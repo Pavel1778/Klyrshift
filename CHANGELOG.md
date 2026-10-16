@@ -40,8 +40,11 @@ The project is renamed and two long-standing autostart defects are fixed.
   configured, so both `lingvix.*` names return 404. Astro writes that origin
   into `<link rel="canonical">`, `og:url`, the `hreflang` alternates, the
   sitemap and `robots.txt`, so the live page advertised a dead address and the
-  footer linked it. The origins now name the hosts that resolve, and
-  `tests/test_repo_urls.py` fails if a `lingvix.*` host reappears.
+  footer linked it. `README.md` carried the same dead origin in its three
+  status badges, its dictionary link and its "where to find us" list, so the
+  repository advertised 404s as well. All of them now name the hosts that
+  resolve, and `tests/test_repo_urls.py` fails if a `lingvix.*` host reappears
+  in the site source, the README or `docs/`.
 - **An unrecognised modifier in a hotkey silently became a bare key.** The
   matcher fires when the held modifier families equal the binding's, so
   `hotkey_fix_last_word = "CMD+Q"` dropped the unknown `CMD`, left an empty

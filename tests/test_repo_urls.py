@@ -96,10 +96,21 @@ def test_site_canonical_origins_are_hosts_that_resolve() -> None:
         assert origins == expected, f"{path.name}: {origins}"
 
 
-def test_site_never_links_the_renamed_but_nonexistent_hosts() -> None:
-    """No template may link a ``lingvix.*`` host: those names do not resolve."""
+def test_no_document_links_the_renamed_but_nonexistent_hosts() -> None:
+    """No tracked document may link a ``lingvix.*`` host: those names do not resolve.
+
+    The templates were the first place this surfaced, but ``README.md`` carried
+    the same dead origin in its status badges, its dictionary link and its
+    "where to find us" list. Scanning the live documentation and the site source
+    -- not the changelog or the session logs, which record the old name as
+    history -- catches the next one wherever it appears.
+    """
+    targets = [REPO_ROOT / "README.md", *sorted((REPO_ROOT / "docs").glob("*.md"))]
+    targets += sorted((REPO_ROOT / "site" / "src").rglob("*.astro"))
+    targets += sorted((REPO_ROOT / "site" / "src").rglob("*.ts"))
+    targets += [ASTRO_CONFIG]
     offenders: list[str] = []
-    for path in (REPO_ROOT / "site" / "src").rglob("*.astro"):
+    for path in targets:
         for match in re.findall(r"https://lingvix\.[a-z0-9.-]+", path.read_text(encoding="utf-8")):
             offenders.append(f"{path.relative_to(REPO_ROOT)}: {match}")
     assert not offenders, "links to nonexistent hosts: " + ", ".join(offenders)

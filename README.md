@@ -6,9 +6,9 @@
 Lingvix — автоматический переключатель раскладки клавиатуры для Linux. Исправляет текст, набранный не в той раскладке (`ghbdtn` → `привет`), автоматически и мгновенно. Работает в Wayland и X11, GNOME 45+, KDE, Sway, через `evdev` + `uinput`. Аналог Caramba Switcher и Punto Switcher. Бесплатно, MIT, без телеметрии.
 
 [![CI](https://github.com/Pavel1778/LinguaFix/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavel1778/LinguaFix/actions/workflows/ci.yml)
-[![License: MIT](https://lingvix.layero.app/badges/license.svg)](LICENSE)
-[![Python 3.10+](https://lingvix.layero.app/badges/python.svg)](https://www.python.org/downloads/)
-[![Debian / Ubuntu](https://lingvix.layero.app/badges/platform.svg)](#-требования--requirements)
+[![License: MIT](https://linguafix.layero.app/badges/license.svg)](LICENSE)
+[![Python 3.10+](https://linguafix.layero.app/badges/python.svg)](https://www.python.org/downloads/)
+[![Debian / Ubuntu](https://linguafix.layero.app/badges/platform.svg)](#-требования--requirements)
 
 ---
 
@@ -336,7 +336,7 @@ lingvix dict remove-category it         # отключить
 `lingvix-dict-<категория>.tar.gz`; при установке он сначала тянется из релиза,
 затем из зеркала репозитория, затем из локальной копии — так `install` работает
 и офлайн. Каталог с разделами — на странице
-[`/dictionaries`](https://lingvix.layero.app/dictionaries).
+[`/dictionaries`](https://linguafix.layero.app/dictionaries).
 
 ### Ручной разворот раскладки
 
@@ -568,8 +568,8 @@ MIT — см. [LICENSE](LICENSE).
 
 ## 🌐 Сайт
 
-- **Основной сайт (RU):** https://lingvix.layero.app
-- **Зеркало (EN):** https://lingvix.vercel.app
+- **Основной сайт (RU):** https://linguafix.layero.app
+- **Зеркало (EN):** https://linguafix.vercel.app
 
 Оба сайта индексируются в поисковиках с per-host canonical и hreflang
 (`ru` / `en` / `x-default`), поэтому они не конкурируют как дубликаты.
