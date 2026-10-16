@@ -95,6 +95,14 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   taps. A single modifier tap never fixes, and any other key cancels an armed
   tap, so capitalisation is unaffected. `DEFAULT_FIX_HOTKEY` in `config.py` is
   the single source of the default.
+- **A hotkey's non-final tokens must be known modifiers.** The matcher fires
+  when the held modifier families *equal* the binding's, so an unrecognised
+  token (`CMD+Q`, `FN+Q`) contributed no family, left the set empty, and the
+  binding then fired on every bare press of its last key. `normalise_hotkey`
+  rejects such a chord at config-load time and `daemon._parse_hotkey` drops it
+  as well, so a config built in memory cannot reach the matcher. A lone
+  modifier (`CTRL`) or a chord ending in one (`CTRL+SHIFT`) is rejected too --
+  neither has a key to fire on. `CTRL+CTRL` stays the valid legacy double tap.
 - `context_analysis`/`context_weight` may only *add* to a candidate, never push
   the current layout below zero, so a neighbour can tip a borderline word but
   cannot create or suppress a correction on its own.
