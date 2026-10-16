@@ -20,6 +20,8 @@ from lingvix import repo
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC = REPO_ROOT / "src" / "lingvix"
 SITE_CONSTS = REPO_ROOT / "site" / "src" / "consts.ts"
+ASTRO_CONFIG = REPO_ROOT / "site" / "astro.config.mjs"
+SITE_LIB = REPO_ROOT / "site" / "src" / "lib" / "site.ts"
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 
 
@@ -77,3 +79,27 @@ def test_site_version_matches_the_package() -> None:
     assert version is not None
     site = SITE_CONSTS.read_text(encoding="utf-8")
     assert f'export const VERSION = "{version.group(1)}";' in site
+
+
+def test_site_canonical_origins_are_hosts_that_resolve() -> None:
+    """The canonical origin must not point at a host that does not exist.
+
+    ``lingvix.layero.app`` and ``lingvix.vercel.app`` are 404 because the DNS
+    entries were never renamed along with the source. The origin is written into
+    ``<link rel="canonical">``, ``og:url``, the ``hreflang`` alternates and the
+    sitemap, so a 404 origin makes search engines drop the page instead of
+    indexing the live one.
+    """
+    expected = {"https://linguafix.layero.app", "https://linguafix.vercel.app"}
+    for path in (ASTRO_CONFIG, SITE_LIB):
+        origins = set(re.findall(r"https://[a-z0-9.-]+", path.read_text(encoding="utf-8")))
+        assert origins == expected, f"{path.name}: {origins}"
+
+
+def test_site_never_links_the_renamed_but_nonexistent_hosts() -> None:
+    """No template may link a ``lingvix.*`` host: those names do not resolve."""
+    offenders: list[str] = []
+    for path in (REPO_ROOT / "site" / "src").rglob("*.astro"):
+        for match in re.findall(r"https://lingvix\.[a-z0-9.-]+", path.read_text(encoding="utf-8")):
+            offenders.append(f"{path.relative_to(REPO_ROOT)}: {match}")
+    assert not offenders, "links to nonexistent hosts: " + ", ".join(offenders)

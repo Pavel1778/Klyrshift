@@ -1,14 +1,20 @@
 // The site ships to two hosts that are both indexed, so they must not compete as
 // duplicate content. Each host declares itself canonical and cross-links the other
 // with hreflang:
-//   - Layero (primary, Russian):  https://lingvix.layero.app
-//   - Vercel (mirror, English):   https://lingvix.vercel.app
+//   - Layero (primary, Russian):  https://linguafix.layero.app
+//   - Vercel (mirror, English):   https://linguafix.vercel.app
+//
+// The hosts are still named ``linguafix.*``: the ``Lingvix`` rename is done in
+// the source but the DNS entries were never renamed, so the ``lingvix.*`` names
+// are 404. The canonical URL, ``og:url`` and the sitemap all derive from these
+// constants, and a 404 origin makes search engines drop the page. When the hosts
+// are renamed, only these two constants change.
 //
 // VERCEL_URL is set for every Vercel build (including the stable production
 // domain), so it selects the Vercel host. The canonical/OG origin is always the
 // stable domain, never the per-deployment VERCEL_URL host.
-export const LAYERO_URL = "https://lingvix.layero.app";
-export const VERCEL_URL = "https://lingvix.vercel.app";
+export const LAYERO_URL = "https://linguafix.layero.app";
+export const VERCEL_URL = "https://linguafix.vercel.app";
 
 export const isVercel = Boolean(import.meta.env.VERCEL_URL);
 

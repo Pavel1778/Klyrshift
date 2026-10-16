@@ -34,6 +34,14 @@ The project is renamed and two long-standing autostart defects are fixed.
   (`/etc/systemd/user`, what the `.deb` does) as `disabled` until the session
   reloads. A working autostart therefore showed as off in the GUI. The probe now
   also checks the global wants symlink directly.
+- **The landing page told search engines to index a 404.** `astro.config.mjs`
+  and `src/lib/site.ts` declared the canonical origin as `lingvix.layero.app`
+  and `lingvix.vercel.app`, but only the `linguafix.*` hosts were ever
+  configured, so both `lingvix.*` names return 404. Astro writes that origin
+  into `<link rel="canonical">`, `og:url`, the `hreflang` alternates, the
+  sitemap and `robots.txt`, so the live page advertised a dead address and the
+  footer linked it. The origins now name the hosts that resolve, and
+  `tests/test_repo_urls.py` fails if a `lingvix.*` host reappears.
 
 ### Added
 

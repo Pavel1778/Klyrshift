@@ -8,11 +8,18 @@ import sitemap from "@astrojs/sitemap";
 // canonical URLs, og:url and the sitemap point at the host that serves them,
 // otherwise the two copies compete as duplicate content.
 //
+// The hosts are still named ``linguafix.*``: the ``Lingvix`` rename is done in
+// the source but the DNS entries were never renamed, so ``lingvix.layero.app``
+// and ``lingvix.vercel.app`` are 404. Pointing the canonical URL at a 404 makes
+// search engines drop the page, so the names that resolve are used here. When
+// the hosts are renamed, only these two constants change.
+//
 // VERCEL_URL is set for every Vercel build (including the stable production
 // domain). SITE_URL overrides both for local checks.
-const site =
-  process.env.SITE_URL ||
-  (process.env.VERCEL_URL ? "https://lingvix.vercel.app" : "https://lingvix.layero.app");
+const LAYERO_ORIGIN = "https://linguafix.layero.app";
+const VERCEL_ORIGIN = "https://linguafix.vercel.app";
+
+const site = process.env.SITE_URL || (process.env.VERCEL_URL ? VERCEL_ORIGIN : LAYERO_ORIGIN);
 
 export default defineConfig({
   site,
