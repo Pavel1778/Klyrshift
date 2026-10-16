@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import subprocess
 import tarfile
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -147,6 +148,38 @@ def test_download_category_prefers_release_archive(
     assert seen[0].endswith("lingvix-dict-it.tar.gz")
     assert count == 2
     assert load_thematic_words("it", "ru", str(tmp_path)) == {"алгоритм", "деплой"}
+
+
+def test_download_category_falls_back_to_the_pre_rename_asset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The live release only ships ``linguafix-dict-*``: it predates the rename.
+
+    A single attempt under the new name would 404 on every install and quietly
+    drop to the branch mirror, so the legacy spelling has to be tried too.
+    """
+    seen: list[str] = []
+
+    def make_archive(member: str, text: str) -> bytes:
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+            payload = text.encode("utf-8")
+            info = tarfile.TarInfo(member)
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+        return buffer.getvalue()
+
+    def fake_urlopen(url: str, timeout: float = 0) -> io.BytesIO:
+        seen.append(url)
+        if "lingvix-dict-" in url:
+            raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+        return io.BytesIO(make_archive("ru-it-1k.txt", "алгоритм\nдеплой\n"))
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    _, count = download_category("it", "ru", str(tmp_path))
+    assert seen[0].endswith("lingvix-dict-it.tar.gz")
+    assert seen[1].endswith("linguafix-dict-it.tar.gz")
+    assert count == 2
 
 
 def test_download_category_rejects_unknown(tmp_path: Path) -> None:

@@ -333,7 +333,9 @@ word is scored against the corpora whose *layout could have produced it*.
   the categories at construction and rebuilds its vocabularies when
   `set_thematic_categories` is called on `reload_config`. Thematic files are
   never bundled in the `.deb`; they are fetched from the GitHub Release
-  (`lingvix-dict-<slug>.tar.gz`) or the offline repository copy.
+  (`lingvix-dict-<slug>.tar.gz`, falling back to the pre-rename
+  `linguafix-dict-<slug>.tar.gz` that the live release ships) or the offline
+  repository copy.
 - **Typo correction (T9)** (`typo_mode`, `typo_max_distance`,
   `typo_max_distance_long`, `typo_min_word_length`). A second, independent
   correction path, off by default. Its own `typo_mode` (`off` / `manual` /

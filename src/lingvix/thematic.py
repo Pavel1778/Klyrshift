@@ -15,6 +15,9 @@ Design:
 * Downloads come from the project's GitHub Release assets first (an archive
   ``lingvix-dict-<slug>.tar.gz``), then the repository mirror, then a locally
   shipped copy -- the same offline-friendly order as the base lists.
+* The release published before the rename attaches the same archives as
+  ``linguafix-dict-<slug>.tar.gz``. Both spellings are tried, newest first, so
+  ``dict install`` works against the live release and against the next one.
 
 Nothing here ever receives typed text: the files are curated lists read from the
 bundle or downloaded from a fixed URL.
@@ -70,6 +73,11 @@ _CATEGORY_BY_SLUG: Final[dict[str, DictionaryCategory]] = {c.slug: c for c in CA
 
 _RELEASE_ASSET_BASE: Final[str] = repo.LATEST_ASSET_BASE + "/"
 _BRANCH_MIRROR_BASE: Final[str] = repo.RAW_MIRROR_BASE + "dictionaries/"
+# Asset prefixes to try, newest first. The v0.2.8 release predates the rename
+# and ships the archives under the old package name, so a request for
+# ``lingvix-dict-<slug>.tar.gz`` alone returns 404 and ``dict install`` silently
+# falls through to the branch mirror (a second round trip, and no archive).
+_ASSET_PREFIXES: Final[tuple[str, ...]] = ("lingvix-dict-", "linguafix-dict-")
 _DOWNLOAD_TIMEOUT: Final[float] = 30.0
 
 # The repository copy, used as the offline fallback from a checkout.
@@ -165,9 +173,10 @@ def download_category(
 ) -> tuple[Path, int]:
     """Download a thematic list for ``category_slug``/``language``.
 
-    Sources, in order: the GitHub Release archive
-    ``lingvix-dict-<slug>.tar.gz``, the repository mirror, then the locally
-    shipped copy. The file lands in ``thematic/<lang>/<slug>.txt``.
+    Sources, in order: the GitHub Release archive (``lingvix-dict-<slug>.tar.gz``,
+    then the pre-rename ``linguafix-dict-<slug>.tar.gz``), the repository mirror,
+    then the locally shipped copy. The file lands in
+    ``thematic/<lang>/<slug>.txt``.
 
     Returns:
         ``(path, word_count)``.
@@ -186,21 +195,24 @@ def download_category(
         raise ValueError(f"category {cat.slug!r} has no {lang!r} list; choose one of: {supported}")
 
     member = cat.file_name(lang)
-    archive_name = f"lingvix-dict-{cat.slug}.tar.gz"
     destination = thematic_path(cat.slug, lang, directory)
     last_error: Exception | None = None
 
-    # 1. Release archive (single asset per category).
-    try:
-        payload = _download_bytes(_RELEASE_ASSET_BASE + archive_name)
+    # 1. Release archive (single asset per category). Both the current and the
+    #    pre-rename asset name are tried: the live release only has the latter.
+    for prefix in _ASSET_PREFIXES:
+        archive_name = f"{prefix}{cat.slug}.tar.gz"
+        try:
+            payload = _download_bytes(_RELEASE_ASSET_BASE + archive_name)
+        except (urllib.error.URLError, OSError) as exc:
+            last_error = exc
+            logger.debug("Category archive %s download failed", archive_name, exc_info=True)
+            continue
         text = _extract_archive(payload, member)
         if text is not None:
             count = _write_words(text.splitlines(), destination)
             logger.info("Downloaded %d %s words for %s", count, cat.slug, lang)
             return destination, count
-    except (urllib.error.URLError, OSError) as exc:
-        last_error = exc
-        logger.debug("Category archive download failed for %s", cat.slug, exc_info=True)
 
     # 2. Branch mirror (raw file).
     try:

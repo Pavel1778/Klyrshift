@@ -45,6 +45,12 @@ The project is renamed and two long-standing autostart defects are fixed.
   repository advertised 404s as well. All of them now name the hosts that
   resolve, and `tests/test_repo_urls.py` fails if a `lingvix.*` host reappears
   in the site source, the README or `docs/`.
+- **`dict install` never used the release archive.** The live release predates
+  the rename and attaches its thematic archives as
+  `linguafix-dict-<slug>.tar.gz`, while the code requested
+  `lingvix-dict-<slug>.tar.gz`. Every install therefore 404'd on the first
+  source and fell through to the branch mirror -- an extra round trip, and the
+  archive path never exercised. Both spellings are tried now, newest first.
 - **An unrecognised modifier in a hotkey silently became a bare key.** The
   matcher fires when the held modifier families equal the binding's, so
   `hotkey_fix_last_word = "CMD+Q"` dropped the unknown `CMD`, left an empty
