@@ -95,6 +95,34 @@ def test_default_fix_hotkey_is_double_shift() -> None:
     assert Config().hotkey_fix_last_word == "SHIFT+SHIFT"
 
 
+def test_unknown_modifier_is_rejected_not_reduced_to_its_key() -> None:
+    """``CMD+Q`` must not degrade into a bare ``Q`` binding.
+
+    The matcher compares the held modifier families against the binding, so a
+    modifier the daemon does not know would leave an empty family set and the
+    chord would fire on every press of its last key. Config loading rejects the
+    value outright instead.
+    """
+    for value in ("CMD+Q", "FN+Q", "HYPER+Q", "A+B"):
+        with pytest.raises(ValueError):
+            Config(hotkey_fix_last_word=value)
+
+
+def test_unknown_modifier_never_reaches_the_matcher() -> None:
+    """A binding built outside ``Config`` is dropped, not matched on the key."""
+    daemon = make_daemon()
+    assert daemon._parse_hotkey("CMD+Q") is None
+    assert daemon._parse_hotkey("CTRL+F12") == (frozenset({"ctrl"}), int(evdev.ecodes.KEY_F12))
+
+
+def test_lone_modifier_is_rejected() -> None:
+    """``CTRL`` alone has no key to fire on; ``CTRL+CTRL`` stays a double tap."""
+    for value in ("CTRL", "CTRL+SHIFT", "ALT"):
+        with pytest.raises(ValueError):
+            Config(hotkey_fix_last_word=value)
+    assert Config(hotkey_fix_last_word="CTRL+CTRL").hotkey_fix_last_word == "CTRL+CTRL"
+
+
 def test_double_shift_within_window_fixes() -> None:
     daemon = make_daemon()
     press(daemon, "ghbdtn")

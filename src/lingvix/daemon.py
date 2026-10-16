@@ -762,6 +762,15 @@ class LingvixDaemon:
         code = self._resolve_hotkey(parts[-1])
         if code is None:
             return None
+        # A token that is not a known modifier must not be dropped silently: the
+        # match is ``families == self._held_modifiers``, so an unrecognised one
+        # would leave an empty family set and the binding would fire on the bare
+        # key (``CMD+Q`` triggering on every ``Q``). ``normalise_hotkey``
+        # rejects these at config-load time; this keeps a config built in memory
+        # from reaching the matcher.
+        if any(part not in _MODIFIER_ALIASES for part in parts[:-1]):
+            logger.warning("Ignoring hotkey %r with an unknown modifier", value)
+            return None
         families = {_MODIFIER_ALIASES[part] for part in parts[:-1] if part in _MODIFIER_ALIASES}
         return frozenset(families), code
 

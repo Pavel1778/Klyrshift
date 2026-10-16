@@ -42,6 +42,15 @@ The project is renamed and two long-standing autostart defects are fixed.
   sitemap and `robots.txt`, so the live page advertised a dead address and the
   footer linked it. The origins now name the hosts that resolve, and
   `tests/test_repo_urls.py` fails if a `lingvix.*` host reappears.
+- **An unrecognised modifier in a hotkey silently became a bare key.** The
+  matcher fires when the held modifier families equal the binding's, so
+  `hotkey_fix_last_word = "CMD+Q"` dropped the unknown `CMD`, left an empty
+  family set, and then triggered on *every* press of `Q`. `normalise_hotkey()`
+  now rejects a chord whose non-final token is not a known modifier, and the
+  same guard runs in the daemon's parser so a config built in memory cannot
+  slip past it. A lone modifier (`"CTRL"`) and a chord ending in one
+  (`"CTRL+SHIFT"`) are rejected too, since neither has a key to fire on;
+  `CTRL+CTRL` remains the valid legacy double tap.
 
 ### Added
 

@@ -190,6 +190,15 @@ FORBIDDEN_HOTKEY_KEYS: Final[frozenset[str]] = frozenset(
     {"ESC", "ESCAPE", "ENTER", "RETURN", "KPENTER", "SPACE", "TAB"}
 )
 _HOTKEY_TOKEN_RE: Final[re.Pattern[str]] = re.compile(r"^[A-Z0-9+_]+$")
+# Modifier spellings accepted as the non-final tokens of a hotkey. The daemon
+# maps these to its held-modifier families (``daemon._MODIFIER_ALIASES``); the
+# two tables must stay in step, so the same names are listed here for
+# validation at config-load time.
+_HOTKEY_MODIFIERS: Final[frozenset[str]] = frozenset(
+    {"CTRL", "CONTROL", "ALT", "SHIFT", "SUPER", "WIN", "META"}
+)
+# Modifier families that may stand in for a key as a double tap (``SHIFT+SHIFT``).
+_HOTKEY_DOUBLE_TAP_MODIFIERS: Final[frozenset[str]] = frozenset({"SHIFT", "CTRL", "ALT"})
 
 
 def _derive_feature_mode(enabled: bool, global_mode: str) -> str:
@@ -243,11 +252,18 @@ def in_quiet_hours(start: str, end: str, now_minutes: int) -> bool:
 def normalise_hotkey(value: str) -> str:
     """Normalise a hotkey string to ``MOD+MOD+KEY`` upper-case form.
 
-    Accepts ``"PAUSE"``, ``"CTRL+SHIFT+F12"`` and ``"RIGHTCTRL+RIGHTALT"``.
+    Accepts ``"PAUSE"``, ``"CTRL+SHIFT+F12"`` and ``"SHIFT+SHIFT"``.
     Empty strings are allowed and mean "unbound".
 
+    Every token but the last must be a modifier the daemon knows, and the last
+    must not be one. A chord whose "modifier" is unrecognised (``"CMD+Q"``,
+    ``"FN+Q"``) is rejected rather than silently reduced to its last key: the
+    daemon matches on held modifier families, so an unknown one would drop out
+    and the binding would fire on a bare ``Q``.
+
     Raises:
-        ValueError: If the value is malformed or uses a forbidden key.
+        ValueError: If the value is malformed, uses a forbidden key, or has a
+            token in a position where it cannot work.
     """
     text = str(value).strip().upper()
     if not text:
@@ -257,11 +273,21 @@ def normalise_hotkey(value: str) -> str:
     parts = [part for part in text.split("+") if part]
     if not parts:
         return ""
-    key = parts[-1]
-    if key in FORBIDDEN_HOTKEY_KEYS:
-        raise ValueError(f"hotkey key {key!r} is not allowed")
     if len(parts) > 4:
         raise ValueError(f"too many modifiers in hotkey {value!r}")
+    *modifiers, key = parts
+    unknown = [part for part in modifiers if part not in _HOTKEY_MODIFIERS]
+    if unknown:
+        raise ValueError(f"unknown modifier {unknown[0]!r} in hotkey {value!r}")
+    if key in _HOTKEY_MODIFIERS:
+        # A lone modifier (``CTRL``) or a chord ending in one (``CTRL+SHIFT``)
+        # has no key to fire on. ``CTRL+CTRL`` is the legacy double-tap form and
+        # is kept: the daemon's double-tap matcher consumes it.
+        if len(parts) == 2 and parts[0] == parts[1] and key in _HOTKEY_DOUBLE_TAP_MODIFIERS:
+            return "+".join(parts)
+        raise ValueError(f"hotkey {value!r} has no key to trigger on")
+    if key in FORBIDDEN_HOTKEY_KEYS:
+        raise ValueError(f"hotkey key {key!r} is not allowed")
     return "+".join(parts)
 
 
