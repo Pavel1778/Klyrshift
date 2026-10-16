@@ -5,7 +5,7 @@
 
 Lingvix — автоматический переключатель раскладки клавиатуры для Linux. Исправляет текст, набранный не в той раскладке (`ghbdtn` → `привет`), автоматически и мгновенно. Работает в Wayland и X11, GNOME 45+, KDE, Sway, через `evdev` + `uinput`. Аналог Caramba Switcher и Punto Switcher. Бесплатно, MIT, без телеметрии.
 
-[![CI](https://github.com/Pavel1778/Lingvix/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavel1778/Lingvix/actions/workflows/ci.yml)
+[![CI](https://github.com/Pavel1778/LinguaFix/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavel1778/LinguaFix/actions/workflows/ci.yml)
 [![License: MIT](https://lingvix.layero.app/badges/license.svg)](LICENSE)
 [![Python 3.10+](https://lingvix.layero.app/badges/python.svg)](https://www.python.org/downloads/)
 [![Debian / Ubuntu](https://lingvix.layero.app/badges/platform.svg)](#-требования--requirements)
@@ -121,14 +121,14 @@ systemd user-сервис и загружает модуль `uinput` во вр�
 > перелогина после `usermod`.
 
 Готовый `.deb` берётся со страницы
-[Releases](https://github.com/Pavel1778/Lingvix/releases) или собирается
+[Releases](https://github.com/Pavel1778/LinguaFix/releases) или собирается
 локально: `make build-deb`.
 
 ### Для разработчиков: из исходников
 
 ```bash
-git clone https://github.com/Pavel1778/Lingvix.git
-cd Lingvix
+git clone https://github.com/Pavel1778/LinguaFix.git
+cd LinguaFix
 bash install.sh          # добавьте --yes для неинтерактивного режима
 ```
 
@@ -555,7 +555,7 @@ make build-deb                # собрать .deb в dist/
 MIT — см. [LICENSE](LICENSE).
 
 История изменений — в [CHANGELOG.md](CHANGELOG.md). Баги и предложения —
-в [Issues](https://github.com/Pavel1778/Lingvix/issues).
+в [Issues](https://github.com/Pavel1778/LinguaFix/issues).
 
 ## 🙏 Благодарности / Acknowledgements
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from lingvix import cli
+from lingvix import cli, repo
 from lingvix.config import Config
 from lingvix.detector import LanguageDetector
 from lingvix.dictionary import (
@@ -82,7 +82,7 @@ def test_download_tries_release_asset_before_mirror(
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     download_extended_dictionary("ru", str(tmp_path))
-    assert seen[0].startswith("https://github.com/Pavel1778/Lingvix/releases/latest/download/")
+    assert seen[0].startswith(repo.LATEST_ASSET_BASE + "/")
     assert seen[0].endswith("ru-50k.txt")
 
 

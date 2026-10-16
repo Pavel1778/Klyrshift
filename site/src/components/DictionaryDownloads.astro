@@ -1,13 +1,16 @@
 ---
 // "Download libraries" section: base frequency lists and thematic
-// (professional) vocabularies, each linked to its GitHub Release asset so a
-// visitor gets the file in one click. Reused on the landing page and on
-// /dictionaries; both hosts (RU Layero / EN Vercel) render their own language.
+// (professional) vocabularies. Base lists link to their release asset; thematic
+// lists link to the repository mirror (the same file ``dict install`` fetches),
+// so a visitor gets the file in one click and the link never 404s. Reused on the
+// landing page and on /dictionaries; both hosts (RU Layero / EN Vercel) render
+// their own language.
 import { pick } from "../lib/site";
 import {
   baseLanguages,
   categoryCards,
   DICTIONARY_ASSET_BASE as RAW,
+  DICTIONARY_MIRROR_BASE as MIRROR,
   humanSize,
 } from "../lib/dictionaries";
 
@@ -86,11 +89,11 @@ const shownCategories = showAll ? categoryCards : categoryCards.slice(0, 6);
                   </span>
                   <a
                     class="shrink-0 text-[#1c71d8] underline dark:text-[#3584e4]"
-                    href={`${RAW}/lingvix-dict-${cat.slug}.tar.gz`}
+                    href={`${MIRROR}/${cat.slug}/${file.lang}-${cat.slug}-1k.txt`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    .tar.gz
+                    .txt
                   </a>
                 </li>
               ))}

@@ -587,8 +587,8 @@ Hotfix for three defects reported after the 0.2.8 live test.
 - The `uk`/`de`/`fr` corpora are opt-in and have not been calibrated against
   live input.
 
-[0.2.3]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.2.3
-[0.2.2]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.2.2
-[0.2.1]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.2.1
-[0.2.0]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.2.0
-[0.1.0]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.1.0
+[0.2.3]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.3
+[0.2.2]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.2
+[0.2.1]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.1
+[0.2.0]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.0
+[0.1.0]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.1.0

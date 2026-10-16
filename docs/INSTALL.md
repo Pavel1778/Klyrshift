@@ -61,8 +61,8 @@ This path is for contributors who work from a clone. Regular users should use
 the `.deb` above.
 
 ```bash
-git clone https://github.com/Pavel1778/Lingvix.git
-cd Lingvix
+git clone https://github.com/Pavel1778/LinguaFix.git
+cd LinguaFix
 bash install.sh
 ```
 

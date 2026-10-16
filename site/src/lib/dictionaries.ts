@@ -7,10 +7,19 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { REPO } from "../consts";
+import { REPO, REPO_SLUG } from "../consts";
 
 /** Stable URL prefix for release assets (attached to every GitHub Release). */
 export const DICTIONARY_ASSET_BASE = `${REPO}/releases/latest/download`;
+
+// Thematic files are linked from the repository mirror, not a release asset:
+// the release publishes a ``<pkg>-dict-<slug>.tar.gz`` archive for only a
+// subset of categories, so a release link 404s for the rest. The mirror file
+// (``dictionaries/<slug>/<lang>-<slug>-1k.txt``) exists for every category and
+// is the same file ``lingvix dict install`` fetches, so a card link always
+// works and always matches the CLI.
+export const DICTIONARY_MIRROR_BASE =
+  `https://raw.githubusercontent.com/${REPO_SLUG}/main/dictionaries`;
 
 export type BaseLanguage = { code: string; title: string };
 

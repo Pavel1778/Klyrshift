@@ -1,7 +1,7 @@
 # Lingvix — лендинг
 
 Статический сайт (Astro 5 + Tailwind CSS) для проекта
-[Lingvix](https://github.com/Pavel1778/Lingvix).
+[Lingvix](https://github.com/Pavel1778/LinguaFix).
 
 ## Локальный запуск
 

@@ -31,6 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from . import repo
 from .dictionary import _write_words, default_extended_dictionary_dir
 
 logger = logging.getLogger(__name__)
@@ -67,10 +68,8 @@ CATEGORIES: Final[tuple[DictionaryCategory, ...]] = (
 
 _CATEGORY_BY_SLUG: Final[dict[str, DictionaryCategory]] = {c.slug: c for c in CATEGORIES}
 
-_RELEASE_ASSET_BASE: Final[str] = "https://github.com/Pavel1778/Lingvix/releases/latest/download/"
-_BRANCH_MIRROR_BASE: Final[str] = (
-    "https://raw.githubusercontent.com/Pavel1778/Lingvix/main/dictionaries/"
-)
+_RELEASE_ASSET_BASE: Final[str] = repo.LATEST_ASSET_BASE + "/"
+_BRANCH_MIRROR_BASE: Final[str] = repo.RAW_MIRROR_BASE + "dictionaries/"
 _DOWNLOAD_TIMEOUT: Final[float] = 30.0
 
 # The repository copy, used as the offline fallback from a checkout.

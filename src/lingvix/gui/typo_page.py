@@ -20,6 +20,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
+from .. import repo  # noqa: E402
 from .prefs_base import BoundPreferencesPage  # noqa: E402
 from .state import GuiState  # noqa: E402
 from .widgets.big_toggle import STATE_OFF, STATE_ON, BigToggle  # noqa: E402
@@ -170,7 +171,7 @@ class TypoPage(BoundPreferencesPage):
         self.add(check_group)
 
         docs = Gtk.LinkButton.new_with_label(
-            "https://github.com/Pavel1778/Lingvix/blob/main/docs/ARCHITECTURE.md",
+            f"{repo.REPO_URL}/blob/main/docs/ARCHITECTURE.md",
             "Документация Т9",
         )
         docs.set_halign(Gtk.Align.CENTER)

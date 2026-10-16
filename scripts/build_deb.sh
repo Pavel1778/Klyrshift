@@ -86,7 +86,7 @@ Depends: python3 (>= 3.10), python3-tomli | python3 (>= 3.11), python3-tomli-w, 
 Recommends: g3kb-switch, xdotool, python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1, gir1.2-appindicator3-0.1, python3-pyatspi, gir1.2-atspi-2.0, wl-clipboard, xclip
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Pavel1778 <noreply@github.com>
-Homepage: https://github.com/Pavel1778/Lingvix
+Homepage: https://github.com/Pavel1778/LinguaFix
 Description: Automatic keyboard layout switcher for Debian GNOME
  Lingvix is a background daemon that detects text typed in the wrong
  keyboard layout (for example "ghbdtn" instead of "привет") and fixes it

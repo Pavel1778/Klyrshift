@@ -7,6 +7,7 @@ import {
   baseLanguages as languages,
   categoryCards,
   DICTIONARY_ASSET_BASE as RAW,
+  DICTIONARY_MIRROR_BASE as MIRROR,
   humanSize,
   thematicCategories,
 } from "../lib/dictionaries";
@@ -141,11 +142,11 @@ const totalWords = categoryCards
                       </span>
                       <a
                         class="shrink-0 font-mono text-[#1c71d8] underline dark:text-[#3584e4]"
-                        href={`${RAW}/lingvix-dict-${cat.slug}.tar.gz`}
+                        href={`${MIRROR}/${cat.slug}/${file.lang}-${cat.slug}-1k.txt`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        ↓ tar.gz
+                        ↓ .txt
                       </a>
                     </li>
                   ))}

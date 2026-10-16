@@ -63,8 +63,8 @@ journalctl --user -u lingvix.service -f
 For the **developer path** instead, replace step 1 with:
 
 ```bash
-git clone https://github.com/Pavel1778/Lingvix.git
-cd Lingvix
+git clone https://github.com/Pavel1778/LinguaFix.git
+cd LinguaFix
 bash install.sh --yes
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```

@@ -19,13 +19,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import __version__
+from . import __version__, repo
 from .config import cache_dir
 
 logger = logging.getLogger(__name__)
 
-RELEASES_URL = "https://api.github.com/repos/Pavel1778/Lingvix/releases/latest"
-RELEASES_PAGE = "https://github.com/Pavel1778/Lingvix/releases/latest"
+RELEASES_URL = f"https://api.github.com/repos/{repo.REPO_SLUG}/releases/latest"
+RELEASES_PAGE = repo.LATEST_RELEASE_URL
 REQUEST_TIMEOUT = 5.0
 CHECK_INTERVAL_SECONDS = 24 * 60 * 60
 _STAMP_NAME = "update_check.json"

@@ -1,12 +1,16 @@
 ---
 import CodeBlock from "./CodeBlock.astro";
-import { DEB_URL, INSTALL_DOC, ISSUES, REPO, RELEASES, VERSION } from "../consts";
+import { DOWNLOAD_URL, INSTALL_DOC, ISSUES, REPO, RELEASES } from "../consts";
 
-const debCode = `wget ${DEB_URL}
-sudo apt install ./lingvix_${VERSION}_all.deb`;
+// The release asset is named after the package (``lingvix_<version>_all.deb``),
+// but the version changes every release and older releases still carry the
+// previous package name, so the snippet installs whatever ``.deb`` the user
+// downloaded from the release page rather than guessing a filename.
+const debCode = `# Скачайте .deb со страницы последнего релиза, затем:
+sudo apt install ./*_all.deb`;
 
 const srcCode = `git clone ${REPO}.git
-cd Lingvix
+cd LinguaFix
 bash install.sh`;
 ---
 
@@ -27,7 +31,7 @@ bash install.sh`;
       <div class="mt-6" data-panel="deb">
         <CodeBlock code={debCode} label="Установка .deb" />
         <div class="mt-4 flex flex-wrap gap-3">
-          <a href={DEB_URL} class="btn btn-primary" target="_blank" rel="noopener noreferrer">Скачать .deb</a>
+          <a href={DOWNLOAD_URL} class="btn btn-primary" target="_blank" rel="noopener noreferrer">Скачать .deb</a>
         </div>
       </div>
 

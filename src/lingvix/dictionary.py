@@ -12,6 +12,8 @@ import logging
 from pathlib import Path
 from typing import Final
 
+from . import repo
+
 logger = logging.getLogger(__name__)
 
 MAX_WORD_LENGTH = 64
@@ -110,9 +112,7 @@ BUNDLED_DICTIONARY_SUFFIX: Final[str] = "-50k.txt"
 # mirrors the upstream top-50k lists (word column only) under the repo's
 # ``dictionaries/`` folder. The upstream FrequencyWords source (MIT) is kept as
 # a fallback so the command still works if the mirror is unreachable.
-_BUNDLED_RAW_BASE: Final[str] = (
-    "https://raw.githubusercontent.com/Pavel1778/Lingvix/main/dictionaries/"
-)
+_BUNDLED_RAW_BASE: Final[str] = repo.RAW_MIRROR_BASE + "dictionaries/"
 _UPSTREAM_RAW: Final[dict[str, str]] = {
     lang: (
         "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/"
@@ -127,7 +127,7 @@ _DOWNLOAD_TIMEOUT: Final[float] = 30.0
 # mirror and the upstream source are both unreachable, ``dict download`` copies
 # this local file instead of failing — so the command always works offline.
 _BUNDLED_DATA_DIR: Final[Path] = Path(__file__).resolve().parent / "data" / "dictionaries"
-_RELEASE_ASSET_BASE: Final[str] = "https://github.com/Pavel1778/Lingvix/releases/latest/download/"
+_RELEASE_ASSET_BASE: Final[str] = repo.LATEST_ASSET_BASE + "/"
 
 
 def bundled_dictionary_source(language: str) -> Path | None:

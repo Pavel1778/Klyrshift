@@ -8,9 +8,9 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
-from .. import __version__  # noqa: E402
+from .. import __version__, repo  # noqa: E402
 
-REPOSITORY = "https://github.com/Pavel1778/Lingvix"
+REPOSITORY = repo.REPO_URL
 
 
 def build_about_window(parent: Gtk.Window | None = None) -> Adw.AboutDialog:
@@ -25,7 +25,7 @@ def build_about_window(parent: Gtk.Window | None = None) -> Adw.AboutDialog:
         issue_url=f"{REPOSITORY}/issues",
         comments=(
             "Автоматическое исправление текста, набранного не в той раскладке.\n"
-            "Всё работает локально: ни одного сетевого запроса."
+            "Текст не покидает машину: демон не делает сетевых запросов."
         ),
     )
     dialog.set_developers(["Pavel1778"])

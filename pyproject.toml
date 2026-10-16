@@ -47,10 +47,10 @@ dev = [
 lingvix = "lingvix.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/Pavel1778/Lingvix"
-Repository = "https://github.com/Pavel1778/Lingvix"
-Issues = "https://github.com/Pavel1778/Lingvix/issues"
-Changelog = "https://github.com/Pavel1778/Lingvix/releases"
+Homepage = "https://github.com/Pavel1778/LinguaFix"
+Repository = "https://github.com/Pavel1778/LinguaFix"
+Issues = "https://github.com/Pavel1778/LinguaFix/issues"
+Changelog = "https://github.com/Pavel1778/LinguaFix/releases"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

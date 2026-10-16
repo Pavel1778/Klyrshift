@@ -6,8 +6,8 @@ development environment and the standards we follow.
 ## Development setup
 
 ```bash
-git clone https://github.com/Pavel1778/Lingvix.git
-cd Lingvix
+git clone https://github.com/Pavel1778/LinguaFix.git
+cd LinguaFix
 bash scripts/dev_setup.sh
 ```
 
