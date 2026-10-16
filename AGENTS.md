@@ -128,6 +128,20 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   the script after a corpus rebuild. `tests/test_demo_model.py` fails when the
   committed model drifts from the corpora.
 
+## Editing files with non-ASCII text
+
+`file_editor` re-encodes UTF-8 on save and corrupts non-ASCII characters
+(Cyrillic, em-dashes, box-drawing) into mojibake. The damage lands on lines
+*outside* the edit as well, so a small rename can silently wreck a whole file.
+`tests/test_source_encoding.py::test_no_mojibake_in_tracked_sources` fails on it.
+
+- To edit a file that contains Cyrillic, use `python` with an explicit
+  `encoding="utf-8"` (`Path(...).read_text/write_text`), not `file_editor`.
+- To repair a file already hit: `git checkout HEAD -- <file>`, then re-apply
+  the edits with the Python heredoc above.
+- Detect damage by scanning tracked files for the mojibake lead characters
+  (U+00D1, U+00E2) or by running the encoding test.
+
 ## Security / privacy invariants (audited)
 
 - The typed text must never reach disk or a subprocess argv. `_process_buffer`
