@@ -469,6 +469,53 @@ class LanguageDetector:
             return None
         return best_layout
 
+    def _vocabulary_validated_layout(self, text: str, current_layout: str) -> str | None:
+        """Return a layout whose conversion of ``text`` yields only known words.
+
+        The plausibility guard protects real words, but it also vetoes a
+        wrong-layout word whose *source* spelling happens to read as plausible
+        noise in the current layout (``ltym`` is not English, yet its bigram
+        score clears the floor, while the word it really is -- ``день`` -- is in
+        the Russian vocabulary). A conversion whose every word is in the target
+        language's vocabulary is far stronger evidence than the source's bigram
+        plausibility, so it overrides the guard.
+
+        The rule stays deliberately narrow: the typed text must not already be a
+        known word of its own language, and exactly one layout may qualify.
+        A wrong guess is worse than no guess.
+        """
+        lowered = text.lower()
+        if lowered in self._user_words:
+            return None
+        current_language = self._layout_language(current_layout)
+        if current_language and lowered in self._vocabularies.get(current_language, set()):
+            # Already a real word where it was typed: leave it alone.
+            return None
+
+        validated: str | None = None
+        for layout in self.converter.available_layouts:
+            if layout == current_layout:
+                continue
+            language = self._layout_language(layout)
+            if language is None or language not in self._vocabularies:
+                continue
+            converted = self.converter.convert(text, current_layout, layout).strip()
+            if not converted or converted == text:
+                continue
+            words = [
+                word for word in WORD_RE.findall(converted) if len(word) >= self.min_word_length
+            ]
+            if not words:
+                continue
+            vocabulary = self._vocabularies[language]
+            if not all(word.lower() in vocabulary for word in words):
+                continue
+            if validated is not None:
+                # More than one layout yields known words: ambiguous, so skip.
+                return None
+            validated = layout
+        return validated
+
     def _bigram_score(self, word: str, language: str) -> float:
         """Return the average log-probability of ``word`` in ``language``."""
         model = self._bigrams.get(language, {})
@@ -668,13 +715,12 @@ class LanguageDetector:
     def _should_guard(self, text: str, current_layout: str) -> bool:
         """Return ``True`` when a guard vetoes converting ``text``.
 
-        Applies the structural-boundary and identifier guards (always safe) and
-        the plausibility guard (only when enabled). The guards only ever prevent
-        a conversion; a word the user taught is handled before they run.
+        The composite of the structural/identifier guards (always safe) and the
+        plausibility guard (only when enabled). ``target_layout`` applies them in
+        two steps so a vocabulary-validated conversion can override the
+        plausibility heuristic alone; this method keeps the composite view.
         """
-        if self.structural_boundaries and self._has_structural_marker(text):
-            return True
-        if self.identifier_guard and _IDENTIFIER_RE.search(text):
+        if self._should_guard_structure_only(text):
             return True
         return bool(self.plausibility_check and self._looks_like_real_words(text, current_layout))
 
@@ -734,10 +780,29 @@ class LanguageDetector:
             logger.debug("detect(len=%d): mixed-script word; skipping", len(stripped))
             return None
 
-        # False-positive guards. They only ever prevent a conversion; a taught
-        # word was already handled above, so this cannot suppress an intended fix.
-        if self._should_guard(stripped, current_layout):
-            logger.debug("detect(len=%d): guard vetoed the conversion; skipping", len(stripped))
+        # The structural and identifier guards are absolute: a URL, path or
+        # code token is never rewritten, whatever a conversion would produce.
+        if self._should_guard_structure_only(stripped):
+            logger.debug("detect(len=%d): structural guard vetoed; skipping", len(stripped))
+            return None
+
+        # A conversion that turns the whole buffer into known words of another
+        # language is stronger evidence than the source's plausibility. It is
+        # therefore checked before the plausibility guard, which would otherwise
+        # veto a real wrong-layout word whose source spelling happens to read as
+        # plausible noise (``ltym`` is not English; ``день`` is Russian).
+        validated = self._vocabulary_validated_layout(stripped, current_layout)
+        if validated is not None:
+            logger.debug(
+                "detect(len=%d): conversion yields known words; target %s",
+                len(stripped),
+                validated,
+            )
+            return validated
+
+        # The plausibility guard only ever prevents a conversion.
+        if self.plausibility_check and self._looks_like_real_words(stripped, current_layout):
+            logger.debug("detect(len=%d): plausibility guard vetoed; skipping", len(stripped))
             return None
 
         words = [w for w in WORD_RE.findall(stripped) if len(w) >= self.min_word_length]

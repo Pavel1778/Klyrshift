@@ -117,3 +117,66 @@ def test_taught_word_wins_over_plausibility_guard() -> None:
         converter=LayoutConverter(), stop_words=[], min_word_length=3, user_words=["vercel"]
     )
     assert det.target_layout("муксуд", "ru") == "us"
+
+
+# --- a real wrong-layout word whose source spelling looks plausible --------------
+#
+# ``ltym`` is not an English word, but its bigram score clears the plausibility
+# floor, so the false-positive guard used to veto the conversion even though
+# ``день`` is a common Russian word. A conversion that yields *only* known
+# words of the target language is stronger evidence than the source's
+# plausibility, so it now overrides the guard. These cases include letters whose
+# US keys are punctuation (``;`` -> ``ж``, ``[`` -> ``х``), which the word tokenizer
+# splits, so the whole-token vocabulary check is what makes them work.
+
+
+@pytest.mark.parametrize(
+    ("typed", "layout", "expected"),
+    [
+        ("ltym", "us", "ru"),
+        (",eltn", "us", "ru"),
+        ("vj;tn", "us", "ru"),
+        ("ye;yj", "us", "ru"),
+        ("b[", "us", None),
+    ],
+)
+def test_plausible_source_word_is_still_corrected(
+    det: LanguageDetector, typed: str, layout: str, expected: str | None
+) -> None:
+    assert det.target_layout(typed, layout) == expected
+
+
+@pytest.mark.parametrize(
+    ("typed", "layout", "expected"),
+    [
+        ("ltym", "us", "день"),
+        (",eltn", "us", "будет"),
+        ("vj;tn", "us", "может"),
+        ("ye;yj", "us", "нужно"),
+    ],
+)
+def test_plausible_source_word_converts_to_the_expected_word(
+    det: LanguageDetector, typed: str, layout: str, expected: str
+) -> None:
+    target = det.target_layout(typed, layout)
+    assert target is not None
+    assert det.convert_buffer(typed, layout, target) == expected
+
+
+def test_vocabulary_validated_override_respects_a_real_source_word(
+    det: LanguageDetector,
+) -> None:
+    """A word that really is a current-layout word is never overridden."""
+    # Short pairs such as ``lf`` -> ``да`` stay on the explicit-hotkey path; a
+    # full-length real word must stay put here.
+    assert det._vocabulary_validated_layout("hello", "us") is None
+    assert det._vocabulary_validated_layout("привет", "ru") is None
+    assert det.target_layout("hello", "us") is None
+
+
+def test_vocabulary_validated_override_is_not_applied_to_urls(
+    det: LanguageDetector,
+) -> None:
+    """The override must not resurrect a structural false positive."""
+    for token in ("github.com", "user@example.com", "/usr/local/bin", "snake_case"):
+        assert det._vocabulary_validated_layout(token, "us") is None
