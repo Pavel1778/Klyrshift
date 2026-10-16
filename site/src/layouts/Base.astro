@@ -2,6 +2,7 @@
 import { Font } from "astro:assets";
 import "../styles/global.css";
 import { LAYERO_URL, VERCEL_URL, isVercel, lang, pick, siteUrl } from "../lib/site";
+import { AUTHOR_URL, LATEST_RELEASE, REPO } from "../consts";
 
 interface Props {
   title?: string;
@@ -38,12 +39,12 @@ const schema = {
   softwareVersion: "0.2.8.2",
   license: "https://opensource.org/licenses/MIT",
   url: siteUrl,
-  downloadUrl: "https://github.com/Pavel1778/Lingvix/releases/latest",
-  codeRepository: "https://github.com/Pavel1778/Lingvix",
+  downloadUrl: LATEST_RELEASE,
+  codeRepository: REPO,
   author: {
     "@type": "Person",
     name: "Pavel",
-    url: "https://github.com/Pavel1778",
+    url: AUTHOR_URL,
   },
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };

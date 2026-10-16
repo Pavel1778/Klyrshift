@@ -1,6 +1,8 @@
 export const VERSION = "0.2.8.2";
 
-export const REPO = "https://github.com/Pavel1778/Lingvix";
+export const REPO_OWNER = "Pavel1778";
+export const REPO = `https://github.com/${REPO_OWNER}/Lingvix`;
+export const AUTHOR_URL = `https://github.com/${REPO_OWNER}`;
 export const RELEASES = `${REPO}/releases`;
 export const LATEST_RELEASE = `${RELEASES}/latest`;
 export const DEB_URL = `${RELEASES}/download/v${VERSION}/lingvix_${VERSION}_all.deb`;
