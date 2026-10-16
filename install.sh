@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# LinguaFix installer for Debian / Ubuntu (GNOME, X11 or Wayland).
+# Lingvix installer for Debian / Ubuntu (GNOME, X11 or Wayland).
 #
 # The script is idempotent: running it again re-installs/updates the same
 # components without duplicating anything. Pass --yes for a non-interactive run.
 set -uo pipefail
 
-APP_NAME="linguafix"
+APP_NAME="lingvix"
 # USER is not guaranteed to be set (cron, su, some containers). Fall back to id.
 CURRENT_USER="${SUDO_USER:-${USER:-$(id -un)}}"
 VENV_DIR="${HOME}/.local/share/${APP_NAME}/venv"
@@ -29,9 +29,9 @@ for arg in "$@"; do
     esac
 done
 
-log()  { printf '\033[1;34m[linguafix]\033[0m %s\n' "$*"; }
-warn() { printf '\033[1;33m[linguafix]\033[0m %s\n' "$*" >&2; }
-err()  { printf '\033[1;31m[linguafix]\033[0m %s\n' "$*" >&2; }
+log()  { printf '\033[1;34m[lingvix]\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[lingvix]\033[0m %s\n' "$*" >&2; }
+err()  { printf '\033[1;31m[lingvix]\033[0m %s\n' "$*" >&2; }
 
 confirm() {
     # confirm <prompt> -> 0 (yes) / 1 (no)
@@ -175,7 +175,7 @@ fi
 mkdir -p "${UNIT_DIR}"
 if [ -f "${REPO_DIR}/data/${APP_NAME}.service" ]; then
     # data/*.service and data/*.desktop carry a "@BIN@" placeholder so that both
-    # install.sh (venv launcher) and the .deb (/usr/bin/linguafix) can share them.
+    # install.sh (venv launcher) and the .deb (/usr/bin/lingvix) can share them.
     sed "s|@BIN@|${BIN}|g" "${REPO_DIR}/data/${APP_NAME}.service" \
         > "${UNIT_DIR}/${APP_NAME}.service"
     chmod 0644 "${UNIT_DIR}/${APP_NAME}.service"
@@ -188,7 +188,7 @@ fi
 APPS_DIR="${HOME}/.local/share/applications"
 mkdir -p "${APPS_DIR}"
 if [ -f "${REPO_DIR}/data/${APP_NAME}.desktop" ]; then
-    # data/linguafix.desktop launches the GUI; data/linguafix-autostart.desktop
+    # data/lingvix.desktop launches the GUI; data/lingvix-autostart.desktop
     # launches the daemon. Both carry the @BIN@ placeholder.
     sed "s|@BIN@|${BIN}|g" "${REPO_DIR}/data/${APP_NAME}.desktop" \
         > "${APPS_DIR}/${APP_NAME}.desktop"
@@ -232,14 +232,14 @@ fi
 # 12. Notification
 # ---------------------------------------------------------------------------
 if have notify-send; then
-    notify-send "${APP_NAME}" "LinguaFix установлен и запущен" || true
+    notify-send "${APP_NAME}" "Lingvix установлен и запущен" || true
 fi
 
 # ---------------------------------------------------------------------------
 # 13. Self-test
 # ---------------------------------------------------------------------------
 if [ -x "${BIN}" ]; then
-    log "Самодиагностика (linguafix doctor):"
+    log "Самодиагностика (lingvix doctor):"
     "${BIN}" doctor || warn "Диагностика нашла проблемы — см. вывод выше."
 fi
 

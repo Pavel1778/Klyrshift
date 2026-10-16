@@ -12,7 +12,7 @@ import sitemap from "@astrojs/sitemap";
 // domain). SITE_URL overrides both for local checks.
 const site =
   process.env.SITE_URL ||
-  (process.env.VERCEL_URL ? "https://linguafix.vercel.app" : "https://linguafix.layero.app");
+  (process.env.VERCEL_URL ? "https://lingvix.vercel.app" : "https://lingvix.layero.app");
 
 export default defineConfig({
   site,

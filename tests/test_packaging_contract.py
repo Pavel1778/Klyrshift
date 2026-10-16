@@ -16,13 +16,13 @@ from pathlib import Path
 
 import pytest
 
-from linguafix import __version__
+from lingvix import __version__
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-UNIT = REPO_ROOT / "data" / "linguafix.service"
-UNIT_IN_PACKAGE = REPO_ROOT / "src" / "linguafix" / "data" / "linguafix.service"
-DESKTOP = REPO_ROOT / "data" / "linguafix.desktop"
-GUI_CSS = REPO_ROOT / "src" / "linguafix" / "gui" / "style.css"
+UNIT = REPO_ROOT / "data" / "lingvix.service"
+UNIT_IN_PACKAGE = REPO_ROOT / "src" / "lingvix" / "data" / "lingvix.service"
+DESKTOP = REPO_ROOT / "data" / "lingvix.desktop"
+GUI_CSS = REPO_ROOT / "src" / "lingvix" / "gui" / "style.css"
 BUILD_DEB = REPO_ROOT / "scripts" / "build_deb.sh"
 
 
@@ -56,8 +56,8 @@ def test_unit_restarts_and_runs_in_foreground() -> None:
 def test_desktop_entry_points_at_gui() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
     assert "Exec=@BIN@ gui" in text
-    assert "Icon=linguafix" in text
-    assert "StartupWMClass=io.github.pavel1778.LinguaFix" in text
+    assert "Icon=lingvix" in text
+    assert "StartupWMClass=io.github.pavel1778.Lingvix" in text
 
 
 # --- package data -----------------------------------------------------------
@@ -68,7 +68,7 @@ def test_gui_css_exists_and_is_declared() -> None:
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     # The GUI loads style.css via importlib.resources, so it must be package
     # data or the installed app raises FileNotFoundError at startup.
-    assert re.search(r'"linguafix\.gui"\s*=\s*\["\*\.css"\]', pyproject)
+    assert re.search(r'"lingvix\.gui"\s*=\s*\["\*\.css"\]', pyproject)
 
 
 def test_package_data_covers_runtime_assets() -> None:
@@ -89,20 +89,20 @@ def test_build_script_strips_bytecode() -> None:
 def test_postinst_reloads_systemd_user_daemon() -> None:
     script = BUILD_DEB.read_text(encoding="utf-8")
     # Without a daemon-reload after the unit file is replaced, the next
-    # ``systemctl --user restart linguafix.service`` warns that the unit changed
+    # ``systemctl --user restart lingvix.service`` warns that the unit changed
     # on disk.
     assert "systemctl --user daemon-reload" in script
 
 
 def test_postrm_prunes_nested_bytecode_and_empty_dirs() -> None:
     script = BUILD_DEB.read_text(encoding="utf-8")
-    # ``doctor`` imports ``linguafix.gui``; run as root (before a session
+    # ``doctor`` imports ``lingvix.gui``; run as root (before a session
     # exists) that writes root-owned ``gui/__pycache__`` under /usr/lib, which
     # dpkg does not track. The purge must remove every nested ``__pycache__``
     # and prune the now-empty package directories, or the zero-config test
-    # finds ``/usr/lib/linguafix`` leftovers after ``apt remove --purge``.
-    assert "find /usr/lib/linguafix -type d -name '__pycache__'" in script
-    assert "find /usr/lib/linguafix -depth -type d -empty" in script
+    # finds ``/usr/lib/lingvix`` leftovers after ``apt remove --purge``.
+    assert "find /usr/lib/lingvix -type d -name '__pycache__'" in script
+    assert "find /usr/lib/lingvix -depth -type d -empty" in script
 
 
 @pytest.mark.skipif(shutil.which("dpkg-deb") is None, reason="dpkg-deb not available")
@@ -115,14 +115,14 @@ def test_deb_carries_css_and_unit(tmp_path: Path) -> None:
         text=True,
     )
     assert build.returncode == 0, build.stderr
-    deb = REPO_ROOT / "dist" / f"linguafix_{__version__}_all.deb"
+    deb = REPO_ROOT / "dist" / f"lingvix_{__version__}_all.deb"
     assert deb.is_file(), f"build produced no {deb.name}"
     listing = subprocess.run(
         ["dpkg-deb", "--contents", str(deb)], capture_output=True, text=True, check=True
     ).stdout
     assert "/gui/style.css" in listing
-    assert "/systemd/user/linguafix.service" in listing
-    assert "/usr/bin/linguafix" in listing
+    assert "/systemd/user/lingvix.service" in listing
+    assert "/usr/bin/lingvix" in listing
 
 
 # --- release workflow -------------------------------------------------------

@@ -13,14 +13,14 @@ from importlib import resources
 
 import pytest
 
-from linguafix.converter import LayoutConverter
-from linguafix.detector import DEFAULT_DETECTOR_LANGUAGES, LanguageDetector
+from lingvix.converter import LayoutConverter
+from lingvix.detector import DEFAULT_DETECTOR_LANGUAGES, LanguageDetector
 
 SUPPORTED = ("en", "ru", "uk", "de", "fr")
 
 
 def _corpus(language: str) -> dict[str, object]:
-    text = (resources.files("linguafix") / "data" / f"ngrams_{language}.json").read_text(
+    text = (resources.files("lingvix") / "data" / f"ngrams_{language}.json").read_text(
         encoding="utf-8"
     )
     data = json.loads(text)

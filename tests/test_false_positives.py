@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from linguafix.converter import LayoutConverter
-from linguafix.detector import LanguageDetector
+from lingvix.converter import LayoutConverter
+from lingvix.detector import LanguageDetector
 
 
 @pytest.fixture

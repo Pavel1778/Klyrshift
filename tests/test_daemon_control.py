@@ -1,4 +1,4 @@
-"""Tests for :mod:`linguafix.daemon_control`.
+"""Tests for :mod:`lingvix.daemon_control`.
 
 The module is the single control surface the GUI uses, so it must behave when
 systemd is present, when it is absent, and when a daemon was started manually.
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from linguafix import daemon_control
+from lingvix import daemon_control
 
 
 @pytest.fixture
@@ -108,7 +108,7 @@ def test_stop_uses_systemd_when_active(isolated_env: Path, monkeypatch: pytest.M
     monkeypatch.setattr(daemon_control, "read_pid", lambda: None)
     monkeypatch.setattr(daemon_control, "_systemctl", lambda args, timeout=5.0: calls.append(args))
     daemon_control.stop()
-    assert calls == [["stop", "linguafix.service"]]
+    assert calls == [["stop", "lingvix.service"]]
 
 
 def test_kill_stops_unit_then_sigkills(isolated_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -121,7 +121,7 @@ def test_kill_stops_unit_then_sigkills(isolated_env: Path, monkeypatch: pytest.M
     monkeypatch.setattr(daemon_control, "_systemctl", lambda args, timeout=5.0: calls.append(args))
     monkeypatch.setattr(daemon_control, "_kill_pid", lambda pid, sig: killed.append((pid, sig)))
     assert daemon_control.kill() is True
-    assert calls == [["stop", "linguafix.service"]]
+    assert calls == [["stop", "lingvix.service"]]
     assert killed == [(4242, signal.SIGKILL)]
 
 
@@ -145,7 +145,7 @@ def test_start_prefers_systemd_when_enabled(
     monkeypatch.setattr(daemon_control, "_systemctl", lambda args, timeout=5.0: calls.append(args))
     monkeypatch.setattr(daemon_control, "read_pid", lambda: None)
     assert daemon_control.start() is True
-    assert calls == [["start", "linguafix.service"]]
+    assert calls == [["start", "lingvix.service"]]
 
 
 def test_start_spawns_when_systemd_disabled(
@@ -211,13 +211,13 @@ def test_reload_falls_back_to_systemctl(
         daemon_control, "_systemctl", lambda args, timeout=5.0: calls.append(args) or _Result()
     )
     assert daemon_control.reload_config() is True
-    assert calls == [["reload-or-restart", "linguafix.service"]]
+    assert calls == [["reload-or-restart", "lingvix.service"]]
 
 
 def test_autostart_reflects_xdg_entry(isolated_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(daemon_control, "systemd_enabled", lambda: False)
     assert daemon_control.autostart_enabled() is False
-    autostart = isolated_env / "config" / "autostart" / "linguafix.desktop"
+    autostart = isolated_env / "config" / "autostart" / "lingvix.desktop"
     autostart.parent.mkdir(parents=True, exist_ok=True)
     autostart.write_text("[Desktop Entry]\n", encoding="utf-8")
     assert daemon_control.autostart_enabled() is True
@@ -225,10 +225,87 @@ def test_autostart_reflects_xdg_entry(isolated_env: Path, monkeypatch: pytest.Mo
 
 def test_systemctl_missing_is_handled(isolated_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(daemon_control.shutil, "which", lambda _name: None)
-    assert daemon_control._systemctl(["is-active", "linguafix.service"]) is None
+    assert daemon_control._systemctl(["is-active", "lingvix.service"]) is None
     assert daemon_control.systemd_active() is False
     assert daemon_control.systemd_enabled() is False
-    assert daemon_control.enable_autostart() is False
+    # Without systemctl the install path is the XDG entry, which enable_autostart
+    # recreates from the packaged template.
+    assert daemon_control.enable_autostart() is True
+    assert daemon_control.autostart_enabled() is True
+    assert daemon_control.autostart_path().exists()
+
+
+def test_disable_autostart_removes_xdg_entry(
+    isolated_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Disabling must remove the XDG entry, not only the systemd unit.
+
+    Regression test for "autostart cannot be turned off": the entry written by
+    ``install.sh`` used to survive ``disable_autostart``, so the GUI switch
+    snapped back on at the next refresh.
+    """
+    monkeypatch.setattr(daemon_control, "systemd_enabled", lambda: False)
+
+    class _Result:
+        returncode = 0
+        stdout = "disabled\n"
+
+    monkeypatch.setattr(daemon_control, "_systemctl", lambda args, timeout=5.0: _Result())
+
+    autostart = isolated_env / "config" / "autostart" / "lingvix.desktop"
+    autostart.parent.mkdir(parents=True, exist_ok=True)
+    autostart.write_text("[Desktop Entry]\nName=Lingvix\n", encoding="utf-8")
+    assert daemon_control.autostart_enabled() is True
+
+    assert daemon_control.disable_autostart() is True
+    assert not autostart.exists()
+    assert daemon_control.autostart_enabled() is False
+
+
+def test_autostart_entry_hidden_is_disabled(
+    isolated_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A hidden desktop entry counts as disabled, not as present."""
+    monkeypatch.setattr(daemon_control, "systemd_enabled", lambda: False)
+    autostart = isolated_env / "config" / "autostart" / "lingvix.desktop"
+    autostart.parent.mkdir(parents=True, exist_ok=True)
+    autostart.write_text("[Desktop Entry]\nHidden=true\n", encoding="utf-8")
+    assert daemon_control.autostart_enabled() is False
+
+
+def test_global_enablement_is_detected(
+    isolated_env: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A globally enabled unit must read as enabled even if is-enabled says no."""
+    monkeypatch.setattr(daemon_control, "_systemctl", lambda args, timeout=5.0: None)
+    monkeypatch.setattr(daemon_control, "GLOBAL_USER_UNIT_DIR", tmp_path / "etc-systemd")
+    wants = tmp_path / "etc-systemd" / "default.target.wants"
+    wants.mkdir(parents=True)
+    assert daemon_control.systemd_enabled() is False
+    (wants / "lingvix.service").symlink_to(tmp_path / "lingvix.service")
+    assert daemon_control.globally_enabled() is True
+    assert daemon_control.systemd_enabled() is True
+
+
+def test_disable_masks_a_globally_enabled_unit(
+    isolated_env: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An unprivileged user cannot disable a global unit, so it is masked."""
+    monkeypatch.setattr(daemon_control, "GLOBAL_USER_UNIT_DIR", tmp_path / "etc-systemd")
+    wants = tmp_path / "etc-systemd" / "default.target.wants"
+    wants.mkdir(parents=True)
+    (wants / "lingvix.service").symlink_to(tmp_path / "lingvix.service")
+    monkeypatch.setattr(daemon_control, "systemd_enabled", lambda: False)
+    calls: list[list[str]] = []
+
+    class _Result:
+        returncode = 0
+
+    monkeypatch.setattr(
+        daemon_control, "_systemctl", lambda args, timeout=5.0: calls.append(args) or _Result()
+    )
+    assert daemon_control.disable_autostart() is True
+    assert ["mask", "lingvix.service"] in calls
 
 
 def test_pid_alive_permission_error_means_alive(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -260,10 +337,10 @@ def test_spawn_detached_prefers_launcher(monkeypatch: pytest.MonkeyPatch) -> Non
         def __init__(self, argv: list[str], **_kwargs: object) -> None:
             recorded.append(argv)
 
-    monkeypatch.setattr(daemon_control.shutil, "which", lambda _name: "/usr/bin/linguafix")
+    monkeypatch.setattr(daemon_control.shutil, "which", lambda _name: "/usr/bin/lingvix")
     monkeypatch.setattr(daemon_control.subprocess, "Popen", _Popen)
     assert daemon_control.spawn_detached() is True
-    assert recorded == [["/usr/bin/linguafix", "start", "--foreground"]]
+    assert recorded == [["/usr/bin/lingvix", "start", "--foreground"]]
 
 
 def test_spawn_detached_falls_back_to_module(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -277,9 +354,7 @@ def test_spawn_detached_falls_back_to_module(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(daemon_control.subprocess, "Popen", _Popen)
     monkeypatch.setattr(daemon_control.sys, "executable", "/usr/bin/python3")
     assert daemon_control.spawn_detached(dry_run=True) is True
-    assert recorded == [
-        ["/usr/bin/python3", "-m", "linguafix", "start", "--foreground", "--dry-run"]
-    ]
+    assert recorded == [["/usr/bin/python3", "-m", "lingvix", "start", "--foreground", "--dry-run"]]
 
 
 def test_spawn_detached_handles_oserror(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -328,7 +403,7 @@ def test_restart_service_daemon(isolated_env: Path, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(daemon_control, "_systemctl", lambda args, timeout=5.0: calls.append(args))
     monkeypatch.setattr(daemon_control, "_wait_until", lambda predicate, timeout: True)
     assert daemon_control.restart() is True
-    assert calls == [["start", "linguafix.service"]]
+    assert calls == [["start", "lingvix.service"]]
 
 
 def test_enable_and_disable_autostart(isolated_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -342,7 +417,7 @@ def test_enable_and_disable_autostart(isolated_env: Path, monkeypatch: pytest.Mo
     )
     assert daemon_control.enable_autostart() is True
     assert daemon_control.disable_autostart() is True
-    assert calls == [["enable", "linguafix.service"], ["disable", "linguafix.service"]]
+    assert calls == [["enable", "lingvix.service"], ["disable", "lingvix.service"]]
 
 
 def test_undo_requires_running_daemon(isolated_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -378,7 +453,7 @@ def test_is_zombie_true_for_zombie(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         daemon_control.Path,
         "read_text",
-        lambda self, encoding=None: "123 (linguafix) Z 1 2 3",
+        lambda self, encoding=None: "123 (lingvix) Z 1 2 3",
     )
     assert daemon_control._is_zombie(123) is True
 
@@ -387,7 +462,7 @@ def test_is_zombie_false_for_sleeping(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         daemon_control.Path,
         "read_text",
-        lambda self, encoding=None: "123 (linguafix) S 1 2 3",
+        lambda self, encoding=None: "123 (lingvix) S 1 2 3",
     )
     assert daemon_control._is_zombie(123) is False
 
@@ -441,7 +516,7 @@ def test_last_error_reports_systemd_failure(
         daemon_control,
         "_systemctl",
         lambda args, timeout=5.0: subprocess.CompletedProcess(
-            args, 1, "", "Failed to start linguafix.service: Unit failed to start"
+            args, 1, "", "Failed to start lingvix.service: Unit failed to start"
         ),
     )
     assert daemon_control.start() is False

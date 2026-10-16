@@ -3,10 +3,10 @@ import CodeBlock from "./CodeBlock.astro";
 import { DEB_URL, INSTALL_DOC, ISSUES, REPO, RELEASES, VERSION } from "../consts";
 
 const debCode = `wget ${DEB_URL}
-sudo apt install ./linguafix_${VERSION}_all.deb`;
+sudo apt install ./lingvix_${VERSION}_all.deb`;
 
 const srcCode = `git clone ${REPO}.git
-cd LinguaFix
+cd Lingvix
 bash install.sh`;
 ---
 
@@ -14,7 +14,7 @@ bash install.sh`;
   <div class="container-page">
     <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">Установка</h2>
     <p class="mx-auto mt-4 max-w-2xl text-center text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-      Одна команда — и LinguaFix работает в фоне.
+      Одна команда — и Lingvix работает в фоне.
     </p>
 
     <div class="mx-auto mt-10 max-w-3xl">

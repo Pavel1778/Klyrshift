@@ -1,13 +1,13 @@
 # Contributing
 
-Thanks for your interest in LinguaFix! This document describes how to set up a
+Thanks for your interest in Lingvix! This document describes how to set up a
 development environment and the standards we follow.
 
 ## Development setup
 
 ```bash
-git clone https://github.com/Pavel1778/LinguaFix.git
-cd LinguaFix
+git clone https://github.com/Pavel1778/Lingvix.git
+cd Lingvix
 bash scripts/dev_setup.sh
 ```
 
@@ -27,7 +27,7 @@ make check         # all of the above
 Or directly:
 
 ```bash
-python -m pytest tests/ -q --cov=linguafix --cov-report=term-missing
+python -m pytest tests/ -q --cov=lingvix --cov-report=term-missing
 ruff check .
 black --check .
 mypy --strict .
@@ -53,8 +53,8 @@ replaced with lightweight fakes; the tests exercise the real daemon logic.
 
 ## Adding a language
 
-1. Add the layout map to `src/linguafix/data/layouts.json`.
-2. Add `src/linguafix/data/ngrams_<lang>.json` with a `words` list and a
+1. Add the layout map to `src/lingvix/data/layouts.json`.
+2. Add `src/lingvix/data/ngrams_<lang>.json` with a `words` list and a
    `bigrams` frequency map.
 3. Extend `LanguageDetector` if the new language needs special casing.
 4. Add tests under `tests/`.
@@ -75,7 +75,7 @@ docs: clarify Wayland limitations
 bash scripts/build_deb.sh
 ```
 
-This produces `dist/linguafix_<version>_all.deb`. The script builds the package
+This produces `dist/lingvix_<version>_all.deb`. The script builds the package
 tree by hand (no `dh_make` required) and runs `dpkg-deb --build`.
 
 Test the package before publishing:
@@ -97,9 +97,9 @@ fakes. When you add a runtime dependency, add it to the `Depends:` line in
 `scripts/build_deb.sh` too — the two dependency lists (apt and pip) must stay in
 sync.
 
-Two files exist in both `data/` and `src/linguafix/data/`: `linguafix.service`,
-`linguafix.desktop` and `linguafix.svg`. Keep them identical — a test enforces
-this. `data/` is the source for `install.sh`; `src/linguafix/data/` is what the
+Two files exist in both `data/` and `src/lingvix/data/`: `lingvix.service`,
+`lingvix.desktop` and `lingvix.svg`. Keep them identical — a test enforces
+this. `data/` is the source for `install.sh`; `src/lingvix/data/` is what the
 installed package ships.
 
 ## Pull requests

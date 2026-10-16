@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-from linguafix.config import Config
+from lingvix.config import Config
 
 _DIST_PACKAGES = "/usr/lib/python3/dist-packages"
 if os.path.isdir(_DIST_PACKAGES) and _DIST_PACKAGES not in sys.path:
@@ -36,7 +36,7 @@ pytestmark = pytest.mark.skipif(not _gtk_usable(), reason="GTK4/libadwaita or di
 
 
 def test_button_builds_with_power_glyph() -> None:
-    from linguafix.gui.widgets.big_toggle import BigToggle
+    from lingvix.gui.widgets.big_toggle import BigToggle
 
     button = BigToggle()
     assert button.icon_name == "system-shutdown-symbolic"
@@ -44,7 +44,7 @@ def test_button_builds_with_power_glyph() -> None:
 
 
 def test_click_reports_toggle() -> None:
-    from linguafix.gui.widgets.big_toggle import BigToggle
+    from lingvix.gui.widgets.big_toggle import BigToggle
 
     clicks: list[bool] = []
     button = BigToggle(on_toggle=lambda: clicks.append(True))
@@ -53,7 +53,7 @@ def test_click_reports_toggle() -> None:
 
 
 def test_click_ignored_while_busy() -> None:
-    from linguafix.gui.widgets.big_toggle import BigToggle
+    from lingvix.gui.widgets.big_toggle import BigToggle
 
     clicks: list[bool] = []
     button = BigToggle(on_toggle=lambda: clicks.append(True))
@@ -68,14 +68,14 @@ def test_accessible_role_is_toggle_button() -> None:
     gi.require_version("Gtk", "4.0")
     from gi.repository import Gtk
 
-    from linguafix.gui.widgets.big_toggle import BigToggle
+    from lingvix.gui.widgets.big_toggle import BigToggle
 
     button = BigToggle()
     assert button._button.get_accessible_role() == Gtk.AccessibleRole.TOGGLE_BUTTON
 
 
 def test_state_classes_and_labels() -> None:
-    from linguafix.gui.widgets.big_toggle import STATE_ON, BigToggle
+    from lingvix.gui.widgets.big_toggle import STATE_ON, BigToggle
 
     button = BigToggle()
     button.set_state(STATE_ON, layout="ru")
@@ -91,7 +91,7 @@ def test_reduce_motion_class_follows_settings() -> None:
     gi.require_version("Gtk", "4.0")
     from gi.repository import Gtk
 
-    from linguafix.gui.widgets.big_toggle import BigToggle
+    from lingvix.gui.widgets.big_toggle import BigToggle
 
     settings = Gtk.Settings.get_default()
     if settings is None:
@@ -105,7 +105,7 @@ def test_reduce_motion_class_follows_settings() -> None:
 
 
 def test_stylesheet_loads() -> None:
-    from linguafix.gui.style import load_stylesheet
+    from lingvix.gui.style import load_stylesheet
 
     assert load_stylesheet() is True
 
@@ -119,7 +119,7 @@ def test_stylesheet_parses_without_errors() -> None:
 
     from gi.repository import Gtk
 
-    css = (resources.files("linguafix.gui") / "style.css").read_text(encoding="utf-8")
+    css = (resources.files("lingvix.gui") / "style.css").read_text(encoding="utf-8")
     errors: list[object] = []
     provider = Gtk.CssProvider()
     provider.connect("parsing-error", lambda _p, section, error: errors.append(error))
@@ -131,7 +131,7 @@ def test_stylesheet_file_is_packaged() -> None:
     """The CSS must be importable as package data (wheel and .deb)."""
     from importlib import resources
 
-    css = (resources.files("linguafix.gui") / "style.css").read_text(encoding="utf-8")
+    css = (resources.files("lingvix.gui") / "style.css").read_text(encoding="utf-8")
     assert ".big-toggle" in css
     assert "power" not in css  # the glyph is set in code, not CSS
 

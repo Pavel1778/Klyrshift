@@ -1,32 +1,32 @@
-# LinguaFix
+# Lingvix
 
 > **Твой язык. Автоматически.** — Your language. Automatically.
 > Автоматическое переключение раскладки клавиатуры для Debian GNOME (X11 и Wayland).
 
-LinguaFix — автоматический переключатель раскладки клавиатуры для Linux. Исправляет текст, набранный не в той раскладке (`ghbdtn` → `привет`), автоматически и мгновенно. Работает в Wayland и X11, GNOME 45+, KDE, Sway, через `evdev` + `uinput`. Аналог Caramba Switcher и Punto Switcher. Бесплатно, MIT, без телеметрии.
+Lingvix — автоматический переключатель раскладки клавиатуры для Linux. Исправляет текст, набранный не в той раскладке (`ghbdtn` → `привет`), автоматически и мгновенно. Работает в Wayland и X11, GNOME 45+, KDE, Sway, через `evdev` + `uinput`. Аналог Caramba Switcher и Punto Switcher. Бесплатно, MIT, без телеметрии.
 
-[![CI](https://github.com/Pavel1778/LinguaFix/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavel1778/LinguaFix/actions/workflows/ci.yml)
-[![License: MIT](https://linguafix.layero.app/badges/license.svg)](LICENSE)
-[![Python 3.10+](https://linguafix.layero.app/badges/python.svg)](https://www.python.org/downloads/)
-[![Debian / Ubuntu](https://linguafix.layero.app/badges/platform.svg)](#-требования--requirements)
+[![CI](https://github.com/Pavel1778/Lingvix/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavel1778/Lingvix/actions/workflows/ci.yml)
+[![License: MIT](https://lingvix.layero.app/badges/license.svg)](LICENSE)
+[![Python 3.10+](https://lingvix.layero.app/badges/python.svg)](https://www.python.org/downloads/)
+[![Debian / Ubuntu](https://lingvix.layero.app/badges/platform.svg)](#-требования--requirements)
 
 ---
 
 ## 🇷🇺 О проекте
 
 Вы печатаете `ghbdtn`, а на экране появляется `ghbdtn` вместо `привет`?
-LinguaFix замечает это, исправляет текст и переключает раскладку —
+Lingvix замечает это, исправляет текст и переключает раскладку —
 автоматически, без вашего участия.
 
 Демон читает нажатия клавиш напрямую через `evdev`, накапливает набранный
 текст и после короткой паузы проверяет, соответствует ли он текущей
 раскладке. Если слово «превращается» в осмысленное при смене раскладки —
-LinguaFix переписывает его и переключает язык. Проект вдохновлён
+Lingvix переписывает его и переключает язык. Проект вдохновлён
 **Caramba Switcher** для Windows (упоминание бренда только как источника идеи).
 
 ## 🇬🇧 About
 
-LinguaFix is a background daemon for Debian GNOME (X11 and Wayland) that
+Lingvix is a background daemon for Debian GNOME (X11 and Wayland) that
 detects text typed in the wrong keyboard layout and fixes it automatically.
 It reads raw key events via `evdev`, tracks the word you are typing, and — the
 moment you press Space or Enter — replaces mistyped text and switches the
@@ -37,7 +37,7 @@ Caramba Switcher for Windows.
 
 ```
   Печатаете:   ghbdtn
-  Получаете:   привет   ← LinguaFix исправил и переключил раскладку
+  Получаете:   привет   ← Lingvix исправил и переключил раскладку
 ```
 
 ![demo placeholder](docs/demo-placeholder.svg)
@@ -64,16 +64,16 @@ Caramba Switcher for Windows.
 - ⚙️ Настраиваемые таймауты, языки и backend'ы
 - 🧩 CLI: `start`, `stop`, `restart`, `kill`, `status`, `config`, `fix`, `dict`,
   `export`, `import`, `doctor`, `collect-logs`, `logs`
-- 🩺 `linguafix doctor` — самодиагностика окружения с таблицей ✅/❌ и подсказками
-- 📜 `linguafix logs` — показать журнал демона (`-n`, `-f`, `--level`)
-- 📦 `linguafix collect-logs` — один tarball со всей диагностикой для баг-репорта
+- 🩺 `lingvix doctor` — самодиагностика окружения с таблицей ✅/❌ и подсказками
+- 📜 `lingvix logs` — показать журнал демона (`-n`, `-f`, `--level`)
+- 📦 `lingvix collect-logs` — один tarball со всей диагностикой для баг-репорта
 - 🔁 Горячая перезагрузка конфига по `SIGHUP`
 - 🧪 Флаг `--dry-run` — анализ без изменения текста (отладка и тесты)
 - 🔒 Приватность: в лог пишутся только метаданные, набранный текст не сохраняется
 
 ## 🎯 Сравнение с аналогами / Comparison
 
-| Возможность | XNeur | gswitch | lay | LinguaFix |
+| Возможность | XNeur | gswitch | lay | Lingvix |
 |---|---|---|---|---|
 | Автоматическое исправление | ⚠️ | ❌ | ⚠️ | ✅ |
 | Wayland | ❌ | ✅ | ❌ | ✅ |
@@ -98,7 +98,7 @@ Caramba Switcher for Windows.
 > `Recommends`, а не `Depends`: на сервере без графики он не нужен. `apt`
 > ставит `Recommends` по умолчанию, поэтому обычная установка даёт рабочий
 > GUI; если вы ставили с `--no-install-recommends`, доставьте их вручную.
-> `linguafix doctor` покажет отдельную строку «Графический интерфейс» с
+> `lingvix doctor` покажет отдельную строку «Графический интерфейс» с
 > точной командой.
 
 ## 🚀 Установка / Installation
@@ -108,7 +108,7 @@ Caramba Switcher for Windows.
 ### Для пользователей: пакет .deb (ничего настраивать не нужно)
 
 ```bash
-sudo apt install ./linguafix_0.2.8.2_all.deb
+sudo apt install ./lingvix_0.2.8.2_all.deb
 ```
 
 Пакет **самодостаточен**: он ставит udev-правило с `TAG+="uaccess"`, включает
@@ -121,18 +121,18 @@ systemd user-сервис и загружает модуль `uinput` во вр�
 > перелогина после `usermod`.
 
 Готовый `.deb` берётся со страницы
-[Releases](https://github.com/Pavel1778/LinguaFix/releases) или собирается
+[Releases](https://github.com/Pavel1778/Lingvix/releases) или собирается
 локально: `make build-deb`.
 
 ### Для разработчиков: из исходников
 
 ```bash
-git clone https://github.com/Pavel1778/LinguaFix.git
-cd LinguaFix
+git clone https://github.com/Pavel1778/Lingvix.git
+cd Lingvix
 bash install.sh          # добавьте --yes для неинтерактивного режима
 ```
 
-`install.sh` ставит то же самое, но в venv внутри `~/.local/share/linguafix`.
+`install.sh` ставит то же самое, но в venv внутри `~/.local/share/lingvix`.
 Доступ к устройствам по-прежнему выдаётся через udev-правило с `uaccess`.
 
 Подробности: [docs/INSTALL.md](docs/INSTALL.md).
@@ -140,22 +140,22 @@ bash install.sh          # добавьте --yes для неинтеракти�
 ## ⚡ Быстрый старт / Quick start
 
 ```bash
-linguafix doctor                       # самодиагностика окружения (таблица ✅/❌)
-linguafix status                       # проверить, что демон запущен
-linguafix fix --text ghbdtn            # предпросмотр исправления
-linguafix fix --text ghbdtn --apply    # применить исправление
-linguafix fix --text ghbdtn --apply --dry-run   # показать, но не применять
-linguafix start --foreground --dry-run # демон-наблюдатель: только логирует
-linguafix dict add vercel              # научить слово, которое нельзя исправлять
-linguafix config show                  # показать конфигурацию
-linguafix config path                  # путь к config.toml
-linguafix export ~/lf-backup.json      # бэкап настроек, словаря и сниппетов
-linguafix import ~/lf-backup.json      # восстановить из бэкапа
-linguafix restart                      # перезапустить демон
-linguafix logs -n 50                   # последние 50 строк журнала
-linguafix logs -f --level DEBUG        # следить за журналом, только DEBUG
-linguafix collect-logs                 # собрать архив для баг-репорта
-systemctl --user status linguafix.service
+lingvix doctor                       # самодиагностика окружения (таблица ✅/❌)
+lingvix status                       # проверить, что демон запущен
+lingvix fix --text ghbdtn            # предпросмотр исправления
+lingvix fix --text ghbdtn --apply    # применить исправление
+lingvix fix --text ghbdtn --apply --dry-run   # показать, но не применять
+lingvix start --foreground --dry-run # демон-наблюдатель: только логирует
+lingvix dict add vercel              # научить слово, которое нельзя исправлять
+lingvix config show                  # показать конфигурацию
+lingvix config path                  # путь к config.toml
+lingvix export ~/lf-backup.json      # бэкап настроек, словаря и сниппетов
+lingvix import ~/lf-backup.json      # восстановить из бэкапа
+lingvix restart                      # перезапустить демон
+lingvix logs -n 50                   # последние 50 строк журнала
+lingvix logs -f --level DEBUG        # следить за журналом, только DEBUG
+lingvix collect-logs                 # собрать архив для баг-репорта
+systemctl --user status lingvix.service
 ```
 
 Флаг `--dry-run` удобен для отладки: демон полностью читает и анализирует
@@ -178,11 +178,11 @@ Shift, Ctrl или Alt.
 языка, а исходное — не слово текущего. Слишком короткое и неоднозначное
 (например одиночная буква) остаётся нетронутым — ошибочная догадка хуже, чем
 её отсутствие. Чтобы принудительно задать конкретное слово, добавьте его в
-словарь (`linguafix dict add`).
+словарь (`lingvix dict add`).
 
 ## ⚙️ Конфигурация / Configuration
 
-Файл: `~/.config/linguafix/config.toml` (создаётся с настройками по умолчанию).
+Файл: `~/.config/lingvix/config.toml` (создаётся с настройками по умолчанию).
 
 ```toml
 analysis_timeout = 0.8     # запасной таймер простоя, секунды (слова без разделителя)
@@ -228,9 +228,16 @@ stop_words = [
 
 # T9: исправление опечаток внутри слова (выключено по умолчанию).
 typo_correction = false    # true — включить
+typo_mode = "off"          # off | manual | auto | hybrid (независимо от mode)
+typo_hotkey = "CTRL+SHIFT+F"  # ручной триггер T9 в режимах manual/hybrid
 typo_max_distance = 1      # 1 или 2 опечатки в коротком слове
 typo_max_distance_long = 2 # 1 или 2 опечатки в слове длиной от 6 символов
 typo_min_word_length = 4   # не трогать короткие слова
+
+# Пунктуация: замена -- на тире, ... на многоточие, умные кавычки (выкл).
+punctuation_correction = false
+punctuation_mode = "off"   # off | manual | auto | hybrid
+punctuation_hotkey = "CTRL+SHIFT+P"  # ручной триггер в режимах manual/hybrid
 
 # Раскладка по приложениям: при фокусе приложения включать его раскладку.
 app_layout_switch = false
@@ -238,7 +245,7 @@ app_layout_switch = false
 # kitty = "ru"
 # code = "us"
 
-# Приложения, которые LinguaFix не трогает автоматически (терминалы, IDE,
+# Приложения, которые Lingvix не трогает автоматически (терминалы, IDE,
 # игры, где набранное — это команда или идентификатор, а не слово). Список
 # уже заполнен разумными значениями; свои приложения можно добавить.
 exceptions_apps = [
@@ -273,14 +280,14 @@ e-mail, пути или версии (`github.com`, `test@example.com`, `3.14`),
 слово — и конвертация станет для детектора «известной хорошей»:
 
 ```bash
-linguafix dict add vercel     # теперь муксуд → vercel срабатывает
-linguafix dict list           # показать слова
-linguafix dict remove vercel  # удалить слово
+lingvix dict add vercel     # теперь муксуд → vercel срабатывает
+lingvix dict list           # показать слова
+lingvix dict remove vercel  # удалить слово
 ```
 
 В GUI есть вкладка **«Словарь»**: добавление и удаление слов, поиск, импорт и
 экспорт файла, кнопка «Применить к демону» (перечитывает словарь без
-перезапуска). Файл — `~/.local/share/linguafix/dictionary.txt`, по одному слову
+перезапуска). Файл — `~/.local/share/lingvix/dictionary.txt`, по одному слову
 на строку. Научаемое слово никогда не переписывается, а его конвертация в
 другую раскладку считается верной. Демон сам никогда не пишет набранный текст в
 этот файл.
@@ -293,12 +300,12 @@ linguafix dict remove vercel  # удалить слово
 не меняя оценку n-грамм, поэтому уже верные слова остаются верными:
 
 ```bash
-linguafix dict download ru          # скачать топ-50k для русского
-linguafix dict download en          # поддерживаются: ru, en, uk, de, fr
-linguafix dict import-file ~/Downloads/ru-50k.txt --lang ru   # вручную
+lingvix dict download ru          # скачать топ-50k для русского
+lingvix dict download en          # поддерживаются: ru, en, uk, de, fr
+lingvix dict import-file ~/Downloads/ru-50k.txt --lang ru   # вручную
 ```
 
-Файлы кладутся в `~/.local/share/linguafix/dictionaries/<lang>.txt` и
+Файлы кладутся в `~/.local/share/lingvix/dictionaries/<lang>.txt` и
 подхватываются при следующем запуске демона (или по хоткею перезагрузки
 конфигурации). Источник — [FrequencyWords](https://github.com/hermitdave/FrequencyWords)
 (лицензия MIT); зеркало списков лежит в репозитории в папке `dictionaries/`.
@@ -311,10 +318,10 @@ linguafix dict import-file ~/Downloads/ru-50k.txt --lang ru   # вручную
 Разделы ставятся отдельно и **не** входят в `.deb`:
 
 ```bash
-linguafix dict categories                 # список разделов
-linguafix dict install it --lang ru       # скачать и подключить
-linguafix dict list-installed             # что уже включено
-linguafix dict remove-category it         # отключить
+lingvix dict categories                 # список разделов
+lingvix dict install it --lang ru       # скачать и подключить
+lingvix dict list-installed             # что уже включено
+lingvix dict remove-category it         # отключить
 ```
 
 Приоритетные разделы (`it`, `medicine`, `science`) содержат **1000+ слов на
@@ -326,10 +333,10 @@ linguafix dict remove-category it         # отключить
 Включённые разделы хранятся в `installed_dict_categories` (по умолчанию
 `["base"]`). Приоритет при детекции: **пользовательский словарь → тематический →
 базовый → T9**. Каждый раздел публикуется как ассет релиза
-`linguafix-dict-<категория>.tar.gz`; при установке он сначала тянется из релиза,
+`lingvix-dict-<категория>.tar.gz`; при установке он сначала тянется из релиза,
 затем из зеркала репозитория, затем из локальной копии — так `install` работает
 и офлайн. Каталог с разделами — на странице
-[`/dictionaries`](https://linguafix.layero.app/dictionaries).
+[`/dictionaries`](https://lingvix.layero.app/dictionaries).
 
 ### Ручной разворот раскладки
 
@@ -340,7 +347,7 @@ linguafix dict remove-category it         # отключить
 
 ### Исправление опечаток (T9)
 
-Отдельно от раскладки LinguaFix умеет исправлять **опечатку внутри слова**
+Отдельно от раскладки Lingvix умеет исправлять **опечатку внутри слова**
 (`langauge` → `language`, `teh` → `the`). Функция выключена по умолчанию:
 неверное исправление хуже, чем его отсутствие. Включается в GUI (вкладка
 «Дополнительно» → «Исправление опечаток (T9)») или в конфиге
@@ -361,9 +368,9 @@ T9 не зависит от режима: в `manual` автоправка *ра
 
 Для длинных слов правило чуть шире: слово длиной от 6 символов может
 отличаться на `typo_max_distance_long` правок (по умолчанию 2), но только
-если лучший вариант заметно частотнее второго — иначе LinguaFix молчит.
+если лучший вариант заметно частотнее второго — иначе Lingvix молчит.
 
-Если ближайших вариантов два и более (или слово уже верное) — LinguaFix молчит.
+Если ближайших вариантов два и более (или слово уже верное) — Lingvix молчит.
 Научаемые слова и токены с разделителем (URL, e-mail, путь, `id-с-дефисом`)
 никогда не «исправляются». T9 работает только там, где раскладка признана
 верной, поэтому не спорит с авто-переключением.
@@ -371,15 +378,15 @@ T9 не зависит от режима: в `manual` автоправка *ра
 После правки конфига перезапустите сервис или отправьте `SIGHUP`:
 
 ```bash
-systemctl --user restart linguafix.service
+systemctl --user restart lingvix.service
 # или
-kill -HUP "$(cat ~/.cache/linguafix/daemon.lock)"
+kill -HUP "$(cat ~/.cache/lingvix/daemon.lock)"
 ```
 
 ### Раскладка по приложениям
 
 Приложения, в которых вы почти всегда печатаете на одном языке, можно
-закрепить за раскладкой. При переходе фокуса на такое приложение LinguaFix
+закрепить за раскладкой. При переходе фокуса на такое приложение Lingvix
 включит его раскладку (не чаще, чем раз в ~0.35 с, и не повторно, пока фокус
 остаётся в нём — чтобы не спорить с ручным переключением).
 
@@ -393,7 +400,7 @@ code = "us"
 В GUI — вкладка **«Дополнительно»** → **«Раскладка по приложениям»**, с кнопкой
 «Определить» текущее приложение.
 
-### Исключения: где LinguaFix не трогает текст
+### Исключения: где Lingvix не трогает текст
 
 В терминале, редакторе или игре набранное — это команда, идентификатор или
 сообщение в чат, а не слово, поэтому «исправлять» его не нужно. Список
@@ -405,7 +412,7 @@ Wine); свои приложения можно добавить в GUI (вкл�
 
 ### Тихие часы
 
-Чтобы LinguaFix не переключал раскладку в заданное время (например, ночью),
+Чтобы Lingvix не переключал раскладку в заданное время (например, ночью),
 включите `quiet_hours_enabled` и задайте `quiet_hours_start`/`quiet_hours_end`
 в формате `ЧЧ:ММ`. Окно может пересекать полночь (`22:00`–`08:00`). Ручной fix
 продолжает работать.
@@ -418,7 +425,7 @@ Wine); свои приложения можно добавить в GUI (вкл�
 
 ### Сниппеты (текстовые сокращения)
 
-В `~/.config/linguafix/snippets.toml` можно задать сокращения; они
+В `~/.config/lingvix/snippets.toml` можно задать сокращения; они
 разворачиваются **до** анализа раскладки:
 
 ```toml
@@ -432,7 +439,7 @@ Wine); свои приложения можно добавить в GUI (вкл�
 
 ### Исправление уже выделенного текста
 
-Выделите текст и нажмите `CTRL+SHIFT+L` — LinguaFix скопирует его, сменит
+Выделите текст и нажмите `CTRL+SHIFT+L` — Lingvix скопирует его, сменит
 раскладку и вставит обратно. Хоткей настраивается в GUI; функция включается
 через `selection_fix_enabled`.
 
@@ -454,18 +461,18 @@ Wine); свои приложения можно добавить в GUI (вкл�
 
 | Проблема | Решение |
 |---|---|
-| Не исправляет | Запустите `linguafix doctor` — он проверит права, устройства и backend'ы |
+| Не исправляет | Запустите `lingvix doctor` — он проверит права, устройства и backend'ы |
 | `Permission denied: /dev/input/...` | Перезагрузите udev-правило: `sudo udevadm control --reload-rules && sudo udevadm trigger`; проверьте `getfacl /dev/input/event3` — подробнее [TROUBLESHOOTING: ACL после .deb](docs/TROUBLESHOOTING.md#после-установки-deb-doctor-жалуется-на-права-devinput-или-devuinput) |
 | `doctor` из TTY или ssh | Это ожидаемо: тип сессии `unknown` — см. [TROUBLESHOOTING: doctor из TTY/ssh](docs/TROUBLESHOOTING.md#doctor-запущен-из-tty-или-ssh) |
 | Переключает, но не заменяет текст | Смените `backend` на `uinput` |
 | Исправляет то, что не нужно | Включены проверки `plausibility_check`, `structural_boundaries`, `identifier_guard`; добавьте строку в `custom_skip_regex` — подробнее [TROUBLESHOOTING: ложные срабатывания](docs/TROUBLESHOOTING.md#a-string-i-typed-is-corrected-wrongly-false-positive) |
 | Нужно вернуть последнее исправление | Хоткей undo (`SHIFT+BACKSPACE`) или кнопка **«Отменить последнее исправление»** в GUI |
-| Хочу посмотреть журнал | `linguafix logs -f --level DEBUG` — набранный текст в журнал не попадает |
-| Кнопка «включить» показывает битый значок | Обновите тему иконок или переустановите пакет: LinguaFix рисует символ питания сам, если темы нет |
+| Хочу посмотреть журнал | `lingvix logs -f --level DEBUG` — набранный текст в журнал не попадает |
+| Кнопка «включить» показывает битый значок | Обновите тему иконок или переустановите пакет: Lingvix рисует символ питания сам, если темы нет |
 | Не работает в терминале | Попробуйте `backend = "uinput"` |
-| `linguafix gui` пишет «нужны GTK4 и libadwaita» | `sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1` (в `.deb` это `Recommends`; `doctor` покажет точную команду) |
+| `lingvix gui` пишет «нужны GTK4 и libadwaita» | `sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1` (в `.deb` это `Recommends`; `doctor` покажет точную команду) |
 | Нет иконки в трее | Установите `python3-gi gir1.2-appindicator3-0.1` |
-| Сообщаете о баге | Приложите `linguafix collect-logs` — в архиве нет набранного текста |
+| Сообщаете о баге | Приложите `lingvix collect-logs` — в архиве нет набранного текста |
 | Конфликт с IBus/Fcitx | Отключите их, если не используете |
 | Не переключает раскладку в Wayland | Установите `g3kb-switch` |
 
@@ -473,7 +480,7 @@ Wine); свои приложения можно добавить в GUI (вкл�
 
 ## ❓ FAQ
 
-**Работает ли LinguaFix в полях пароля?**
+**Работает ли Lingvix в полях пароля?**
 Нет — Wayland не позволяет определить, что фокус в поле пароля. Используйте
 стоп-слова (`stop_words`), чтобы защитить конкретные строки.
 
@@ -482,23 +489,23 @@ Wine); свои приложения можно добавить в GUI (вкл�
 синтетические нажатия. Это известное ограничение Wayland.
 
 **Как добавить язык?**
-Добавьте раскладку в `src/linguafix/data/layouts.json` и файл
-`src/linguafix/data/ngrams_<lang>.json` со словами и биграммами. См.
+Добавьте раскладку в `src/lingvix/data/layouts.json` и файл
+`src/lingvix/data/ngrams_<lang>.json` со словами и биграммами. См.
 [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 **Почему короткие слова не исправляются?**
 У слов из 1–2 символов слишком мало статистического сигнала. Порог задаётся
 параметром `min_word_length`.
 
-**Как временно остановить LinguaFix?**
-`systemctl --user stop linguafix.service` или `linguafix stop`.
+**Как временно остановить Lingvix?**
+`systemctl --user stop lingvix.service` или `lingvix stop`.
 
 **Нужны ли root-права?**
 Только при установке (udev-правило и systemd-сервис). Сам демон работает от
 пользователя.
 
-**Как удалить LinguaFix?**
-Для `.deb`: `sudo apt remove --purge linguafix`. Из исходников:
+**Как удалить Lingvix?**
+Для `.deb`: `sudo apt remove --purge lingvix`. Из исходников:
 `bash uninstall.sh` (добавьте `--purge`, чтобы удалить конфиг и логи).
 
 ## 🧑💻 Разработка / Development
@@ -527,10 +534,10 @@ make build-deb                # собрать .deb в dist/
   завершении посреди замены текст может остаться обрезанным. Используйте
   `uinput` (значение по умолчанию в Debian-пакете), где это возможно.
 - Демон слушает все доступные клавиатуры; устройство с именем, содержащим
-  `linguafix` или `uinput`, намеренно пропускается (защита от петли).
+  `lingvix` или `uinput`, намеренно пропускается (защита от петли).
 - T9 исправляет только слова из встроенного частотного словаря. Бренды,
   названия компаний и техножаргон (`vercel`, `kubernetes`, имена) в него не
-  входят — добавьте их через `linguafix dict add <слово>`, иначе детектор
+  входят — добавьте их через `lingvix dict add <слово>`, иначе детектор
   промолчит.
 - Языки `uk`, `de`, `fr` включаются вручную (`languages`) и проверены меньше,
   чем `en`/`ru`; по умолчанию активны только `en` и `ru`.
@@ -548,7 +555,7 @@ make build-deb                # собрать .deb в dist/
 MIT — см. [LICENSE](LICENSE).
 
 История изменений — в [CHANGELOG.md](CHANGELOG.md). Баги и предложения —
-в [Issues](https://github.com/Pavel1778/LinguaFix/issues).
+в [Issues](https://github.com/Pavel1778/Lingvix/issues).
 
 ## 🙏 Благодарности / Acknowledgements
 
@@ -561,8 +568,8 @@ MIT — см. [LICENSE](LICENSE).
 
 ## 🌐 Сайт
 
-- **Основной сайт (RU):** https://linguafix.layero.app
-- **Зеркало (EN):** https://linguafix.vercel.app
+- **Основной сайт (RU):** https://lingvix.layero.app
+- **Зеркало (EN):** https://lingvix.vercel.app
 
 Оба сайта индексируются в поисковиках с per-host canonical и hreflang
 (`ru` / `en` / `x-default`), поэтому они не конкурируют как дубликаты.

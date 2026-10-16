@@ -15,9 +15,9 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix.config import Config  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector  # noqa: E402
+from lingvix.config import Config  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = int(evdev.ecodes.EV_KEY)
 
@@ -66,9 +66,9 @@ class FakeInjector:
         return "backend=fake"
 
 
-def _make_daemon(injector: FakeInjector) -> LinguaFixDaemon:
+def _make_daemon(injector: FakeInjector) -> LingvixDaemon:
     config = Config(analysis_timeout=0.1, min_word_length=3, stop_words=[], on_space=True)
-    return LinguaFixDaemon(
+    return LingvixDaemon(
         config,
         detector=LanguageDetector(converter=None, stop_words=[], min_word_length=3),
         switcher=FakeSwitcher("us"),
@@ -80,7 +80,7 @@ def _event(name: str, value: int = 1) -> FakeEvent:
     return FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), value)
 
 
-def _type(daemon: LinguaFixDaemon, names: list[str]) -> None:
+def _type(daemon: LingvixDaemon, names: list[str]) -> None:
     for name in names:
         daemon._handle_event(_event(name, 1))
         daemon._handle_event(_event(name, 0))
@@ -88,7 +88,7 @@ def _type(daemon: LinguaFixDaemon, names: list[str]) -> None:
 
 def test_key_typed_during_fix_is_replayed() -> None:
     """A key pressed while the replacement runs lands in the buffer afterwards."""
-    daemon_ref: dict[str, LinguaFixDaemon] = {}
+    daemon_ref: dict[str, LingvixDaemon] = {}
 
     def type_during_fix() -> None:
         # The user hits ``x`` between the backspaces and the injected text.
@@ -129,7 +129,7 @@ def test_events_are_queued_while_processing() -> None:
 
 def test_deferred_queue_is_bounded() -> None:
     """A held key cannot grow the deferred queue without bound."""
-    from linguafix.daemon import _MAX_DEFERRED_EVENTS
+    from lingvix.daemon import _MAX_DEFERRED_EVENTS
 
     daemon = _make_daemon(FakeInjector())
     daemon._processing_buffer = True

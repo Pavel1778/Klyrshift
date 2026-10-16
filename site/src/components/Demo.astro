@@ -1,14 +1,28 @@
 ---
+// The landing-page demo mirrors the daemon's decision, not just its conversion:
+// text that already reads as real words in the layout it was typed in is left
+// alone, exactly like the product. Flipping every token would turn correct
+// Russian into gibberish, which is the opposite of what Lingvix does. The model
+// (vocabulary + bigram table per language) is generated from the shipped corpora
+// by scripts/build_demo_model.py, so it cannot drift from the real detector.
+import { pick } from "../lib/site";
 ---
 
 <section id="demo" class="container-page py-16 sm:py-20">
-  <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">Попробуйте сами</h2>
+  <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+    {pick("Попробуйте сами", "Try it yourself")}
+  </h2>
   <p class="mx-auto mt-4 max-w-2xl text-center text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-    Наберите текст не в той раскладке — демо покажет, что вы имели в виду.
+    {pick(
+      "Наберите текст не в той раскладке — демо покажет, что вы имели в виду. Правильный текст Lingvix не трогает.",
+      "Type text in the wrong layout and the demo shows what you meant. Text that is already correct is left alone."
+    )}
   </p>
 
   <div class="mx-auto mt-10 max-w-2xl">
-    <label for="demo-input" class="mb-2 block text-sm font-medium">Наберите здесь</label>
+    <label for="demo-input" class="mb-2 block text-sm font-medium">
+      {pick("Наберите здесь", "Type here")}
+    </label>
     <input
       id="demo-input"
       type="text"
@@ -22,25 +36,40 @@
     />
 
     <div class="mt-4 rounded-xl border border-[#e5e5e5] bg-white p-4 dark:border-[#3d3d3d] dark:bg-[#2d2d2d]">
-      <p class="text-sm text-[#0a0a0a]/70 dark:text-[#fafafa]/70">LinguaFix исправит на:</p>
+      <p class="text-sm text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
+        {pick("Lingvix исправит на:", "Lingvix would correct it to:")}
+      </p>
       <p
         id="demo-output"
         class="mt-1 min-h-[1.75rem] font-mono text-lg text-[#1c71d8] dark:text-[#3584e4]"
       >
         <span class="text-[#0a0a0a]/30 dark:text-[#fafafa]/30">…</span>
       </p>
+      <p
+        id="demo-note"
+        data-note={pick(
+          "Текст уже корректен — менять нечего.",
+          "Already correct — nothing to change."
+        )}
+        class="mt-2 hidden text-xs text-[#0a0a0a]/50 dark:text-[#fafafa]/50"
+      ></p>
     </div>
 
     <div class="mt-5 flex flex-wrap items-center gap-2">
-      <span class="text-sm text-[#0a0a0a]/60 dark:text-[#fafafa]/60">Попробуйте:</span>
+      <span class="text-sm text-[#0a0a0a]/60 dark:text-[#fafafa]/60">
+        {pick("Попробуйте:", "Try:")}
+      </span>
       <button type="button" class="badge demo-chip" data-fill="ghbdtn">ghbdtn</button>
       <button type="button" class="badge demo-chip" data-fill="руддщ">руддщ</button>
       <button type="button" class="badge demo-chip" data-fill="Rfr ltkf">Rfr ltkf</button>
+      <button type="button" class="badge demo-chip" data-fill="привет">привет</button>
     </div>
   </div>
 </section>
 
 <script>
+  import model from "../data/demo-model.json";
+
   const US = "qwertyuiop[]asdfghjkl;'zxcvbnm,./`QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?~";
   const RU = "йцукенгшщзхъфывапролджэячсмитьбю.ёЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,Ё";
   const toRu: Record<string, string> = {};
@@ -50,32 +79,105 @@
     toEn[RU[i]] = US[i];
   }
 
-  // A token that joins sub-parts with a structural separator (URL, e-mail,
-  // path, version, hyphenated id) is never rewritten — the daemon skips it too.
-  const SEPARATOR = /\w[.@/\\:_-]\w/;
+  const CYRILLIC = /[\u0400-\u04FF]/;
+  const STRUCTURAL_SEPARATOR = /\w[.@/\\=#&~|<>[\]{}()]\w/;
+  const IDENTIFIER = /[a-z][A-Z]|_|[^\W_]-[^\W_]|[A-Za-z]\d|\d[A-Za-z]/;
+  const VOWELS = new Set("aeiouyаеёиоуыэюяіїє");
+  // Mirrors the detector defaults (Config.max_consecutive_consonants,
+  // min_vowel_ratio, plausibility_floor, UNKNOWN_BIGRAM_PROBABILITY).
+  const MAX_CONSONANTS = 6;
+  const MIN_VOWEL_RATIO = 0.15;
+  const PLAUSIBILITY_FLOOR = -7.0;
+  const UNKNOWN_BIGRAM = 1e-7;
+  const MIN_WORD_LENGTH = 3;
 
-  // Convert each whitespace-separated token to the opposite layout, keeping
-  // other characters and leaving separator-joined tokens untouched.
+  type LangModel = { words: string[]; bigrams: Record<string, number> };
+  const models = model as unknown as Record<string, LangModel>;
+  const vocab: Record<string, Set<string>> = {};
+  for (const [lang, m] of Object.entries(models)) {
+    vocab[lang] = new Set(m.words);
+  }
+
+  /** Average log-probability of a word under the language's bigram model. */
+  function bigramScore(word: string, lang: string): number {
+    const table = models[lang]?.bigrams;
+    if (!table) return -Infinity;
+    const padded = "^" + word.toLowerCase() + "$";
+    let total = 0;
+    let pairs = 0;
+    for (let i = 0; i < padded.length - 1; i++) {
+      total += Math.log(table[padded.slice(i, i + 2)] ?? UNKNOWN_BIGRAM);
+      pairs++;
+    }
+    return pairs === 0 ? -Infinity : total / pairs;
+  }
+
+  /** The detector's per-word plausibility test, ported to TypeScript. */
+  function isPlausible(word: string, lang: string): boolean {
+    const lowered = word.toLowerCase();
+    if (vocab[lang]?.has(lowered)) return true;
+    if (lowered.length < MIN_WORD_LENGTH) return true;
+    const letters = [...lowered].filter((ch) => /\p{L}/u.test(ch));
+    if (letters.length === 0) return true;
+    const bigram = bigramScore(lowered, lang);
+    if (bigram === -Infinity) return true;
+    if (bigram < PLAUSIBILITY_FLOOR) return false;
+    const vowels = letters.filter((ch) => VOWELS.has(ch)).length;
+    if (vowels === 0) return false;
+    if (vowels / letters.length < MIN_VOWEL_RATIO) return false;
+    let run = 0;
+    for (const ch of letters) {
+      run = VOWELS.has(ch) ? 0 : run + 1;
+      if (run > MAX_CONSONANTS) return false;
+    }
+    return true;
+  }
+
+  /** True when the token is guarded (URL, code, or already plausible). */
+  function isGuarded(token: string, lang: string): boolean {
+    if (STRUCTURAL_SEPARATOR.test(token) || IDENTIFIER.test(token)) return true;
+    return isPlausible(token, lang);
+  }
+
+  function flip(token: string): string {
+    const map = CYRILLIC.test(token) ? toEn : toRu;
+    return [...token].map((ch) => map[ch] ?? ch).join("");
+  }
+
+  /**
+   * Convert only the tokens that are not plausible in the layout they were
+   * typed in, which is what the daemon does per word.
+   */
   function convert(text: string): string {
     return text.replace(/\S+/g, (token) => {
-      if (SEPARATOR.test(token)) return token;
-      const map = /[А-Яа-яЁё]/.test(token) ? toEn : toRu;
-      return [...token].map((ch) => map[ch] ?? ch).join("");
+      const lang = CYRILLIC.test(token) ? "ru" : "en";
+      if (isGuarded(token, lang)) return token;
+      return flip(token);
     });
   }
 
   const input = document.getElementById("demo-input") as HTMLInputElement | null;
   const output = document.getElementById("demo-output");
+  const note = document.getElementById("demo-note");
 
   function render() {
     if (!input || !output) return;
     const value = input.value;
     if (!value.trim()) {
-      output.innerHTML =
-        '<span class="text-[#0a0a0a]/30 dark:text-[#fafafa]/30">…</span>';
+      output.innerHTML = '<span class="text-[#0a0a0a]/30 dark:text-[#fafafa]/30">…</span>';
+      if (note) note.classList.add("hidden");
       return;
     }
-    output.textContent = convert(value);
+    const result = convert(value);
+    output.textContent = result;
+    if (note) {
+      if (result === value) {
+        note.textContent = note.dataset.note ?? "";
+        note.classList.remove("hidden");
+      } else {
+        note.classList.add("hidden");
+      }
+    }
   }
 
   input?.addEventListener("input", render);

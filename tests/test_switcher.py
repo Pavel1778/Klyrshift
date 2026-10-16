@@ -1,4 +1,4 @@
-"""Tests for :mod:`linguafix.switcher`."""
+"""Tests for :mod:`lingvix.switcher`."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import subprocess
 
 import pytest
 
-from linguafix import switcher as switcher_module
-from linguafix.switcher import LayoutSwitcher
+from lingvix import switcher as switcher_module
+from lingvix.switcher import LayoutSwitcher
 
 
 def fake_completed(stdout: str = "", returncode: int = 0) -> subprocess.CompletedProcess[str]:
@@ -143,7 +143,7 @@ def test_switch_to_g3kb_logs_argv_at_debug(
     monkeypatch.setattr(switcher_module, "_which", lambda name: "/usr/bin/" + name)
     monkeypatch.setattr(switcher_module, "_run", lambda cmd, timeout=2.0: fake_completed(""))
     switcher = LayoutSwitcher(["us", "ru"], "g3kb-switch")
-    with caplog.at_level("DEBUG", logger="linguafix.switcher"):
+    with caplog.at_level("DEBUG", logger="lingvix.switcher"):
         switcher.switch_to("ru")
     assert any(
         "g3kb-switch" in record.getMessage() and "-s" in record.getMessage()

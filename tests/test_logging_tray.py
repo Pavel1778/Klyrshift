@@ -1,4 +1,4 @@
-"""Tests for :mod:`linguafix.logging_setup` and :mod:`linguafix.tray`."""
+"""Tests for :mod:`lingvix.logging_setup` and :mod:`lingvix.tray`."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from linguafix.logging_setup import LOG_FILE_NAME, setup_logging
-from linguafix.tray import TrayIcon
+from lingvix.logging_setup import LOG_FILE_NAME, setup_logging
+from lingvix.tray import TrayIcon
 
 
 def test_setup_logging_creates_file(tmp_path: Path) -> None:
@@ -103,7 +103,7 @@ def test_tray_stop_without_start() -> None:
 
 
 def test_tray_status_callback_is_stored() -> None:
-    tray = TrayIcon(on_status=lambda: "LinguaFix: active")
+    tray = TrayIcon(on_status=lambda: "Lingvix: active")
     assert tray.on_status is not None
 
 
@@ -112,7 +112,7 @@ def test_tray_show_status_without_callback_is_noop(
 ) -> None:
     calls: list[list[str]] = []
     monkeypatch.setattr(
-        "linguafix.tray.subprocess.run",
+        "lingvix.tray.subprocess.run",
         lambda *a, **k: calls.append(list(a[0])),
     )
     TrayIcon()._show_status()  # no callback -> nothing happens
@@ -122,13 +122,13 @@ def test_tray_show_status_without_callback_is_noop(
 def test_tray_show_status_notifies(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
     monkeypatch.setattr(
-        "linguafix.tray.subprocess.run",
+        "lingvix.tray.subprocess.run",
         lambda *a, **k: calls.append(list(a[0])),
     )
-    tray = TrayIcon(on_status=lambda: "LinguaFix: active, layout=us")
+    tray = TrayIcon(on_status=lambda: "Lingvix: active, layout=us")
     tray._show_status()
     assert calls
-    assert "LinguaFix: active, layout=us" in calls[0]
+    assert "Lingvix: active, layout=us" in calls[0]
 
 
 def test_tray_show_status_handles_callback_error(
@@ -137,7 +137,7 @@ def test_tray_show_status_handles_callback_error(
     def boom() -> str:
         raise RuntimeError("nope")
 
-    monkeypatch.setattr("linguafix.tray.subprocess.run", lambda *a, **k: None)
+    monkeypatch.setattr("lingvix.tray.subprocess.run", lambda *a, **k: None)
     TrayIcon(on_status=boom)._show_status()  # must not raise
 
 

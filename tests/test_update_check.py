@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from linguafix import update_check
+from lingvix import update_check
 
 
 @pytest.fixture
@@ -137,10 +137,10 @@ def test_maybe_check_throttles(isolated_env: Path) -> None:
 def test_daemon_check_disabled_does_nothing(
     monkeypatch: pytest.MonkeyPatch, isolated_env: Path
 ) -> None:
-    from linguafix.config import Config
-    from linguafix.daemon import LinguaFixDaemon
+    from lingvix.config import Config
+    from lingvix.daemon import LingvixDaemon
 
-    daemon = LinguaFixDaemon(config=Config(update_check_enabled=False))
+    daemon = LingvixDaemon(config=Config(update_check_enabled=False))
     called: list[int] = []
     monkeypatch.setattr(update_check, "check_for_update", lambda *a, **k: called.append(1) or None)
     daemon._maybe_check_update()
@@ -148,10 +148,10 @@ def test_daemon_check_disabled_does_nothing(
 
 
 def test_daemon_check_enabled_notifies(monkeypatch: pytest.MonkeyPatch, isolated_env: Path) -> None:
-    from linguafix.config import Config
-    from linguafix.daemon import LinguaFixDaemon
+    from lingvix.config import Config
+    from lingvix.daemon import LingvixDaemon
 
-    daemon = LinguaFixDaemon(config=Config(update_check_enabled=True))
+    daemon = LingvixDaemon(config=Config(update_check_enabled=True))
     info = update_check.UpdateInfo("0.2.0", "v0.3.0", True, "https://example/releases")
     monkeypatch.setattr(update_check, "check_for_update", lambda *a, **k: info)
     notified: list[str] = []
@@ -176,10 +176,10 @@ def test_daemon_check_does_not_block_event_loop(
     """
     import threading
 
-    from linguafix.config import Config
-    from linguafix.daemon import LinguaFixDaemon
+    from lingvix.config import Config
+    from lingvix.daemon import LingvixDaemon
 
-    daemon = LinguaFixDaemon(config=Config(update_check_enabled=True))
+    daemon = LingvixDaemon(config=Config(update_check_enabled=True))
     release = threading.Event()
     started = threading.Event()
 

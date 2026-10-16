@@ -1,10 +1,10 @@
-"""Tests for the T9 typo corrector (:mod:`linguafix.typo`)."""
+"""Tests for the T9 typo corrector (:mod:`lingvix.typo`)."""
 
 from __future__ import annotations
 
 import pytest
 
-from linguafix.typo import (
+from lingvix.typo import (
     DEFAULT_LONG_WORD_THRESHOLD,
     DEFAULT_MAX_DISTANCE,
     DEFAULT_MAX_DISTANCE_LONG,
@@ -127,8 +127,8 @@ def test_long_word_threshold_and_distance_defaults() -> None:
 
 
 def test_corpus_two_edit_typo_is_corrected() -> None:
-    from linguafix.converter import LayoutConverter
-    from linguafix.detector import LanguageDetector
+    from lingvix.converter import LayoutConverter
+    from lingvix.detector import LanguageDetector
 
     detector = LanguageDetector(LayoutConverter())
     corrector = TypoCorrector(detector.ordered_vocabulary("ru"), min_length=4)
@@ -137,8 +137,8 @@ def test_corpus_two_edit_typo_is_corrected() -> None:
 
 
 def test_corpus_short_two_edit_typo_is_refused() -> None:
-    from linguafix.converter import LayoutConverter
-    from linguafix.detector import LanguageDetector
+    from lingvix.converter import LayoutConverter
+    from lingvix.detector import LanguageDetector
 
     detector = LanguageDetector(LayoutConverter())
     corrector = TypoCorrector(detector.ordered_vocabulary("ru"), min_length=4)
@@ -147,8 +147,8 @@ def test_corpus_short_two_edit_typo_is_refused() -> None:
 
 
 def test_corpus_used_by_the_detector_finds_a_real_typo() -> None:
-    from linguafix.converter import LayoutConverter
-    from linguafix.detector import LanguageDetector
+    from lingvix.converter import LayoutConverter
+    from lingvix.detector import LanguageDetector
 
     detector = LanguageDetector(LayoutConverter())
     corrector = TypoCorrector(list(detector.vocabulary("en")))

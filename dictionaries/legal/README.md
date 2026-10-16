@@ -9,12 +9,12 @@
 
 ## Источник и лицензия
 
-Составлено вручную (manual curation) для проекта LinguaFix, лицензия — MIT.
+Составлено вручную (manual curation) для проекта Lingvix, лицензия — MIT.
 Термины — общеупотребительные правовые понятия; списки не являются
 юридической консультацией.
 
 ## Установка
 
 ```bash
-linguafix dict install legal --lang ru
+lingvix dict install legal --lang ru
 ```

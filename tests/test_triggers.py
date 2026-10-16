@@ -16,9 +16,9 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix.config import Config  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector  # noqa: E402
+from lingvix.config import Config  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -84,7 +84,7 @@ def make_event(name: str, value: int = 1) -> FakeEvent:
     return FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), value)
 
 
-def press(daemon: LinguaFixDaemon, text: str) -> None:
+def press(daemon: LingvixDaemon, text: str) -> None:
     """Press (and release) the physical keys that produce ``text`` on a US layout."""
     for char in text:
         name, shift = _KEY_BY_CHAR[char]
@@ -96,14 +96,14 @@ def press(daemon: LinguaFixDaemon, text: str) -> None:
             daemon._handle_event(make_event("KEY_LEFTSHIFT", 0))
 
 
-def make_daemon(**kwargs: object) -> LinguaFixDaemon:
+def make_daemon(**kwargs: object) -> LingvixDaemon:
     options: dict[str, object] = {"analysis_timeout": 0.8, "stop_words": ["password"]}
     options.update(kwargs)
     config = Config(**options)
     detector = LanguageDetector(
         converter=None, stop_words=config.stop_words, min_word_length=config.min_word_length
     )
-    return LinguaFixDaemon(
+    return LingvixDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -111,7 +111,7 @@ def make_daemon(**kwargs: object) -> LinguaFixDaemon:
     )
 
 
-def _injector(daemon: LinguaFixDaemon) -> FakeInjector:
+def _injector(daemon: LingvixDaemon) -> FakeInjector:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector
@@ -241,7 +241,7 @@ def test_adaptive_timeout_grows_for_a_slow_typist() -> None:
 
 
 def test_adaptive_timeout_is_clamped() -> None:
-    from linguafix.config import MAX_ANALYSIS_TIMEOUT, MIN_ANALYSIS_TIMEOUT
+    from lingvix.config import MAX_ANALYSIS_TIMEOUT, MIN_ANALYSIS_TIMEOUT
 
     slow = make_daemon(analysis_timeout=2.0, analysis_timeout_adaptive=True)
     slow._key_intervals.extend([2.0] * 10)

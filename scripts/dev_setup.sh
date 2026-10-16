@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Set up a development environment for LinguaFix.
+# Set up a development environment for Lingvix.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -9,19 +9,19 @@ cd "${REPO_DIR}"
 PYTHON="${PYTHON:-python3}"
 VENV="${VENV:-.venv}"
 
-echo "[linguafix] Creating virtual environment in ${VENV}"
+echo "[lingvix] Creating virtual environment in ${VENV}"
 "${PYTHON}" -m venv "${VENV}"
 "${VENV}/bin/pip" install --upgrade pip
 "${VENV}/bin/pip" install -e ".[dev]"
 
-echo "[linguafix] Installing git hooks"
+echo "[lingvix] Installing git hooks"
 if command -v pre-commit >/dev/null 2>&1 && [ -f .pre-commit-config.yaml ]; then
     "${VENV}/bin/pre-commit" install || true
 fi
 
 cat <<EOF
 
-[linguafix] Development environment ready.
+[lingvix] Development environment ready.
 
 Activate it with:
     source ${VENV}/bin/activate

@@ -15,10 +15,10 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix.config import Config  # noqa: E402
-from linguafix.converter import LayoutConverter  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector, _has_mixed_script_word  # noqa: E402
+from lingvix.config import Config  # noqa: E402
+from lingvix.converter import LayoutConverter  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector, _has_mixed_script_word  # noqa: E402
 
 MIXED_WORDS = [
     "ghbdtnпривет",
@@ -104,7 +104,7 @@ class _FakeInjector:
         return "backend=fake"
 
 
-def _daemon() -> LinguaFixDaemon:
+def _daemon() -> LingvixDaemon:
     config = Config(stop_words=[], analysis_timeout=0.8)
     detector = LanguageDetector(
         converter=LayoutConverter(),
@@ -112,7 +112,7 @@ def _daemon() -> LinguaFixDaemon:
         min_word_length=config.min_word_length,
         confidence_threshold=config.confidence_threshold,
     )
-    return LinguaFixDaemon(
+    return LingvixDaemon(
         config, detector=detector, switcher=_FakeSwitcher("ru"), injector=_FakeInjector()
     )
 

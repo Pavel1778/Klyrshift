@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# LinguaFix uninstaller. Removes the user service, autostart entry, icon and
+# Lingvix uninstaller. Removes the user service, autostart entry, icon and
 # (with confirmation) the virtual environment and configuration.
 set -uo pipefail
 
-APP_NAME="linguafix"
+APP_NAME="lingvix"
 SHARE_DIR="${HOME}/.local/share/${APP_NAME}"
 VENV_DIR="${SHARE_DIR}/venv"
 UNIT_DIR="${HOME}/.config/systemd/user"
@@ -31,8 +31,8 @@ for arg in "$@"; do
     esac
 done
 
-log()  { printf '\033[1;34m[linguafix]\033[0m %s\n' "$*"; }
-warn() { printf '\033[1;33m[linguafix]\033[0m %s\n' "$*" >&2; }
+log()  { printf '\033[1;34m[lingvix]\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[lingvix]\033[0m %s\n' "$*" >&2; }
 
 confirm() {
     if [ "${ASSUME_YES}" -eq 1 ]; then
@@ -74,4 +74,4 @@ if [ "${PURGE}" -eq 1 ] || confirm "Удалить конфигурацию и �
     rm -rf "${CONFIG_DIR}" "${STATE_DIR}" "${CACHE_DIR}"
 fi
 
-log "LinguaFix удалён. Группу input пользователю не удаляю (её используют другие инструменты)."
+log "Lingvix удалён. Группу input пользователю не удаляю (её используют другие инструменты)."

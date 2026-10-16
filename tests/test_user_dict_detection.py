@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from linguafix import dictionary
-from linguafix.converter import LayoutConverter
-from linguafix.detector import LanguageDetector
+from lingvix import dictionary
+from lingvix.converter import LayoutConverter
+from lingvix.detector import LanguageDetector
 
 
 def make_detector(user_words: list[str] | None = None) -> LanguageDetector:

@@ -5,6 +5,51 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+The project is renamed and two long-standing autostart defects are fixed.
+
+### Changed
+
+- **The project is renamed LinguaFix → Lingvix.** The name collided with the
+  Windows/Microsoft `LinguaFix` utility, which made the project hard to find and
+  impossible to publish under that name. The new name is used everywhere: the
+  Python package (`src/lingvix/`, import `lingvix`), the CLI (`lingvix`), the
+  systemd unit (`lingvix.service`), the udev rule (`71-lingvix.rules`), the
+  desktop/autostart entries, the config and data directories
+  (`~/.config/lingvix`, `~/.local/share/lingvix`, `~/.local/state/lingvix`) and
+  the landing page. This is a breaking rename: an existing install must be
+  reinstalled, and the old config directory is not migrated automatically.
+- `README.md`, `AGENTS.md`, `docs/*` and the site reflect the new name.
+
+### Fixed
+
+- **Autostart could not be turned off.** `disable_autostart()` removed only the
+  systemd user unit, but `install.sh` also writes an XDG entry
+  (`~/.config/autostart/lingvix.desktop`). That entry kept launching the daemon,
+  so the GUI switch snapped back on at the next refresh. Disabling now removes
+  the XDG entry *and* masks the unit; enabling removes the mask.
+- **Autostart always read as off.** `systemd_enabled()` trusted
+  `systemctl --user is-enabled`, which reports a unit enabled *globally*
+  (`/etc/systemd/user`, what the `.deb` does) as `disabled` until the session
+  reloads. A working autostart therefore showed as off in the GUI. The probe now
+  also checks the global wants symlink directly.
+
+### Added
+
+- **Live demo on the landing page** (`site/src/components/Demo.astro`). It ports
+  the detector's per-word plausibility test to TypeScript, so a visitor can try
+  the correction in the browser. Its vocabulary and bigram tables are generated
+  from the shipped corpora by `scripts/build_demo_model.py`
+  (`tests/test_demo_model.py` fails if they drift).
+- `tests/test_demo_model.py` and new autostart cases in
+  `tests/test_daemon_control.py`.
+
+### Removed
+
+- `docs/TESTING_v0.2.0.md` — superseded by `docs/TESTING.md`; its still-useful
+  GUI checklist is merged into the latter as section H.
+
 ## [0.2.8.2] - 2026-10-08
 
 Follow-up to 0.2.8.1 for two defects reported after the 0.2.8 live test, plus
@@ -16,7 +61,7 @@ an independent-mode model for T9 and punctuation.
   persists migrations to `config.toml` was committed to `main` (`089afee`) but
   was not in the `v0.2.8` tag, so a user who installed that build still saw the
   stale file. It is part of this release; on first load the migrated values are
-  written back and the next `linguafix config show` agrees with the daemon.
+  written back and the next `lingvix config show` agrees with the daemon.
 - **T9 no longer rewrites correct words ("T9-спам").** The reported build
   predated the v0.2.8.1 guard (`typo_in_manual`); it is now part of the shipped
   code. On top of it, the typo pass is gated by its own mode (below) rather than
@@ -32,7 +77,7 @@ an independent-mode model for T9 and punctuation.
   `typo_mode = "manual"`, otherwise the global mode is used. The legacy booleans
   are kept mirrored for compatibility. New manual hotkeys:
   `CTRL+SHIFT+F` (T9) and `CTRL+SHIFT+P` (punctuation).
-- **T9 tab on `linguafix gui`.** Both features have an independent mode combo,
+- **T9 tab on `lingvix gui`.** Both features have an independent mode combo,
   the full parameter set (min word length, max edit distance for short/long
   words, long-word threshold, confidence margin), an expander with examples, a
   "Проверить сейчас" preview dialog, and a link to the documentation. The tab
@@ -63,11 +108,11 @@ Hotfix for three defects reported after the 0.2.8 live test.
 
 - **Config migrations now reach the file.** A migration applied on load (the
   `CTRL+CTRL` undo hotkey, the `300 ms` double-tap window, the `gedit` →
-  `texteditor` exception) lived only in memory, so `linguafix config show` —
+  `texteditor` exception) lived only in memory, so `lingvix config show` —
   which reads the file — kept displaying the stale values while the daemon
   logged the migrated ones. `load_config` now writes the migrated config back
   atomically (temp file + `os.replace`) and logs
-  `Config: migrated and saved ...`. `linguafix config migrate [--dry-run]`
+  `Config: migrated and saved ...`. `lingvix config migrate [--dry-run]`
   previews the change and `config show` warns when file and effective values
   diverge. Deliberate user values (`mode`, `backspace_settle_ms`,
   `min_word_length`, a hand-picked double-tap window) are never migrated.
@@ -87,8 +132,8 @@ Hotfix for three defects reported after the 0.2.8 live test.
 - Seven new thematic dictionary categories — `science`, `business`,
   `electronics`, `media`, `education`, `gaming`, `sport` (ru + en, ~150 words
   each), on top of the original five. Each ships as a
-  `linguafix-dict-<slug>.tar.gz` release asset and is listed on the landing
-  page. Install with `linguafix dict install <category> --lang ru`.
+  `lingvix-dict-<slug>.tar.gz` release asset and is listed on the landing
+  page. Install with `lingvix dict install <category> --lang ru`.
 
 ### Changed
 
@@ -101,9 +146,9 @@ Hotfix for three defects reported after the 0.2.8 live test.
 
 ### Added
 
-- `linguafix dict download <lang>` and `linguafix dict import-file <path>` load
+- `lingvix dict download <lang>` and `lingvix dict import-file <path>` load
   extended frequency word lists (`ru`, `en`, `uk`, `de`, `fr`) into
-  `$XDG_DATA_HOME/linguafix/dictionaries/<lang>.txt`. The detector reads them in
+  `$XDG_DATA_HOME/lingvix/dictionaries/<lang>.txt`. The detector reads them in
   addition to the bundled corpora, widening vocabulary membership only — n-gram
   scoring is unchanged, so already-correct words keep their verdict while rarer
   words are recognised. Lists mirror FrequencyWords (MIT) under the repository's
@@ -112,19 +157,19 @@ Hotfix for three defects reported after the 0.2.8 live test.
   `releases/latest/download/<lang>-50k.txt` asset first, then the branch mirror,
   then upstream, and finally copies a locally shipped list — so it succeeds with
   no network. Every list is attached to each GitHub Release and bundled in the
-  `.deb` (`linguafix/data/dictionaries/`), and the landing page links the
+  `.deb` (`lingvix/data/dictionaries/`), and the landing page links the
   release assets rather than a branch path.
 - A `toggle_layout` hotkey (default `CTRL+SHIFT+T`) force-retypes the last word
   in the other layout, the manual reverse of a correction. Configurable as
   `hotkey_toggle_layout_last_word`.
-- **Thematic (professional) dictionaries.** `linguafix dict categories`,
+- **Thematic (professional) dictionaries.** `lingvix dict categories`,
   `dict install <category> [--lang ru]`, `dict list-installed` and
   `dict remove-category <category>` add domain vocabularies on top of the base
   frequency list: `it`, `medicine`, `legal`, `finance`, `engineering` (ru + en).
   Installed categories are recorded in `installed_dict_categories` (default
   `["base"]`) and loaded as membership on top of the corpora. Detection priority
   is **user dictionary → thematic → base → T9**. Thematic lists are **not**
-  bundled in the `.deb`; each is published as a `linguafix-dict-<slug>.tar.gz`
+  bundled in the `.deb`; each is published as a `lingvix-dict-<slug>.tar.gz`
   release asset, fetched first, then from the branch mirror, then from the
   offline repository copy. The `/dictionaries` landing page lists the sections
   with language, word count, size and licence (MIT).
@@ -132,7 +177,7 @@ Hotfix for three defects reported after the 0.2.8 live test.
 ### Changed
 
 - The undo hotkey default (`SHIFT+BACKSPACE`) and the new toggle hotkey are shown
-  by `linguafix hotkeys` and the GUI. A stale `CTRL+CTRL` value left by an older
+  by `lingvix hotkeys` and the GUI. A stale `CTRL+CTRL` value left by an older
   install is migrated to the default on load and the change is logged.
 - A config still on the pre-0.2.8 double-tap window (`hotkey_double_tap_ms = 300`)
   is widened to the current default (2000 ms): 300 ms is too short to catch a
@@ -213,9 +258,9 @@ Hotfix for three defects reported after the 0.2.8 live test.
 ### Added
 
 - The `.deb` `postinst` runs `systemctl --user daemon-reload` after replacing
-  the unit, so the next `systemctl --user restart linguafix.service` no longer
+  the unit, so the next `systemctl --user restart lingvix.service` no longer
   warns that the unit changed on disk.
-- `linguafix doctor` gains a "Графический интерфейс" check that names the exact
+- `lingvix doctor` gains a "Графический интерфейс" check that names the exact
   packages to install (`python3-gi gir1.2-gtk-4.0 gir1.2-adw-1`) when the
   GTK4/libadwaita stack is absent. The GUI stack is a `Recommends` of the
   `.deb` (a headless install does not need it), so a download followed by
@@ -230,8 +275,8 @@ Hotfix for three defects reported after the 0.2.8 live test.
 
 ### Fixed
 
-- `apt remove --purge` now leaves no empty `/usr/lib/linguafix` directories
-  behind. The new `doctor` GUI check imports `linguafix.gui`; run as root, that
+- `apt remove --purge` now leaves no empty `/usr/lib/lingvix` directories
+  behind. The new `doctor` GUI check imports `lingvix.gui`; run as root, that
   writes root-owned `gui/__pycache__` under `/usr/lib`, which dpkg does not
   track. `postrm` now removes every nested `__pycache__` and prunes the
   directories it leaves empty.
@@ -259,7 +304,7 @@ Hotfix for three defects reported after the 0.2.8 live test.
 
 ### Added
 
-- `linguafix logs [-n N] [-f] [--level LEVEL]` prints (or follows) the daemon
+- `lingvix logs [-n N] [-f] [--level LEVEL]` prints (or follows) the daemon
   log, with an optional level filter.
 - The `Fixing buffer ...` log line now carries `reason=layout|typo|punctuation`,
   so a correction can be told apart from a typo fix without guessing.
@@ -274,13 +319,13 @@ Hotfix for three defects reported after the 0.2.8 live test.
   rendered as a broken-image placeholder. A new `tests/test_icons_exist.py`
   scans every `icon_name` in the GUI and asserts it exists in the installed
   icon theme.
-- `linguafix fix` now applies the opt-in typo corrector when layout detection
-  finds nothing, matching the daemon; `linguafix fix --text "превет"` gives
+- `lingvix fix` now applies the opt-in typo corrector when layout detection
+  finds nothing, matching the daemon; `lingvix fix --text "превет"` gives
   `привет` when `typo_correction` is on.
-- `linguafix status` now uses the same "running" definition as `stop` and the
+- `lingvix status` now uses the same "running" definition as `stop` and the
   GUI (the flock PID lock, or an active systemd user unit), so a service daemon
   without a lock file is no longer reported as not running.
-- `linguafix start` delegates to the shared control module instead of spawning
+- `lingvix start` delegates to the shared control module instead of spawning
   and polling on its own, so `start` and the next `status` can no longer
   disagree.
 - The manual-fix hotkey now resolves a taught short token (`ы` -> `s`) even when
@@ -307,8 +352,8 @@ Hotfix for three defects reported after the 0.2.8 live test.
   decline. A replacement the input backend cannot type is refused wholesale rather
   than half-applied. Off by default.
 - Search-engine metadata for two indexed hosts: each host declares itself
-  canonical (`https://linguafix.layero.app` for the Russian primary,
-  `https://linguafix.vercel.app` for the English mirror) and cross-links the other
+  canonical (`https://lingvix.layero.app` for the Russian primary,
+  `https://lingvix.vercel.app` for the English mirror) and cross-links the other
   with `hreflang` (`ru`, `en`, `x-default`), so the copies do not compete as
   duplicate content. A generated `robots.txt` and a sitemap are emitted per host,
   the default `description`/`og:locale`/JSON-LD follow the host language, and the
@@ -322,7 +367,7 @@ Hotfix for three defects reported after the 0.2.8 live test.
 
 ### Changed
 
-- `linguafix fix` now loads the user dictionary before detection, so a taught
+- `lingvix fix` now loads the user dictionary before detection, so a taught
   brand such as `vercel` is corrected by the CLI exactly as the daemon does.
 
 ### Fixed
@@ -347,7 +392,7 @@ Hotfix for three defects reported after the 0.2.8 live test.
   replaced the external shields.io footer badges (broken behind a slow/blocked
   CDN, and not proxied by the host) with self-hosted SVGs in
   `site/public/badges/`; the footer now names the single canonical host
-  (linguafix.layero.app) instead of a mirror link that hit a login wall; code
+  (lingvix.layero.app) instead of a mirror link that hit a login wall; code
   blocks now wrap instead of clipping
   at 375 px; the install tabs stack vertically on mobile; localised the
   «Privacy First» feature title to «Приватность»; softened the step-03 copy to
@@ -373,7 +418,7 @@ Hotfix for three defects reported after the 0.2.8 live test.
 
 ### Fixed
 
-- `linguafix stop` (and `kill`) now actually stop a packaged daemon. The CLI
+- `lingvix stop` (and `kill`) now actually stop a packaged daemon. The CLI
   only sent `SIGTERM` to the lock-file PID, so under the systemd user unit
   (`Restart=always`) systemd respawned the daemon about 5 s later and it looked
   unstoppable. Both commands now go through `daemon_control`, which stops the
@@ -446,10 +491,10 @@ Hotfix for three defects reported after the 0.2.8 live test.
   (copy, convert, paste, restore) and can be rebound in the GUI.
 - Per-app default layout. `app_layouts` maps an application name to a layout
   that is switched to when that application gains focus (`app_layout_switch`).
-- Settings export/import. `linguafix export` / `linguafix import` (and the GUI
+- Settings export/import. `lingvix export` / `lingvix import` (and the GUI
   **Backup** group) bundle the config, user dictionary and snippets into one
-  JSON file. `linguafix restart` restarts the daemon preserving whether it runs
-  as a user service; `linguafix config path` prints the config location.
+  JSON file. `lingvix restart` restarts the daemon preserving whether it runs
+  as a user service; `lingvix config path` prints the config location.
 - Opt-in update check. Once a day, when `update_check_enabled` is set, the
   daemon asks the GitHub releases API for the latest tag and logs (and
   notifies) when a newer version exists. Off by default — it is the only
@@ -509,7 +554,7 @@ Hotfix for three defects reported after the 0.2.8 live test.
   (`update-desktop-database` in the `.deb` postinst and `install.sh`).
 - False-positive corrections on plausible text, hyphenated identifiers and
   tokens with internal separators.
-- Multi-character undo is reliable through the daemon (`linguafix undo`).
+- Multi-character undo is reliable through the daemon (`lingvix undo`).
 
 ### Known limitations
 
@@ -520,8 +565,8 @@ Hotfix for three defects reported after the 0.2.8 live test.
 - The `uk`/`de`/`fr` corpora are opt-in and have not been calibrated against
   live input.
 
-[0.2.3]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.3
-[0.2.2]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.2
-[0.2.1]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.1
-[0.2.0]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.0
-[0.1.0]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.1.0
+[0.2.3]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.2.3
+[0.2.2]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.2.2
+[0.2.1]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.2.1
+[0.2.0]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.2.0
+[0.1.0]: https://github.com/Pavel1778/Lingvix/releases/tag/v0.1.0

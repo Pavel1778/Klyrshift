@@ -1,6 +1,6 @@
 """Default exceptions: terminals, IDEs and games.
 
-LinguaFix ships a pre-filled "never touch" list, because in a terminal or an
+Lingvix ships a pre-filled "never touch" list, because in a terminal or an
 editor the other layout is *not* more plausible — what is typed there is a
 command or an identifier, not a word. A manual fix (double Shift) must still
 work inside those applications.
@@ -15,10 +15,10 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix.config import DEFAULT_EXCEPTION_APPS, Config  # noqa: E402
-from linguafix.converter import LayoutConverter  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector  # noqa: E402
+from lingvix.config import DEFAULT_EXCEPTION_APPS, Config  # noqa: E402
+from lingvix.converter import LayoutConverter  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -68,27 +68,27 @@ def make_event(name: str, value: int = 1) -> FakeEvent:
     return FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), value)
 
 
-def press(daemon: LinguaFixDaemon, text: str) -> None:
+def press(daemon: LingvixDaemon, text: str) -> None:
     for char in text:
         name, _ = _KEY_BY_CHAR[char]
         daemon._handle_event(make_event(name, 1))
         daemon._handle_event(make_event(name, 0))
 
 
-def tap(daemon: LinguaFixDaemon, name: str) -> None:
+def tap(daemon: LingvixDaemon, name: str) -> None:
     daemon._handle_event(make_event(name, 1))
     daemon._handle_event(make_event(name, 0))
 
 
-def make_daemon(monkeypatch: pytest.MonkeyPatch, app: str, **kwargs: object) -> LinguaFixDaemon:
-    monkeypatch.setattr("linguafix.daemon.get_active_app", lambda: app)
+def make_daemon(monkeypatch: pytest.MonkeyPatch, app: str, **kwargs: object) -> LingvixDaemon:
+    monkeypatch.setattr("lingvix.daemon.get_active_app", lambda: app)
     config = Config(stop_words=["password"], **kwargs)
     detector = LanguageDetector(
         converter=LayoutConverter(),
         stop_words=config.stop_words,
         min_word_length=config.min_word_length,
     )
-    return LinguaFixDaemon(
+    return LingvixDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -96,7 +96,7 @@ def make_daemon(monkeypatch: pytest.MonkeyPatch, app: str, **kwargs: object) -> 
     )
 
 
-def _injector(daemon: LinguaFixDaemon) -> FakeInjector:
+def _injector(daemon: LingvixDaemon) -> FakeInjector:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector

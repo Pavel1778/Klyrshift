@@ -14,11 +14,11 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix.config import Config  # noqa: E402
-from linguafix.converter import LayoutConverter  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector  # noqa: E402
-from linguafix.text_expander import TextExpander  # noqa: E402
+from lingvix.config import Config  # noqa: E402
+from lingvix.converter import LayoutConverter  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector  # noqa: E402
+from lingvix.text_expander import TextExpander  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -70,7 +70,7 @@ for _sym, _name in {" ": "KEY_SPACE", "!": "KEY_1", "@": "KEY_2", ".": "KEY_DOT"
     _KEY_BY_CHAR[_sym] = (_name, True)
 
 
-def _press(daemon: LinguaFixDaemon, text: str) -> None:
+def _press(daemon: LingvixDaemon, text: str) -> None:
     for char in text:
         name, shift = _KEY_BY_CHAR[char]
         daemon._shift = shift
@@ -78,7 +78,7 @@ def _press(daemon: LinguaFixDaemon, text: str) -> None:
         daemon._handle_event(FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), 0))
 
 
-def _make_daemon(**kwargs: object) -> LinguaFixDaemon:
+def _make_daemon(**kwargs: object) -> LingvixDaemon:
     options: dict[str, object] = {"stop_words": [], "analysis_timeout": 0.8}
     options.update(kwargs)
     config = Config(**options)
@@ -88,7 +88,7 @@ def _make_daemon(**kwargs: object) -> LinguaFixDaemon:
         min_word_length=config.min_word_length,
         confidence_threshold=config.confidence_threshold,
     )
-    return LinguaFixDaemon(
+    return LingvixDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -96,7 +96,7 @@ def _make_daemon(**kwargs: object) -> LinguaFixDaemon:
     )
 
 
-def _fixes(daemon: LinguaFixDaemon) -> list[tuple[int, str, str]]:
+def _fixes(daemon: LingvixDaemon) -> list[tuple[int, str, str]]:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector.replacements

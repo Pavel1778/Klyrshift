@@ -1,6 +1,6 @@
 """Migration of a real v0.2.7 ``config.toml`` (from the live-test report).
 
-This reproduces the exact file the user pasted from ``linguafix config show``
+This reproduces the exact file the user pasted from ``lingvix config show``
 on v0.2.7 and asserts what v0.2.8 turns it into on first load. The rules are:
 
 * stale *defaults* are upgraded (``hotkey_undo_last_fix = "CTRL+CTRL"``,
@@ -13,9 +13,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from linguafix.config import DEFAULT_DOUBLE_TAP_MS, Config, load_config
+from lingvix.config import DEFAULT_DOUBLE_TAP_MS, Config, load_config
 
-# The user's v0.2.7 config, copied verbatim from ``linguafix config show``
+# The user's v0.2.7 config, copied verbatim from ``lingvix config show``
 # (the ``stop_words`` list is trimmed to a few entries — it is not migrated).
 USER_CONFIG_V027 = """\
 analysis_timeout = 0.7000000000000001
@@ -167,7 +167,7 @@ def test_typo_mode_round_trips_without_rederivation(tmp_path: Path) -> None:
 
 def test_migrated_config_round_trips(tmp_path: Path) -> None:
     """Saving the migrated config must persist the new values (config show)."""
-    from linguafix.config import save_config
+    from lingvix.config import save_config
 
     path = tmp_path / "config.toml"
     config = _load_user_config(tmp_path)
@@ -217,7 +217,7 @@ def test_second_load_does_not_rewrite(tmp_path: Path) -> None:
 
 def test_preview_migrations_lists_changes_without_writing(tmp_path: Path) -> None:
     """``config migrate --dry-run`` needs the list; the file must stay put."""
-    from linguafix.config import preview_migrations
+    from lingvix.config import preview_migrations
 
     path = tmp_path / "config.toml"
     path.write_text(USER_CONFIG_V027, encoding="utf-8")

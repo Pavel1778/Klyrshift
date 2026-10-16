@@ -1,4 +1,4 @@
-"""Tests for :mod:`linguafix.config`."""
+"""Tests for :mod:`lingvix.config`."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from linguafix import config as config_module
-from linguafix.config import (
+from lingvix import config as config_module
+from lingvix.config import (
     DEFAULT_EXCEPTION_APPS,
     DEFAULT_UNDO_HOTKEY,
     Config,
@@ -301,9 +301,9 @@ def test_xdg_paths_honour_environment(monkeypatch: pytest.MonkeyPatch, tmp_path:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
-    assert config_module.config_path() == tmp_path / "cfg" / "linguafix" / "config.toml"
-    assert config_module.state_dir() == tmp_path / "state" / "linguafix"
-    assert config_module.cache_dir() == tmp_path / "cache" / "linguafix"
+    assert config_module.config_path() == tmp_path / "cfg" / "lingvix" / "config.toml"
+    assert config_module.state_dir() == tmp_path / "state" / "lingvix"
+    assert config_module.cache_dir() == tmp_path / "cache" / "lingvix"
 
 
 def test_stop_words_are_lower_cased() -> None:
@@ -357,7 +357,7 @@ def test_dropped_invalid_key_is_logged(
         "typo_correction = true\nanalysis_timeout = 'not-a-number'\n",
         encoding="utf-8",
     )
-    with caplog.at_level("WARNING", logger="linguafix.config"):
+    with caplog.at_level("WARNING", logger="lingvix.config"):
         loaded = load_config(tmp_config_path)
     assert loaded.typo_correction is True
     assert loaded.analysis_timeout == 0.8

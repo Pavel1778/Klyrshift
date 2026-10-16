@@ -1,7 +1,7 @@
 """Regression: the ``рhello`` truncation bug.
 
 The user typed ``hello`` while the Russian layout was active, so the keys
-produced ``руддщ``. LinguaFix replaced the text but left the first character
+produced ``руддщ``. Lingvix replaced the text but left the first character
 behind (``рhello``) because the number of Backspaces and the on-screen text had
 drifted apart.
 
@@ -21,10 +21,10 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix.config import Config  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector  # noqa: E402
-from linguafix.injector import TextInjector  # noqa: E402
+from lingvix.config import Config  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector  # noqa: E402
+from lingvix.injector import TextInjector  # noqa: E402
 
 EV_KEY = int(evdev.ecodes.EV_KEY)
 BACKSPACE = int(evdev.ecodes.KEY_BACKSPACE)
@@ -38,7 +38,7 @@ class RecordingUInput:
 
     instances: ClassVar[list[RecordingUInput]] = []
 
-    def __init__(self, capabilities: object, name: str = "linguafix") -> None:
+    def __init__(self, capabilities: object, name: str = "lingvix") -> None:
         self.capabilities = capabilities
         self.name = name
         self.written: list[tuple[int, int, int]] = []
@@ -99,17 +99,17 @@ class FakeInjector:
         return "backend=fake"
 
 
-def _press(daemon: LinguaFixDaemon, key_names: list[str]) -> None:
+def _press(daemon: LingvixDaemon, key_names: list[str]) -> None:
     for name in key_names:
         code = int(getattr(evdev.ecodes, name))
         daemon._handle_event(type("E", (), {"type": EV_KEY, "code": code, "value": 1})())
         daemon._handle_event(type("E", (), {"type": EV_KEY, "code": code, "value": 0})())
 
 
-def _daemon_with_fake_injector(settle_ms: int = 0) -> LinguaFixDaemon:
+def _daemon_with_fake_injector(settle_ms: int = 0) -> LingvixDaemon:
     config = Config(analysis_timeout=0.8, stop_words=[], backspace_settle_ms=settle_ms)
     detector = LanguageDetector(converter=None, stop_words=[], min_word_length=3)
-    return LinguaFixDaemon(
+    return LingvixDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("ru"),
@@ -227,7 +227,7 @@ def test_settle_delay_is_applied_between_the_batches(monkeypatch: pytest.MonkeyP
 
     monkeypatch.setattr(TextInjector, "_uinput_available", lambda self: True)
     monkeypatch.setattr(evdev, "UInput", RecordingUInput)
-    monkeypatch.setattr("linguafix.injector.time.sleep", record_sleep)
+    monkeypatch.setattr("lingvix.injector.time.sleep", record_sleep)
 
     injector = TextInjector(backend="uinput", settle_ms=30)
     assert injector.replace_text(5, "hello", "us") is True
@@ -241,7 +241,7 @@ def test_zero_settle_delay_does_not_sleep(monkeypatch: pytest.MonkeyPatch) -> No
 
     monkeypatch.setattr(TextInjector, "_uinput_available", lambda self: True)
     monkeypatch.setattr(evdev, "UInput", RecordingUInput)
-    monkeypatch.setattr("linguafix.injector.time.sleep", sleeps.append)
+    monkeypatch.setattr("lingvix.injector.time.sleep", sleeps.append)
 
     injector = TextInjector(backend="uinput", settle_ms=0)
     assert injector.replace_text(5, "hello", "us") is True
@@ -250,7 +250,7 @@ def test_zero_settle_delay_does_not_sleep(monkeypatch: pytest.MonkeyPatch) -> No
 
 def test_daemon_passes_settle_ms_to_the_injector() -> None:
     config = Config(backspace_settle_ms=45)
-    daemon = LinguaFixDaemon(config, switcher=FakeSwitcher("us"), injector=None)
+    daemon = LingvixDaemon(config, switcher=FakeSwitcher("us"), injector=None)
     injector: Any = daemon.injector
     assert injector._settle_ms == 45
 
@@ -270,10 +270,10 @@ def test_daemon_with_real_uinput_injector_emits_exact_batch(
     RecordingUInput.instances.clear()
     monkeypatch.setattr(TextInjector, "_uinput_available", lambda self: True)
     monkeypatch.setattr(evdev, "UInput", RecordingUInput)
-    monkeypatch.setattr("linguafix.injector.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("lingvix.injector.time.sleep", lambda _seconds: None)
 
     config = Config(analysis_timeout=0.8, stop_words=[], backspace_settle_ms=30)
-    daemon = LinguaFixDaemon(
+    daemon = LingvixDaemon(
         config,
         detector=LanguageDetector(converter=None, stop_words=[], min_word_length=3),
         switcher=FakeSwitcher("ru"),

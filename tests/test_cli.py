@@ -1,4 +1,4 @@
-"""Tests for :mod:`linguafix.cli`."""
+"""Tests for :mod:`lingvix.cli`."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from linguafix import cli
-from linguafix.config import config_path
+from lingvix import cli
+from lingvix.config import config_path
 
 
 @pytest.fixture
@@ -50,19 +50,21 @@ def test_build_parser_has_all_commands() -> None:
 
 
 def test_hotkeys_command(isolated_env: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """``linguafix hotkeys`` prints the effective bindings for a default config."""
+    """``lingvix hotkeys`` prints the effective bindings for a default config."""
     assert cli.main(["hotkeys"]) == 0
     out = capsys.readouterr().out
     assert "SHIFT+SHIFT" in out
     assert "SHIFT+BACKSPACE" in out
     assert "CTRL+SHIFT+T" in out
     assert "CTRL+SHIFT+R" in out
+    assert "CTRL+SHIFT+F" in out
+    assert "CTRL+SHIFT+P" in out
     assert "2000" in out
 
 
 def test_version_command(capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(["version"]) == 0
-    assert "LinguaFix" in capsys.readouterr().out
+    assert "Lingvix" in capsys.readouterr().out
 
 
 def test_doctor_command(
@@ -78,7 +80,7 @@ def test_collect_logs_command(
     assert cli.main(["collect-logs", "--output", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     assert "архив создан" in out
-    assert list(tmp_path.glob("linguafix-logs-*.tar.gz"))
+    assert list(tmp_path.glob("lingvix-logs-*.tar.gz"))
 
 
 def test_collect_logs_command_failure(
@@ -95,7 +97,7 @@ def test_collect_logs_command_failure(
 def test_status_when_not_running(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     monkeypatch.setattr(daemon_control, "is_running", lambda: False)
     monkeypatch.setattr(cli, "_read_pid", lambda: None)
@@ -106,7 +108,7 @@ def test_status_when_not_running(
 def test_status_when_running(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     monkeypatch.setattr(daemon_control, "is_running", lambda: True)
     monkeypatch.setattr(cli, "_read_pid", lambda: 4242)
@@ -122,7 +124,7 @@ def test_status_agrees_with_is_running_for_a_service_daemon(
     ``status`` must use the same definition as ``stop``; reading only the lock
     file made the two disagree.
     """
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     monkeypatch.setattr(daemon_control, "is_running", lambda: True)
     monkeypatch.setattr(cli, "_read_pid", lambda: None)
@@ -133,7 +135,7 @@ def test_status_agrees_with_is_running_for_a_service_daemon(
 def test_stop_when_not_running(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     monkeypatch.setattr(daemon_control, "is_running", lambda: False)
     assert cli.main(["stop"]) == 0
@@ -144,7 +146,7 @@ def test_stop_delegates_to_daemon_control(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """``stop`` must go through ``daemon_control.stop`` (stops the systemd unit)."""
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     stopped: list[bool] = []
     monkeypatch.setattr(daemon_control, "is_running", lambda: True)
@@ -157,7 +159,7 @@ def test_stop_delegates_to_daemon_control(
 def test_stop_reports_failure(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     monkeypatch.setattr(daemon_control, "is_running", lambda: True)
     monkeypatch.setattr(daemon_control, "stop", lambda: False)
@@ -168,7 +170,7 @@ def test_stop_reports_failure(
 def test_kill_delegates_to_daemon_control(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     killed: list[bool] = []
     monkeypatch.setattr(daemon_control, "is_running", lambda: True)
@@ -181,7 +183,7 @@ def test_kill_delegates_to_daemon_control(
 def test_kill_when_not_running(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     monkeypatch.setattr(daemon_control, "is_running", lambda: False)
     assert cli.main(["kill"]) == 0
@@ -326,9 +328,9 @@ def test_start_dry_run_flag_is_parsed() -> None:
 def test_install_autostart(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    desktop = isolated_env / "src" / "linguafix.desktop"
+    desktop = isolated_env / "src" / "lingvix.desktop"
     desktop.parent.mkdir(parents=True, exist_ok=True)
-    desktop.write_text("[Desktop Entry]\nName=LinguaFix\n", encoding="utf-8")
+    desktop.write_text("[Desktop Entry]\nName=Lingvix\n", encoding="utf-8")
     monkeypatch.setattr(
         cli, "_bundled_data_file", lambda name: desktop if name.endswith("desktop") else None
     )
@@ -348,32 +350,32 @@ def test_install_autostart_missing_source(
 def test_install_autostart_renders_bin_placeholder(
     isolated_env: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    desktop = isolated_env / "src" / "linguafix.desktop"
+    desktop = isolated_env / "src" / "lingvix.desktop"
     desktop.parent.mkdir(parents=True, exist_ok=True)
     desktop.write_text("[Desktop Entry]\nExec=@BIN@ start --foreground\n", encoding="utf-8")
     monkeypatch.setattr(
         cli, "_bundled_data_file", lambda name: desktop if name.endswith("desktop") else None
     )
     monkeypatch.setattr(cli.subprocess, "run", lambda *a, **k: None)
-    monkeypatch.setattr(cli, "_launcher_path", lambda: "/usr/bin/linguafix")
+    monkeypatch.setattr(cli, "_launcher_path", lambda: "/usr/bin/lingvix")
     assert cli.main(["install-autostart"]) == 0
     written = cli._autostart_path().read_text(encoding="utf-8")
     assert "@BIN@" not in written
-    assert "Exec=/usr/bin/linguafix start --foreground" in written
+    assert "Exec=/usr/bin/lingvix start --foreground" in written
 
 
 def test_bundled_unit_and_desktop_are_templates() -> None:
     """The shipped files must keep the placeholder for installers to render."""
     from importlib import resources
 
-    base = resources.files("linguafix") / "data"
-    assert "@BIN@" in (base / "linguafix.service").read_text(encoding="utf-8")
-    assert "@BIN@" in (base / "linguafix.desktop").read_text(encoding="utf-8")
+    base = resources.files("lingvix") / "data"
+    assert "@BIN@" in (base / "lingvix.service").read_text(encoding="utf-8")
+    assert "@BIN@" in (base / "lingvix.desktop").read_text(encoding="utf-8")
 
 
 def test_udev_rule_uses_uaccess() -> None:
     """The shipped udev rule must grant access via uaccess, not the input group."""
-    rule = Path(__file__).resolve().parent.parent / "data" / "71-linguafix.rules"
+    rule = Path(__file__).resolve().parent.parent / "data" / "71-lingvix.rules"
     text = rule.read_text(encoding="utf-8")
     active = [line for line in text.splitlines() if line.strip() and not line.startswith("#")]
     assert any('TAG+="uaccess"' in line for line in active)
@@ -385,12 +387,12 @@ def test_udev_rule_uses_uaccess() -> None:
 
 
 def test_repo_and_packaged_data_files_match() -> None:
-    """``data/`` and ``src/linguafix/data/`` must not drift apart."""
+    """``data/`` and ``src/lingvix/data/`` must not drift apart."""
     from importlib import resources
 
-    packaged = Path(str(resources.files("linguafix") / "data"))
+    packaged = Path(str(resources.files("lingvix") / "data"))
     repo_data = Path(__file__).resolve().parent.parent / "data"
-    for name in ("linguafix.service", "linguafix.desktop", "linguafix.svg"):
+    for name in ("lingvix.service", "lingvix.desktop", "lingvix.svg"):
         assert (repo_data / name).read_bytes() == (packaged / name).read_bytes(), name
 
 
@@ -413,10 +415,10 @@ def test_run_quiet_survives_missing_binary() -> None:
 def test_install_autostart_survives_missing_systemctl(
     isolated_env: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    desktop = isolated_env / "src" / "linguafix.desktop"
+    desktop = isolated_env / "src" / "lingvix.desktop"
     desktop.parent.mkdir(parents=True, exist_ok=True)
     desktop.write_text("Exec=@BIN@ start\n", encoding="utf-8")
-    unit = isolated_env / "src" / "linguafix.service"
+    unit = isolated_env / "src" / "lingvix.service"
     unit.write_text("ExecStart=@BIN@ start\n", encoding="utf-8")
 
     def fake(name: str) -> Path:
@@ -457,7 +459,7 @@ def test_start_when_already_running(
 
 
 def test_cmd_gui_delegates(monkeypatch: pytest.MonkeyPatch) -> None:
-    import linguafix.gui as gui
+    import lingvix.gui as gui
 
     monkeypatch.setattr(gui, "main", lambda: 0)
     assert cli.cmd_gui(argparse.Namespace()) == 0
@@ -467,7 +469,7 @@ def test_start_detached_delegates_to_daemon_control(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """``start`` must use the shared control module, not its own spawn/poll."""
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     started: list[bool] = []
     monkeypatch.setattr(daemon_control, "start", lambda dry_run=False: started.append(True) or True)
@@ -480,7 +482,7 @@ def test_start_detached_reports_failure_when_daemon_dies(
     isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A daemon that never comes up must not print success, and must say why."""
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     monkeypatch.setattr(daemon_control, "start", lambda dry_run=False: False)
     monkeypatch.setattr(daemon_control, "last_error", lambda: "демон завершился сразу")
@@ -502,7 +504,7 @@ def test_mode_show_and_set(isolated_env: Path, capsys: pytest.CaptureFixture[str
 
 def test_mode_signals_running_daemon(isolated_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Changing the mode must reach a running daemon, not only the file."""
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     reloads: list[bool] = []
     monkeypatch.setattr(daemon_control, "is_running", lambda: True)
@@ -515,7 +517,7 @@ def test_mode_signals_running_daemon(isolated_env: Path, monkeypatch: pytest.Mon
 def test_mode_does_not_signal_when_daemon_stopped(
     isolated_env: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from linguafix import daemon_control
+    from lingvix import daemon_control
 
     reloads: list[bool] = []
     monkeypatch.setattr(daemon_control, "is_running", lambda: False)
@@ -598,4 +600,4 @@ def test_install_autostart_uses_dedicated_autostart_file(
 
     monkeypatch.setattr(cli, "_bundled_data_file", fake)
     assert cli.main(["install-autostart"]) == 0
-    assert "linguafix-autostart.desktop" in requested
+    assert "lingvix-autostart.desktop" in requested

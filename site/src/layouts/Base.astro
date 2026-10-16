@@ -10,12 +10,12 @@ interface Props {
 
 const {
   title = pick(
-    "LinguaFix — автоматическое исправление раскладки для Linux",
-    "LinguaFix — automatic keyboard layout switcher for Linux",
+    "Lingvix — автоматическое исправление раскладки для Linux",
+    "Lingvix — automatic keyboard layout switcher for Linux",
   ),
   description = pick(
-    "LinguaFix — автоматический переключатель раскладки клавиатуры для Linux. Исправляет ghbdtn → привет мгновенно. Работает в Wayland и X11, GNOME 45+, KDE, Sway. Аналог Caramba Switcher и Punto Switcher. Бесплатно, MIT, без телеметрии.",
-    "LinguaFix — automatic keyboard layout switcher for Linux. Fixes ghbdtn → privet instantly. Works in Wayland and X11, GNOME 45+, KDE, Sway. Free, MIT, no telemetry.",
+    "Lingvix — автоматический переключатель раскладки клавиатуры для Linux. Исправляет ghbdtn → привет мгновенно. Работает в Wayland и X11, GNOME 45+, KDE, Sway. Аналог Caramba Switcher и Punto Switcher. Бесплатно, MIT, без телеметрии.",
+    "Lingvix — automatic keyboard layout switcher for Linux. Fixes ghbdtn → privet instantly. Works in Wayland and X11, GNOME 45+, KDE, Sway. Free, MIT, no telemetry.",
   ),
 } = Astro.props;
 
@@ -28,7 +28,7 @@ const ogImage = new URL("/og-image.png", siteUrl);
 const schema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "LinguaFix",
+  name: "Lingvix",
   description: pick(
     "Автоматический переключатель раскладки клавиатуры для Linux",
     "Automatic keyboard layout switcher for Linux",
@@ -38,8 +38,8 @@ const schema = {
   softwareVersion: "0.2.8.2",
   license: "https://opensource.org/licenses/MIT",
   url: siteUrl,
-  downloadUrl: "https://github.com/Pavel1778/LinguaFix/releases/latest",
-  codeRepository: "https://github.com/Pavel1778/LinguaFix",
+  downloadUrl: "https://github.com/Pavel1778/Lingvix/releases/latest",
+  codeRepository: "https://github.com/Pavel1778/Lingvix",
   author: {
     "@type": "Person",
     name: "Pavel",
@@ -67,7 +67,7 @@ const schema = {
     <meta name="description" content={description} />
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="LinguaFix" />
+    <meta property="og:site_name" content="Lingvix" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />

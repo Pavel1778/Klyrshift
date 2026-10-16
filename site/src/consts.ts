@@ -1,9 +1,9 @@
 export const VERSION = "0.2.8.2";
 
-export const REPO = "https://github.com/Pavel1778/LinguaFix";
+export const REPO = "https://github.com/Pavel1778/Lingvix";
 export const RELEASES = `${REPO}/releases`;
 export const LATEST_RELEASE = `${RELEASES}/latest`;
-export const DEB_URL = `${RELEASES}/download/v${VERSION}/linguafix_${VERSION}_all.deb`;
+export const DEB_URL = `${RELEASES}/download/v${VERSION}/lingvix_${VERSION}_all.deb`;
 export const ISSUES = `${REPO}/issues`;
 export const CONTRIBUTING = `${REPO}/blob/main/docs/CONTRIBUTING.md`;
 export const INSTALL_DOC = `${REPO}/blob/main/docs/INSTALL.md`;

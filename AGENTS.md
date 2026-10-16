@@ -1,18 +1,19 @@
 # AGENTS.md
 
-Repository-specific notes for agents working on LinguaFix.
+Repository-specific notes for agents working on Lingvix.
 
 ## Layout
 
-- `src/linguafix/` — the Python package (PEP 621, `pyproject.toml`).
+- `src/lingvix/` — the Python package (PEP 621, `pyproject.toml`).
 - `data/` — system integration files (systemd unit, XDG autostart, udev rule, icon).
-- `src/linguafix/data/` — data files **shipped inside the package** (`layouts.json`,
+- `src/lingvix/data/` — data files **shipped inside the package** (`layouts.json`,
   `ngrams_*.json`, `stop_words.txt`, and copies of the unit/desktop/icon).
-- `scripts/` — `build_deb.sh`, `smoke_test.sh`, `dev_setup.sh`.
+- `scripts/` — `build_deb.sh`, `smoke_test.sh`, `dev_setup.sh`,
+  `build_demo_model.py` (generates the landing page's demo data).
 
-`linguafix.service`, `linguafix.desktop` and `linguafix.svg` exist in **both**
-`data/` and `src/linguafix/data/` and must stay byte-identical — a test enforces
-this. `data/` is read by `install.sh`; `src/linguafix/data/` is what an installed
+`lingvix.service`, `lingvix.desktop` and `lingvix.svg` exist in **both**
+`data/` and `src/lingvix/data/` and must stay byte-identical — a test enforces
+this. `data/` is read by `install.sh`; `src/lingvix/data/` is what an installed
 package ships and what the CLI reads.
 
 ## Build and verify
@@ -39,8 +40,8 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 - Keep the apt `Depends:` in `scripts/build_deb.sh` in sync with the runtime
   imports. `tomli` is required on Python < 3.11; `tomli_w` on all versions.
 - `data/*.service` and `data/*.desktop` contain a `@BIN@` placeholder. It is
-  rendered by `install.sh` (venv launcher), `build_deb.sh` (`/usr/bin/linguafix`)
-  and the CLI (`shutil.which("linguafix")`). Never ship an unrendered file.
+  rendered by `install.sh` (venv launcher), `build_deb.sh` (`/usr/bin/lingvix`)
+  and the CLI (`shutil.which("lingvix")`). Never ship an unrendered file.
 - The daemon tracks the current word as **scancodes** (`_scancodes`), not only
   as characters. `TextInjector.replace_text` takes a *count*, not the old text;
   the daemon passes `len(self._scancodes)`. Do not reintroduce a string-based
@@ -82,11 +83,11 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   It also validates the *converted* form: if the wrong-layout rendering of the
   buffer is a taught word (``муксуд`` → ``vercel``), the correction fires even
   though the brand is absent from the frequency corpora. This is why an unknown
-  brand is silent until `linguafix dict add` teaches it. It is a vocabulary
+  brand is silent until `lingvix dict add` teaches it. It is a vocabulary
   membership test, not a score bonus — a bonus is drowned out by the n-gram
   penalties.
-  The file (`~/.local/share/linguafix/dictionary.txt` by default) is edited
-  explicitly (`linguafix dict add/remove`, the GUI Dictionary tab, or by hand);
+  The file (`~/.local/share/lingvix/dictionary.txt` by default) is edited
+  explicitly (`lingvix dict add/remove`, the GUI Dictionary tab, or by hand);
   the daemon never writes typed text to it. A config reload always re-reads it.
 - The default fix hotkey is **`SHIFT+SHIFT`** (double tap of a modifier within
   `hotkey_double_tap_ms`, default 300 ms), not `PAUSE`. `daemon._parse_hotkey`
@@ -105,8 +106,27 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   apostrophe in a comment: it ends the block early. The smoke and zero-config
   scripts both hit this.
 - Running the installed CLI as root creates root-owned `__pycache__` under
-  `/usr/lib/linguafix`, which dpkg does not track; `postrm` cleans it with
+  `/usr/lib/lingvix`, which dpkg does not track; `postrm` cleans it with
   `py3clean` + `rm -rf`.
+- **Autostart has two independent mechanisms** and both must be honoured:
+  the systemd user unit (`lingvix.service`, enabled *globally* in
+  `/etc/systemd/user` by the `.deb`) and the XDG entry
+  (`~/.config/autostart/lingvix.desktop`, written by `install.sh`). A defect
+  survived here twice: `disable_autostart()` removed only the unit, so the XDG
+  entry kept starting the daemon and the GUI switch snapped back on; and
+  `systemd_enabled()` trusted `systemctl is-enabled`, which reports a globally
+  enabled unit as `disabled` in a session that has not reloaded, so a
+  working autostart read as off. `daemon_control.disable_autostart` now removes
+  the XDG entry **and** masks the unit (an unprivileged user cannot
+  `disable --global`); `enable_autostart` removes the mask; `systemd_enabled`
+  also probes the `/etc/systemd/user/*/lingvix.service` wants symlinks directly
+  (`globally_enabled`). `tests/test_daemon_control.py` pins all four paths.
+- `site/src/data/demo-model.json` is **generated** from the shipped
+  `src/lingvix/data/ngrams_*.json` by `scripts/build_demo_model.py`; the landing
+  page's demo (`site/src/components/Demo.astro`) ports the detector's
+  plausibility test to TypeScript on top of it. Never hand-edit the JSON: rerun
+  the script after a corpus rebuild. `tests/test_demo_model.py` fails when the
+  committed model drifts from the corpora.
 
 ## Security / privacy invariants (audited)
 
@@ -124,7 +144,7 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   buffered, not dropped. Do not hold the lock across `replace_text`.
 - The buffer is bounded by `Config.max_buffer_size` (default 200) and flushed
   early on overflow, so a held key cannot grow it without bound.
-- `linguafix stop` escalates to `SIGKILL` after 2 s; `linguafix kill` forces it.
+- `lingvix stop` escalates to `SIGKILL` after 2 s; `lingvix kill` forces it.
 - When the last keyboard disappears the loop re-runs discovery in place (never
   caches a device path); `Restart=always` is the backstop.
 
@@ -143,7 +163,7 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   systemd 257+ (Debian 13) `73-seat-late.rules` turns `uaccess` into the ACL. It
   runs in filename order and only processes rules that guard the `remove` event,
   so a `99-*` rule without the guard is silently skipped and `/dev/input` stays
-  unreadable. The shipped rule is `data/71-linguafix.rules`.
+  unreadable. The shipped rule is `data/71-lingvix.rules`.
 - `python3-evdev` ships in Debian and Ubuntu and is the only native runtime
   dependency; `install.sh` reuses it via `--system-site-packages` so no compiler
   is needed. `python-uinput` is **not** a dependency.

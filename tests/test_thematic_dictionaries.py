@@ -9,10 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from linguafix import cli
-from linguafix.config import Config
-from linguafix.detector import LanguageDetector
-from linguafix.thematic import (
+from lingvix import cli
+from lingvix.config import Config
+from lingvix.detector import LanguageDetector
+from lingvix.thematic import (
     CATEGORIES,
     category,
     category_slugs,
@@ -30,7 +30,7 @@ DICTIONARIES = REPO_ROOT / "dictionaries"
 
 
 def _run_cli(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> int:
-    monkeypatch.setattr("sys.argv", ["linguafix", *argv])
+    monkeypatch.setattr("sys.argv", ["lingvix", *argv])
     return cli.main()
 
 
@@ -144,7 +144,7 @@ def test_download_category_prefers_release_archive(
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     _, count = download_category("it", "ru", str(tmp_path))
-    assert seen[0].endswith("linguafix-dict-it.tar.gz")
+    assert seen[0].endswith("lingvix-dict-it.tar.gz")
     assert count == 2
     assert load_thematic_words("it", "ru", str(tmp_path)) == {"алгоритм", "деплой"}
 
@@ -239,7 +239,7 @@ def test_cli_install_and_remove_category(
     code = _run_cli(monkeypatch, ["dict", "install", "it", "--lang", "ru"])
     assert code == 0
     assert "Установлено" in capsys.readouterr().out
-    directory = isolated_home / "xdg_data_home" / "linguafix" / "dictionaries"
+    directory = isolated_home / "xdg_data_home" / "lingvix" / "dictionaries"
     assert thematic_path("it", "ru", str(directory)).is_file()
 
     assert _run_cli(monkeypatch, ["dict", "list-installed"]) == 0
@@ -247,7 +247,7 @@ def test_cli_install_and_remove_category(
 
     assert _run_cli(monkeypatch, ["dict", "remove-category", "it"]) == 0
     assert "отключена" in capsys.readouterr().out
-    from linguafix.config import load_config
+    from lingvix.config import load_config
 
     assert load_config().installed_dict_categories == ["base"]
 
@@ -269,7 +269,7 @@ def test_installed_category_slugs_reports_disk(
         raise urllib.error.URLError("offline")
 
     monkeypatch.setattr("urllib.request.urlopen", fail)
-    directory = isolated_home / "xdg_data_home" / "linguafix" / "dictionaries"
+    directory = isolated_home / "xdg_data_home" / "lingvix" / "dictionaries"
     download_category("medicine", "ru", str(directory))
     assert installed_category_slugs("ru", str(directory)) == ("medicine",)
     assert installed_category_slugs("en", str(directory)) == ()
@@ -289,7 +289,7 @@ def test_thematic_lists_are_not_bundled_in_the_deb() -> None:
 
 def test_base_lists_are_in_the_built_deb() -> None:
     """When a .deb exists, every base list must be inside it."""
-    deb = REPO_ROOT / "dist" / "linguafix_0.2.8_all.deb"
+    deb = REPO_ROOT / "dist" / "lingvix_0.2.8_all.deb"
     if not deb.is_file():
         pytest.skip("no built .deb to inspect")
     listing = subprocess.run(
@@ -306,5 +306,5 @@ def test_base_lists_are_in_the_built_deb() -> None:
 
 def test_release_workflow_attaches_category_archives() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    assert "linguafix-dict-" in workflow
+    assert "lingvix-dict-" in workflow
     assert "dist/dict-archives" in workflow

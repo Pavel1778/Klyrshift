@@ -1,6 +1,6 @@
 """Privacy audit: no typed text may ever be persisted or leak.
 
-LinguaFix reads every keystroke, so the one hard guarantee it must keep is that
+Lingvix reads every keystroke, so the one hard guarantee it must keep is that
 the typed characters are never written anywhere: not to the log, the cache, the
 state directory, the config file, the systemd journal, a subprocess argv, or an
 exception traceback.
@@ -19,10 +19,10 @@ from typing import Any
 
 import pytest
 
-from linguafix import logging_setup
-from linguafix.config import Config, cache_dir, config_path, load_config, save_config, state_dir
-from linguafix.daemon import LinguaFixDaemon
-from linguafix.detector import LanguageDetector
+from lingvix import logging_setup
+from lingvix.config import Config, cache_dir, config_path, load_config, save_config, state_dir
+from lingvix.daemon import LingvixDaemon
+from lingvix.detector import LanguageDetector
 
 # Substrings that must never appear anywhere. Chosen so a partial leak (just the
 # digits, just the word) is still caught.
@@ -169,7 +169,7 @@ def _walk(root: Path) -> list[Path]:
     return [p for p in root.rglob("*") if p.is_file()]
 
 
-def _run_secret_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LinguaFixDaemon:
+def _run_secret_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LingvixDaemon:
     """Run a real daemon session whose buffer contains the secret string.
 
     The daemon is driven through its real ``_handle_event``/``_process_buffer``
@@ -187,7 +187,7 @@ def _run_secret_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Ling
     config = Config(analysis_timeout=0.1, min_word_length=1, stop_words=[])
     save_config(config)
     injector = _RecordingInjector()
-    daemon = LinguaFixDaemon(
+    daemon = LingvixDaemon(
         config,
         detector=LanguageDetector(
             converter=None,
@@ -266,7 +266,7 @@ def test_no_secret_in_subprocess_argv(tmp_path: Path, monkeypatch: pytest.Monkey
 
     config = Config(analysis_timeout=0.1, min_word_length=1, stop_words=[], notify_on_fix=True)
     save_config(config)
-    daemon = LinguaFixDaemon(
+    daemon = LingvixDaemon(
         config,
         detector=LanguageDetector(
             converter=None,
@@ -298,7 +298,7 @@ def test_traceback_does_not_contain_buffer(
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
 
     config = Config(analysis_timeout=0.1, min_word_length=1, stop_words=[])
-    daemon = LinguaFixDaemon(
+    daemon = LingvixDaemon(
         config,
         detector=LanguageDetector(
             converter=None,
@@ -340,7 +340,7 @@ def test_no_secret_in_user_journal(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         pytest.skip("journalctl is not available")
     _run_secret_session(tmp_path, monkeypatch)
     result = subprocess.run(
-        ["journalctl", "--user", "-u", "linguafix.service", "--no-pager", "-n", "500"],
+        ["journalctl", "--user", "-u", "lingvix.service", "--no-pager", "-n", "500"],
         check=False,
         capture_output=True,
         text=True,
@@ -359,7 +359,7 @@ def test_daemon_survives_injector_exception(
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
     config = Config(analysis_timeout=0.1, min_word_length=1, stop_words=[])
     injector = _RecordingInjector()
-    daemon = LinguaFixDaemon(
+    daemon = LingvixDaemon(
         config,
         detector=LanguageDetector(
             converter=None,

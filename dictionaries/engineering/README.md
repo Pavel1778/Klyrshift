@@ -9,11 +9,11 @@
 
 ## Источник и лицензия
 
-Составлено вручную (manual curation) для проекта LinguaFix, лицензия — MIT.
+Составлено вручную (manual curation) для проекта Lingvix, лицензия — MIT.
 Термины — общеупотребительные технические понятия.
 
 ## Установка
 
 ```bash
-linguafix dict install engineering --lang ru
+lingvix dict install engineering --lang ru
 ```

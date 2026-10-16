@@ -14,9 +14,9 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix.config import Config  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector  # noqa: E402
+from lingvix.config import Config  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -77,12 +77,12 @@ def make_event(name: str, value: int = 1) -> FakeEvent:
     return FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), value)
 
 
-def tap(daemon: LinguaFixDaemon, name: str) -> None:
+def tap(daemon: LingvixDaemon, name: str) -> None:
     daemon._handle_event(make_event(name, 1))
     daemon._handle_event(make_event(name, 0))
 
 
-def press(daemon: LinguaFixDaemon, text: str) -> None:
+def press(daemon: LingvixDaemon, text: str) -> None:
     for char in text:
         name, shift = _KEY_BY_CHAR[char]
         if shift:
@@ -93,14 +93,14 @@ def press(daemon: LinguaFixDaemon, text: str) -> None:
             daemon._handle_event(make_event("KEY_LEFTSHIFT", 0))
 
 
-def make_daemon(**kwargs: object) -> LinguaFixDaemon:
+def make_daemon(**kwargs: object) -> LingvixDaemon:
     options: dict[str, object] = {"analysis_timeout": 0.8, "stop_words": ["password"]}
     options.update(kwargs)
     config = Config(**options)
     detector = LanguageDetector(
         converter=None, stop_words=config.stop_words, min_word_length=config.min_word_length
     )
-    return LinguaFixDaemon(
+    return LingvixDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -108,7 +108,7 @@ def make_daemon(**kwargs: object) -> LinguaFixDaemon:
     )
 
 
-def _injector(daemon: LinguaFixDaemon) -> FakeInjector:
+def _injector(daemon: LingvixDaemon) -> FakeInjector:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector
@@ -133,7 +133,7 @@ def test_manual_mode_skips_automatic_fix() -> None:
 
 
 def test_manual_mode_forces_fix_for_listed_app(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("linguafix.daemon.get_active_app", lambda: "myeditor")
+    monkeypatch.setattr("lingvix.daemon.get_active_app", lambda: "myeditor")
     daemon = make_daemon(mode="manual", exceptions_force_in_manual=["myeditor"])
     press(daemon, "ghbdtn")
     tap(daemon, "KEY_SPACE")
@@ -141,7 +141,7 @@ def test_manual_mode_forces_fix_for_listed_app(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_manual_mode_ignores_unlisted_app(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("linguafix.daemon.get_active_app", lambda: "firefox")
+    monkeypatch.setattr("lingvix.daemon.get_active_app", lambda: "firefox")
     daemon = make_daemon(mode="manual", exceptions_force_in_manual=["kitty"])
     press(daemon, "ghbdtn")
     tap(daemon, "KEY_SPACE")
@@ -164,7 +164,7 @@ def test_hotkey_forces_fix_in_manual_mode() -> None:
 
 def test_toggle_mode_hotkey_cycles_and_persists(monkeypatch: pytest.MonkeyPatch) -> None:
     saved: list[str] = []
-    monkeypatch.setattr("linguafix.config.save_config", lambda cfg: saved.append(cfg.mode))
+    monkeypatch.setattr("lingvix.config.save_config", lambda cfg: saved.append(cfg.mode))
     daemon = make_daemon(mode="auto", hotkey_toggle_mode="CTRL+M")
     daemon._handle_event(make_event("KEY_LEFTCTRL", 1))
     tap(daemon, "KEY_M")
@@ -286,7 +286,7 @@ def test_short_word_without_taught_conversion_is_ignored() -> None:
 def test_reload_config_refreshes_hotkeys(monkeypatch: pytest.MonkeyPatch) -> None:
     daemon = make_daemon(hotkey_fix_last_word="PAUSE")
     new_config = Config(hotkey_fix_last_word="F9")
-    monkeypatch.setattr("linguafix.config.load_config", lambda: new_config)
+    monkeypatch.setattr("lingvix.config.load_config", lambda: new_config)
     daemon.reload_config()
     assert daemon.config.hotkey_fix_last_word == "F9"
     assert daemon._hotkeys["fix"] is not None

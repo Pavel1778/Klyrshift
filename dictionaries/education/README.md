@@ -9,12 +9,12 @@
 
 ## Источник и лицензия
 
-Составлено вручную (manual curation) для проекта LinguaFix, лицензия — MIT
+Составлено вручную (manual curation) для проекта Lingvix, лицензия — MIT
 (см. корневой `LICENSE`). Термины — общеупотребительные названия понятий,
 они не являются объектами авторского права как отдельные слова.
 
 ## Установка
 
 ```bash
-linguafix dict install education --lang ru
+lingvix dict install education --lang ru
 ```

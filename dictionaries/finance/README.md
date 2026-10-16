@@ -9,12 +9,12 @@
 
 ## Источник и лицензия
 
-Составлено вручную (manual curation) для проекта LinguaFix, лицензия — MIT.
+Составлено вручную (manual curation) для проекта Lingvix, лицензия — MIT.
 Термины — общеупотребительные финансовые понятия; списки не являются
 финансовой рекомендацией.
 
 ## Установка
 
 ```bash
-linguafix dict install finance --lang ru
+lingvix dict install finance --lang ru
 ```

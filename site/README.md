@@ -1,7 +1,7 @@
-# LinguaFix — лендинг
+# Lingvix — лендинг
 
 Статический сайт (Astro 5 + Tailwind CSS) для проекта
-[LinguaFix](https://github.com/Pavel1778/LinguaFix).
+[Lingvix](https://github.com/Pavel1778/Lingvix).
 
 ## Локальный запуск
 
@@ -30,18 +30,33 @@ site/
 ├── public/               # favicon, logo, og-image, robots.txt, скриншоты
 └── src/
     ├── consts.ts         # URL-ы (repo, releases, .deb) и версия
+    ├── data/             # demo-model.json — генерируется, не правится руками
     ├── layouts/Base.astro
     ├── components/       # 10 секций + CodeBlock
     ├── pages/index.astro
     └── styles/global.css
 ```
 
+## Живое демо
+
+Секция «Попробовать» (`src/components/Demo.astro`) повторяет логику детектора в
+TypeScript, чтобы посетитель мог исправить текст без установки. Её входные
+данные — словарь и биграммы — лежат в `src/data/demo-model.json` и
+**генерируются** из боевых корпусов `src/lingvix/data/ngrams_*.json`:
+
+```bash
+python scripts/build_demo_model.py
+```
+
+Файл нужно перегенерировать после пересборки корпусов и закоммитить: тест
+`tests/test_demo_model.py` падает, если демо разошлось с продуктом.
+
 ## Деплой
 
 ### Vercel (основной)
 
 1. Зарегистрируйтесь на <https://vercel.com> через GitHub.
-2. **Add New → Project** → выберите репозиторий `LinguaFix`.
+2. **Add New → Project** → выберите репозиторий `Lingvix`.
 3. **Root Directory** = `site`.
 4. Framework определится как Astro; build — `npm run build`, output — `dist`.
 5. **Deploy**. Сайт будет на `<проект>.vercel.app`.
@@ -50,13 +65,15 @@ site/
 
 Проект Layero **подключён к репозиторию**: платформа сама собирает и публикует
 сайт на каждом push в `main`. Репозиторий самодостаточен для сборки — на это
-работают два файла:
+работает файл **`site/layero.json`**:
 
-- корневой **`layero.json`** — описывает сборку монорепо, т.к. приложение лежит
-  не в корне: `framework: generic`, `buildCommand: npm --prefix site ci &&
-  npm --prefix site run build`, `outputDirectory: site/dist`. Без него Layero
-  из корня не находит приложение («This folder has no app of its own»).
-- `site/layero.json` — настройки, если собирать из папки `site/` вручную.
+```json
+{
+  "framework": "astro",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
+}
+```
 
 Проверить план сборки без выгрузки (логин не нужен):
 
@@ -70,8 +87,8 @@ npx layero@latest deploy --dry-run
 npx layero@latest deploy --root site
 ```
 
-`layero.json` не обязателен, если Layero сам определяет Astro, но для монорепо
-корневой файл нужен явно.
+`layero.json` не обязателен, если Layero сам определяет Astro, но для явности
+он оставлен в `site/`.
 
 ## Обновление версии
 

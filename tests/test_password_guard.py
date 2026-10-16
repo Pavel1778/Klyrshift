@@ -14,11 +14,11 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix import app_focus  # noqa: E402
-from linguafix.config import Config  # noqa: E402
-from linguafix.converter import LayoutConverter  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector  # noqa: E402
+from lingvix import app_focus  # noqa: E402
+from lingvix.config import Config  # noqa: E402
+from lingvix.converter import LayoutConverter  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -69,14 +69,14 @@ _KEY_BY_CHAR = {char: (f"KEY_{char.upper()}", False) for char in "abcdefghijklmn
 _KEY_BY_CHAR[" "] = ("KEY_SPACE", False)
 
 
-def _press(daemon: LinguaFixDaemon, text: str) -> None:
+def _press(daemon: LingvixDaemon, text: str) -> None:
     for char in text:
         name, _shift = _KEY_BY_CHAR[char]
         daemon._handle_event(FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), 1))
         daemon._handle_event(FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), 0))
 
 
-def _make_daemon(role: str | None, *, password_guard: bool = True) -> LinguaFixDaemon:
+def _make_daemon(role: str | None, *, password_guard: bool = True) -> LingvixDaemon:
     config = Config(stop_words=[], analysis_timeout=0.8, password_guard=password_guard)
     detector = LanguageDetector(
         converter=LayoutConverter(),
@@ -84,7 +84,7 @@ def _make_daemon(role: str | None, *, password_guard: bool = True) -> LinguaFixD
         min_word_length=config.min_word_length,
         confidence_threshold=config.confidence_threshold,
     )
-    daemon = LinguaFixDaemon(
+    daemon = LingvixDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -94,7 +94,7 @@ def _make_daemon(role: str | None, *, password_guard: bool = True) -> LinguaFixD
     return daemon
 
 
-def _fixes(daemon: LinguaFixDaemon) -> list[tuple[int, str, str]]:
+def _fixes(daemon: LingvixDaemon) -> list[tuple[int, str, str]]:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector.replacements

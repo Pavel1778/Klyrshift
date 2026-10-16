@@ -5,7 +5,7 @@
 
 ## Как заменить на реальные
 
-1. Запустите GUI: `linguafix gui`.
+1. Запустите GUI: `lingvix gui`.
 2. Сделайте снимок нужного экрана (GNOME: `PrtSc` или `gnome-screenshot -w`).
 3. Обрежьте до ~900×600 и сохраните как `.png` рядом с соответствующим SVG.
 4. Замените ссылку в `README.md` (`docs/screenshots/*.svg` → `.png`).

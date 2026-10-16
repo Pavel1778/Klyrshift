@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
 #
-# Build a Debian package for LinguaFix without dh_make, using dpkg-deb directly.
+# Build a Debian package for Lingvix without dh_make, using dpkg-deb directly.
 #
 # Layout of the resulting package:
-#   /usr/bin/linguafix                              launcher wrapper
-#   /usr/lib/linguafix/linguafix/...                Python package + data
-#   /usr/share/applications/linguafix.desktop       desktop entry
+#   /usr/bin/lingvix                              launcher wrapper
+#   /usr/lib/lingvix/lingvix/...                Python package + data
+#   /usr/share/applications/lingvix.desktop       desktop entry
 #   /usr/share/icons/hicolor/scalable/apps/*.svg    icon
-#   /usr/lib/systemd/user/linguafix.service         systemd user unit
-#   /usr/lib/udev/rules.d/71-linguafix.rules        udev rule
+#   /usr/lib/systemd/user/lingvix.service         systemd user unit
+#   /usr/lib/udev/rules.d/71-lingvix.rules        udev rule
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_DIR}"
 
 VERSION="$(grep -m1 '^version' pyproject.toml | sed -E 's/.*"([^"]+)".*/\1/')"
-PKG="linguafix"
+PKG="lingvix"
 ARCH="all"
 BUILD_DIR="${REPO_DIR}/build/${PKG}_${VERSION}_${ARCH}"
 DIST_DIR="${REPO_DIR}/dist"
 
-echo "[linguafix] Building ${PKG} ${VERSION} (${ARCH})"
+echo "[lingvix] Building ${PKG} ${VERSION} (${ARCH})"
 
 rm -rf "${BUILD_DIR}"
 mkdir -p "${BUILD_DIR}/DEBIAN"
@@ -51,9 +51,9 @@ chmod -R a+rX "${BUILD_DIR}/usr/lib/${PKG}"
 # --- Launcher wrapper -------------------------------------------------------
 cat > "${BUILD_DIR}/usr/bin/${PKG}" <<'EOF'
 #!/bin/sh
-# LinguaFix launcher: run the packaged module with the system Python.
-PYTHONPATH="/usr/lib/linguafix${PYTHONPATH:+:${PYTHONPATH}}" \
-    exec /usr/bin/python3 -m linguafix "$@"
+# Lingvix launcher: run the packaged module with the system Python.
+PYTHONPATH="/usr/lib/lingvix${PYTHONPATH:+:${PYTHONPATH}}" \
+    exec /usr/bin/python3 -m lingvix "$@"
 EOF
 chmod 0755 "${BUILD_DIR}/usr/bin/${PKG}"
 
@@ -86,9 +86,9 @@ Depends: python3 (>= 3.10), python3-tomli | python3 (>= 3.11), python3-tomli-w, 
 Recommends: g3kb-switch, xdotool, python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1, gir1.2-appindicator3-0.1, python3-pyatspi, gir1.2-atspi-2.0, wl-clipboard, xclip
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Pavel1778 <noreply@github.com>
-Homepage: https://github.com/Pavel1778/LinguaFix
+Homepage: https://github.com/Pavel1778/Lingvix
 Description: Automatic keyboard layout switcher for Debian GNOME
- LinguaFix is a background daemon that detects text typed in the wrong
+ Lingvix is a background daemon that detects text typed in the wrong
  keyboard layout (for example "ghbdtn" instead of "привет") and fixes it
  automatically. It works on both X11 and Wayland.
 EOF
@@ -98,7 +98,7 @@ EOF
 # usermod, to relogin or to enable anything by hand.
 #
 #   * device access is granted by the udev rule via TAG+="uaccess" (see
-#     data/71-linguafix.rules), so no group membership is touched;
+#     data/71-lingvix.rules), so no group membership is touched;
 #   * the uinput module is loaded so /dev/uinput appears;
 #   * the user unit is enabled globally so it starts at the next login. It is
 #     deliberately not started here: the package may be installed without a
@@ -113,7 +113,7 @@ if command -v udevadm >/dev/null 2>&1; then
     udevadm trigger || true
 fi
 
-# Refresh the desktop database so the application menu shows LinguaFix right
+# Refresh the desktop database so the application menu shows Lingvix right
 # after installation, without waiting for a re-login or a desktop refresh.
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q /usr/share/applications || true
@@ -130,7 +130,7 @@ if command -v modprobe >/dev/null 2>&1; then
 fi
 
 # Reload the systemd user manager after the unit file was replaced, so a later
-# ``systemctl --user restart linguafix.service`` does not warn that the unit
+# ``systemctl --user restart lingvix.service`` does not warn that the unit
 # changed on disk. Best effort: an install without a running user bus still
 # succeeds.
 if command -v systemctl >/dev/null 2>&1; then
@@ -141,10 +141,10 @@ fi
 # --global writes the symlink under /etc/systemd/user, which is what makes the
 # service start on the next login. Do not fail the install if systemd is absent.
 if command -v systemctl >/dev/null 2>&1; then
-    systemctl --user enable --global linguafix.service >/dev/null 2>&1 || true
+    systemctl --user enable --global lingvix.service >/dev/null 2>&1 || true
 fi
 
-echo "LinguaFix установлен. Сервис запустится при следующем входе в сессию."
+echo "Lingvix установлен. Сервис запустится при следующем входе в сессию."
 EOF
 chmod 0755 "${BUILD_DIR}/DEBIAN/postinst"
 
@@ -155,7 +155,7 @@ cat > "${BUILD_DIR}/DEBIAN/prerm" <<'EOF'
 #!/bin/sh
 set -e
 if command -v systemctl >/dev/null 2>&1; then
-    systemctl --user disable --global linguafix.service >/dev/null 2>&1 || true
+    systemctl --user disable --global lingvix.service >/dev/null 2>&1 || true
 fi
 exit 0
 EOF
@@ -175,12 +175,12 @@ case "${1:-}" in
         # under /usr/lib, which dpkg does not track. Drop it, then prune the
         # directories it leaves empty, so a purge leaves nothing behind.
         if command -v py3clean >/dev/null 2>&1; then
-            py3clean /usr/lib/linguafix >/dev/null 2>&1 || true
+            py3clean /usr/lib/lingvix >/dev/null 2>&1 || true
         fi
-        if [ -d /usr/lib/linguafix ]; then
-            find /usr/lib/linguafix -type d -name '__pycache__' \
+        if [ -d /usr/lib/lingvix ]; then
+            find /usr/lib/lingvix -type d -name '__pycache__' \
                 -prune -exec rm -rf {} + 2>/dev/null || true
-            find /usr/lib/linguafix -depth -type d -empty \
+            find /usr/lib/lingvix -depth -type d -empty \
                 -exec rmdir {} + 2>/dev/null || true
         fi
         ;;
@@ -189,19 +189,19 @@ esac
 case "${1:-}" in
     purge)
         if command -v systemctl >/dev/null 2>&1; then
-            systemctl --user disable --global linguafix.service >/dev/null 2>&1 || true
+            systemctl --user disable --global lingvix.service >/dev/null 2>&1 || true
         fi
-        rm -rf /etc/systemd/user/default.target.wants/linguafix.service
+        rm -rf /etc/systemd/user/default.target.wants/lingvix.service
         # Per-user state for the user that requested the install, when known.
         for candidate in "${SUDO_USER:-}" "${USER:-}"; do
             [ -n "${candidate}" ] || continue
             [ "${candidate}" = "root" ] && continue
             home="$(getent passwd "${candidate}" | cut -d: -f6)"
             [ -n "${home}" ] || continue
-            rm -rf "${home}/.config/linguafix" \
-                   "${home}/.local/share/linguafix" \
-                   "${home}/.local/state/linguafix" \
-                   "${home}/.cache/linguafix"
+            rm -rf "${home}/.config/lingvix" \
+                   "${home}/.local/share/lingvix" \
+                   "${home}/.local/state/lingvix" \
+                   "${home}/.cache/lingvix"
         done
         ;;
 esac
@@ -217,4 +217,4 @@ chmod 0755 "${BUILD_DIR}/DEBIAN/postrm"
 # --- Build ------------------------------------------------------------------
 dpkg-deb --build --root-owner-group "${BUILD_DIR}" "${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"
 
-echo "[linguafix] Package built: ${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"
+echo "[lingvix] Package built: ${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"

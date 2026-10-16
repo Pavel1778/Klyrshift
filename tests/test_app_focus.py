@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from linguafix import app_focus
+from lingvix import app_focus
 
 
 def test_strip_desktop_suffix() -> None:

@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from linguafix import cli
-from linguafix.config import Config
-from linguafix.detector import LanguageDetector
-from linguafix.dictionary import (
+from lingvix import cli
+from lingvix.config import Config
+from lingvix.detector import LanguageDetector
+from lingvix.dictionary import (
     BUNDLED_DICTIONARY_LANGUAGES,
     bundled_dictionary_source,
     default_extended_dictionary_dir,
@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 def test_default_dir_is_under_xdg_data(isolated_home: Path) -> None:
     directory = default_extended_dictionary_dir()
-    assert directory == isolated_home / "xdg_data_home" / "linguafix" / "dictionaries"
+    assert directory == isolated_home / "xdg_data_home" / "lingvix" / "dictionaries"
 
 
 def test_path_and_load_round_trip(tmp_path: Path) -> None:
@@ -82,7 +82,7 @@ def test_download_tries_release_asset_before_mirror(
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     download_extended_dictionary("ru", str(tmp_path))
-    assert seen[0].startswith("https://github.com/Pavel1778/LinguaFix/releases/latest/download/")
+    assert seen[0].startswith("https://github.com/Pavel1778/Lingvix/releases/latest/download/")
     assert seen[0].endswith("ru-50k.txt")
 
 
@@ -167,7 +167,7 @@ def test_config_normalises_extended_dir() -> None:
 
 
 def _run_cli(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> int:
-    monkeypatch.setattr("sys.argv", ["linguafix", *argv])
+    monkeypatch.setattr("sys.argv", ["lingvix", *argv])
     return cli.main()
 
 

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Lingvix">
+  <title>Lingvix</title>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="#3584e4"/>
+  <rect x="26" y="72" width="76" height="32" rx="8" fill="#ffffff"/>
+  <g fill="#3584e4">
+    <rect x="34" y="80" width="9" height="8" rx="2"/>
+    <rect x="47" y="80" width="9" height="8" rx="2"/>
+    <rect x="60" y="80" width="9" height="8" rx="2"/>
+    <rect x="73" y="80" width="9" height="8" rx="2"/>
+    <rect x="86" y="80" width="8" height="8" rx="2"/>
+    <rect x="44" y="92" width="40" height="6" rx="3"/>
+  </g>
+  <g fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M36 50 h48"/>
+    <path d="M74 38 l12 12 -12 12"/>
+  </g>
+  <g fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.65">
+    <path d="M92 26 h-40"/>
+    <path d="M62 18 l-10 8 10 8"/>
+  </g>
+</svg>

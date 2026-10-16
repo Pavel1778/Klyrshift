@@ -22,10 +22,10 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix.config import Config  # noqa: E402
-from linguafix.converter import LayoutConverter  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector  # noqa: E402
+from lingvix.config import Config  # noqa: E402
+from lingvix.converter import LayoutConverter  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -154,7 +154,7 @@ class Harness:
         self.switcher = ScreenSwitcher("us")
         self.screen = Screen(self.converter, self.switcher)
         self.injector = ScreenInjector(self.screen)
-        self.daemon = LinguaFixDaemon(
+        self.daemon = LingvixDaemon(
             self.config,
             detector=self.detector,
             switcher=self.switcher,

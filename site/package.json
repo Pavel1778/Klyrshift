@@ -1,9 +1,9 @@
 {
-  "name": "linguafix-site",
+  "name": "lingvix-site",
   "version": "0.2.8.2",
   "private": true,
   "type": "module",
-  "description": "Landing page for LinguaFix",
+  "description": "Landing page for Lingvix",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

@@ -1,1 +1,1 @@
-"""Test suite for LinguaFix."""
+"""Test suite for Lingvix."""

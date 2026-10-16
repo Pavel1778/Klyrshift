@@ -14,10 +14,10 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from linguafix.config import Config  # noqa: E402
-from linguafix.converter import LayoutConverter  # noqa: E402
-from linguafix.daemon import LinguaFixDaemon  # noqa: E402
-from linguafix.detector import LanguageDetector  # noqa: E402
+from lingvix.config import Config  # noqa: E402
+from lingvix.converter import LayoutConverter  # noqa: E402
+from lingvix.daemon import LingvixDaemon  # noqa: E402
+from lingvix.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -67,17 +67,17 @@ def _key_name(char: str) -> str:
     return _KEY_BY_CHAR[char][0]
 
 
-def tap(daemon: LinguaFixDaemon, name: str) -> None:
+def tap(daemon: LingvixDaemon, name: str) -> None:
     daemon._handle_event(FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), 1))
     daemon._handle_event(FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), 0))
 
 
-def press(daemon: LinguaFixDaemon, text: str) -> None:
+def press(daemon: LingvixDaemon, text: str) -> None:
     for char in text:
         tap(daemon, _key_name(char))
 
 
-def make_daemon(**kwargs: object) -> LinguaFixDaemon:
+def make_daemon(**kwargs: object) -> LingvixDaemon:
     options: dict[str, object] = {"stop_words": [], "analysis_timeout": 0.8}
     options.update(kwargs)
     config = Config(**options)
@@ -87,7 +87,7 @@ def make_daemon(**kwargs: object) -> LinguaFixDaemon:
         min_word_length=config.min_word_length,
         confidence_threshold=config.confidence_threshold,
     )
-    return LinguaFixDaemon(
+    return LingvixDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -95,7 +95,7 @@ def make_daemon(**kwargs: object) -> LinguaFixDaemon:
     )
 
 
-def _injector(daemon: LinguaFixDaemon) -> FakeInjector:
+def _injector(daemon: LingvixDaemon) -> FakeInjector:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector

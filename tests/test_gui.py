@@ -15,8 +15,8 @@ from typing import Any
 
 import pytest
 
-import linguafix.app_focus as app_focus
-from linguafix.config import Config
+import lingvix.app_focus as app_focus
+from lingvix.config import Config
 
 _DIST_PACKAGES = "/usr/lib/python3/dist-packages"
 if os.path.isdir(_DIST_PACKAGES) and _DIST_PACKAGES not in sys.path:
@@ -44,8 +44,8 @@ pytestmark = pytest.mark.skipif(not _gtk_usable(), reason="GTK4/libadwaita or di
 @pytest.fixture
 def gui_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     """Return a :class:`GuiState` isolated to ``tmp_path`` and a fake backend."""
-    from linguafix.gui import state as state_module
-    from linguafix.gui.state import GuiState
+    from lingvix.gui import state as state_module
+    from lingvix.gui.state import GuiState
 
     config = Config()
     monkeypatch.setattr(state_module, "load_config", lambda: config)
@@ -59,10 +59,10 @@ def test_window_creates_with_expected_pages(gui_state: Any) -> None:
     gi.require_version("Adw", "1")
     from gi.repository import Adw
 
-    from linguafix.gui.window import LinguaFixWindow
+    from lingvix.gui.window import LingvixWindow
 
-    app = Adw.Application(application_id="io.github.pavel1778.LinguaFixTest")
-    window = LinguaFixWindow(gui_state, app)
+    app = Adw.Application(application_id="io.github.pavel1778.LingvixTest")
+    window = LingvixWindow(gui_state, app)
     names = {page.get_name() for page in window.stack.get_pages()}
     assert names == {"home", "settings", "dictionary", "typo", "history", "advanced"}
     # The advanced page exists but is hidden from the switcher until revealed.
@@ -74,7 +74,7 @@ def test_window_creates_with_expected_pages(gui_state: Any) -> None:
 
 
 def test_big_toggle_start_and_stop(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    from linguafix.gui import state as state_module
+    from lingvix.gui import state as state_module
 
     active = {"value": False}
     calls: list[str] = []
@@ -87,8 +87,8 @@ def test_big_toggle_start_and_stop(gui_state: Any, monkeypatch: pytest.MonkeyPat
 
     import gi
 
-    from linguafix.gui.home_page import HomePage
-    from linguafix.gui.widgets.big_toggle import STATE_BUSY, STATE_OFF, STATE_ON
+    from lingvix.gui.home_page import HomePage
+    from lingvix.gui.widgets.big_toggle import STATE_BUSY, STATE_OFF, STATE_ON
 
     gi.require_version("Adw", "1")
     from gi.repository import Adw
@@ -116,7 +116,7 @@ def test_big_toggle_start_and_stop(gui_state: Any, monkeypatch: pytest.MonkeyPat
 
 
 def test_undo_button_asks_daemon(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    from linguafix.gui import state as state_module
+    from lingvix.gui import state as state_module
 
     calls: list[str] = []
     monkeypatch.setattr(state_module, "daemon_is_running", lambda: True)
@@ -128,7 +128,7 @@ def test_undo_button_asks_daemon(gui_state: Any, monkeypatch: pytest.MonkeyPatch
     gi.require_version("Adw", "1")
     from gi.repository import Adw
 
-    from linguafix.gui.home_page import HomePage
+    from lingvix.gui.home_page import HomePage
 
     page = HomePage(gui_state, Adw.ToastOverlay())
     page._on_undo_clicked(None)
@@ -139,7 +139,7 @@ def test_mode_switcher_persists(gui_state: Any, monkeypatch: pytest.MonkeyPatch)
     saved: list[str] = []
     monkeypatch.setattr(gui_state, "save", lambda: saved.append(gui_state.config.mode))
 
-    from linguafix.gui.widgets.mode_switcher import ModeSwitcher
+    from lingvix.gui.widgets.mode_switcher import ModeSwitcher
 
     switcher = ModeSwitcher(on_change=gui_state.set_mode)
     switcher.set_mode("hybrid", notify=True)
@@ -149,7 +149,7 @@ def test_mode_switcher_persists(gui_state: Any, monkeypatch: pytest.MonkeyPatch)
 
 def test_set_mode_signals_running_daemon(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Switching mode in the GUI must reach a running daemon, not just the file."""
-    from linguafix.gui import state as state_module
+    from lingvix.gui import state as state_module
 
     reloads: list[bool] = []
     monkeypatch.setattr(state_module, "daemon_is_running", lambda: True)
@@ -163,7 +163,7 @@ def test_set_mode_signals_running_daemon(gui_state: Any, monkeypatch: pytest.Mon
 def test_set_mode_does_not_signal_when_daemon_stopped(
     gui_state: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from linguafix.gui import state as state_module
+    from lingvix.gui import state as state_module
 
     reloads: list[bool] = []
     monkeypatch.setattr(state_module, "daemon_is_running", lambda: False)
@@ -177,7 +177,7 @@ def test_set_mode_does_not_signal_when_daemon_stopped(
 def test_autostart_switch_enables_and_disables(
     gui_state: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from linguafix.gui import state as state_module
+    from lingvix.gui import state as state_module
 
     enabled = {"value": False}
     calls: list[bool] = []
@@ -199,7 +199,7 @@ def test_autostart_switch_enables_and_disables(
     gi.require_version("Adw", "1")
     from gi.repository import Adw
 
-    from linguafix.gui.home_page import HomePage
+    from lingvix.gui.home_page import HomePage
 
     page = HomePage(gui_state, Adw.ToastOverlay())
     page.autostart_row.set_active(True)
@@ -210,7 +210,7 @@ def test_autostart_switch_enables_and_disables(
 
 
 def test_hotkey_row_validation(gui_state: Any) -> None:
-    from linguafix.gui.widgets.hotkey_row import HotkeyRow
+    from lingvix.gui.widgets.hotkey_row import HotkeyRow
 
     changes: list[str] = []
     row = HotkeyRow("Исправить", value="PAUSE", on_change=changes.append)
@@ -227,7 +227,7 @@ def test_hotkey_row_records_and_clears(gui_state: Any) -> None:
     gi.require_version("Gdk", "4.0")
     from gi.repository import Gdk
 
-    from linguafix.gui.widgets.hotkey_row import HotkeyRow
+    from lingvix.gui.widgets.hotkey_row import HotkeyRow
 
     changes: list[str] = []
     row = HotkeyRow("Исправить", value="PAUSE", on_change=changes.append)
@@ -253,13 +253,13 @@ def test_keyval_to_hotkey_rejects_modifier_only() -> None:
     gi.require_version("Gdk", "4.0")
     from gi.repository import Gdk
 
-    from linguafix.gui.widgets.hotkey_row import keyval_to_hotkey
+    from lingvix.gui.widgets.hotkey_row import keyval_to_hotkey
 
     assert keyval_to_hotkey(Gdk.KEY_Control_L, 0) is None
 
 
 def test_app_exceptions_list_add_remove(gui_state: Any) -> None:
-    from linguafix.gui.widgets.app_exceptions_list import AppExceptionsList
+    from lingvix.gui.widgets.app_exceptions_list import AppExceptionsList
 
     changes: list[list[str]] = []
     widget = AppExceptionsList("Исключения", apps=["code"], on_change=changes.append)
@@ -288,7 +288,7 @@ def test_app_exceptions_list_add_remove(gui_state: Any) -> None:
 
 
 def test_dictionary_list_add_remove_search(gui_state: Any) -> None:
-    from linguafix.gui.widgets.dictionary_list import DictionaryList
+    from lingvix.gui.widgets.dictionary_list import DictionaryList
 
     changes: list[list[str]] = []
     widget = DictionaryList("Словарь", words=["vercel"], on_change=changes.append)
@@ -317,7 +317,7 @@ def test_dictionary_list_add_remove_search(gui_state: Any) -> None:
 
 
 def test_dictionary_list_import_export(tmp_path: Path, gui_state: Any) -> None:
-    from linguafix.gui.widgets.dictionary_list import DictionaryList
+    from lingvix.gui.widgets.dictionary_list import DictionaryList
 
     widget = DictionaryList("Словарь", words=["vercel"])
     source = tmp_path / "in.txt"
@@ -335,9 +335,9 @@ def test_dictionary_page_persists_words(tmp_path: Path, monkeypatch: pytest.Monk
 
     gi.require_version("Adw", "1")
 
-    from linguafix.config import Config
-    from linguafix.gui.dictionary_page import DictionaryPage
-    from linguafix.gui.state import GuiState
+    from lingvix.config import Config
+    from lingvix.gui.dictionary_page import DictionaryPage
+    from lingvix.gui.state import GuiState
 
     config = Config(dictionary_custom_path=str(tmp_path / "dictionary.txt"))
     state = GuiState(config=config)
@@ -359,7 +359,7 @@ def test_hotkey_row_records_double_tap_modifier(gui_state: Any) -> None:
     gi.require_version("Gdk", "4.0")
     from gi.repository import Gdk
 
-    from linguafix.gui.widgets.hotkey_row import HotkeyRow
+    from lingvix.gui.widgets.hotkey_row import HotkeyRow
 
     changes: list[str] = []
     row = HotkeyRow("Исправить", value="", on_change=changes.append)
@@ -399,7 +399,7 @@ class _NoLayout:
 
 
 def test_status_row_renders_all_branches() -> None:
-    from linguafix.gui.widgets.status_row import StatusRow
+    from lingvix.gui.widgets.status_row import StatusRow
 
     row = StatusRow()
     row.update(layout="us", backend="uinput", mode="Авто", seconds_since_fix=None)
@@ -408,7 +408,7 @@ def test_status_row_renders_all_branches() -> None:
 
 
 def test_mode_switcher_click_notifies(gui_state: Any) -> None:
-    from linguafix.gui.widgets.mode_switcher import ModeSwitcher
+    from lingvix.gui.widgets.mode_switcher import ModeSwitcher
 
     seen: list[str] = []
     switcher = ModeSwitcher(on_change=seen.append)
@@ -421,7 +421,7 @@ def test_mode_switcher_click_notifies(gui_state: Any) -> None:
 
 
 def test_big_toggle_states_and_poller() -> None:
-    from linguafix.gui.widgets.big_toggle import (
+    from lingvix.gui.widgets.big_toggle import (
         STATE_BUSY,
         STATE_OFF,
         STATE_ON,
@@ -452,7 +452,7 @@ def test_big_toggle_states_and_poller() -> None:
 
 
 def test_app_exceptions_set_apps_and_detect(gui_state: Any) -> None:
-    from linguafix.gui.widgets.app_exceptions_list import AppExceptionsList
+    from lingvix.gui.widgets.app_exceptions_list import AppExceptionsList
 
     widget = AppExceptionsList("Исключения", apps=["code"], on_detect=lambda: "firefox")
     widget.set_apps(["vim", "nano"])
@@ -474,7 +474,7 @@ def test_app_exceptions_set_apps_and_detect(gui_state: Any) -> None:
 
 
 def test_app_exceptions_add_empty_is_ignored(gui_state: Any) -> None:
-    from linguafix.gui.widgets.app_exceptions_list import AppExceptionsList
+    from lingvix.gui.widgets.app_exceptions_list import AppExceptionsList
 
     widget = AppExceptionsList("Исключения")
 
@@ -493,7 +493,7 @@ def test_settings_page_bindings(gui_state: Any, monkeypatch: pytest.MonkeyPatch)
     saved: list[str] = []
     monkeypatch.setattr(gui_state, "save", lambda: saved.append("save"))
 
-    from linguafix.gui.settings_page import SettingsPage
+    from lingvix.gui.settings_page import SettingsPage
 
     page = SettingsPage(gui_state, on_saved=saved.append)
     page._on_mode_selected("hybrid")
@@ -509,7 +509,7 @@ def test_settings_page_bindings(gui_state: Any, monkeypatch: pytest.MonkeyPatch)
 def test_settings_page_language_toggle(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
 
-    from linguafix.gui.settings_page import SettingsPage
+    from lingvix.gui.settings_page import SettingsPage
 
     page = SettingsPage(gui_state, on_saved=lambda _m: None)
     row = page.language_rows["ru"]
@@ -522,7 +522,7 @@ def test_advanced_page_handlers(gui_state: Any, monkeypatch: pytest.MonkeyPatch)
     saved: list[str] = []
     monkeypatch.setattr(gui_state, "save", lambda: saved.append("save"))
 
-    from linguafix.gui.advanced_page import AdvancedPage
+    from lingvix.gui.advanced_page import AdvancedPage
 
     page = AdvancedPage(gui_state, on_saved=saved.append)
     page._on_exceptions_changed(["code", "gnome-terminal"])
@@ -544,7 +544,7 @@ def test_advanced_page_typo_group_reflects_config(
     gui_state: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
-    from linguafix.gui.advanced_page import AdvancedPage
+    from lingvix.gui.advanced_page import AdvancedPage
 
     gui_state.config.typo_correction = True
     gui_state.config.typo_max_distance = 2
@@ -560,7 +560,7 @@ def test_advanced_page_expander_group_reflects_config(
     gui_state: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
-    from linguafix.gui.advanced_page import AdvancedPage
+    from lingvix.gui.advanced_page import AdvancedPage
 
     gui_state.config.text_expander_enabled = True
     gui_state.config.selection_fix_enabled = False
@@ -573,7 +573,7 @@ def test_advanced_page_expander_group_reflects_config(
 
 
 def test_app_layout_map_add_remove(gui_state: Any) -> None:
-    from linguafix.gui.widgets.app_layout_map import AppLayoutMap
+    from lingvix.gui.widgets.app_layout_map import AppLayoutMap
 
     changes: list[dict[str, str]] = []
     widget = AppLayoutMap("Раскладка", mapping={"code": "us"}, on_change=changes.append)
@@ -606,7 +606,7 @@ def test_app_layout_map_add_remove(gui_state: Any) -> None:
 
 
 def test_app_layout_map_detect(gui_state: Any) -> None:
-    from linguafix.gui.widgets.app_layout_map import AppLayoutMap
+    from lingvix.gui.widgets.app_layout_map import AppLayoutMap
 
     widget = AppLayoutMap("Раскладка", on_detect=lambda: "firefox")
     widget._on_detect_clicked(None)
@@ -618,7 +618,7 @@ def test_app_layout_map_detect(gui_state: Any) -> None:
 
 def test_advanced_page_app_layouts_changed(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
-    from linguafix.gui.advanced_page import AdvancedPage
+    from lingvix.gui.advanced_page import AdvancedPage
 
     page = AdvancedPage(gui_state)
     page._on_app_layouts_changed({"kitty": "ru"})
@@ -626,7 +626,7 @@ def test_advanced_page_app_layouts_changed(gui_state: Any, monkeypatch: pytest.M
 
 
 def test_backup_group_export_import(gui_state: Any) -> None:
-    from linguafix.gui.widgets.backup_group import BackupGroup
+    from lingvix.gui.widgets.backup_group import BackupGroup
 
     exported: list[str] = []
     imported: list[str] = []
@@ -658,7 +658,7 @@ def test_backup_group_export_import(gui_state: Any) -> None:
 
 
 def test_backup_group_cancel_is_silent(gui_state: Any) -> None:
-    from linguafix.gui.widgets.backup_group import BackupGroup
+    from lingvix.gui.widgets.backup_group import BackupGroup
 
     notes: list[str] = []
     widget = BackupGroup(
@@ -679,7 +679,7 @@ def test_advanced_page_settings_roundtrip(
     gui_state: Any, tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
-    from linguafix.gui.advanced_page import AdvancedPage
+    from lingvix.gui.advanced_page import AdvancedPage
 
     page = AdvancedPage(gui_state)
     out = tmp_path / "backup.json"
@@ -690,7 +690,7 @@ def test_advanced_page_settings_roundtrip(
 
 def test_advanced_page_regex_validation(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
-    from linguafix.gui.advanced_page import AdvancedPage
+    from lingvix.gui.advanced_page import AdvancedPage
 
     page = AdvancedPage(gui_state)
     assert page._validate_regex("") is True
@@ -704,10 +704,10 @@ def test_window_menu_actions(gui_state: Any) -> None:
     gi.require_version("Adw", "1")
     from gi.repository import Adw
 
-    from linguafix.gui.window import LinguaFixWindow
+    from lingvix.gui.window import LingvixWindow
 
-    app = Adw.Application(application_id="io.github.pavel1778.LinguaFixTest2")
-    window = LinguaFixWindow(gui_state, app)
+    app = Adw.Application(application_id="io.github.pavel1778.LingvixTest2")
+    window = LingvixWindow(gui_state, app)
     window._on_open_config(None, None)
     window._on_saved("ok")
     window._on_show_advanced(None, None)
@@ -724,10 +724,10 @@ def test_window_resizes_without_breaking(gui_state: Any) -> None:
     gi.require_version("Adw", "1")
     from gi.repository import Adw
 
-    from linguafix.gui.window import LinguaFixWindow
+    from lingvix.gui.window import LingvixWindow
 
-    app = Adw.Application(application_id="io.github.pavel1778.LinguaFixTestResize")
-    window = LinguaFixWindow(gui_state, app)
+    app = Adw.Application(application_id="io.github.pavel1778.LingvixTestResize")
+    window = LingvixWindow(gui_state, app)
     # Width is homogeneous; height follows the visible page so the window can
     # shrink instead of being pinned to the tallest page.
     assert window.stack.get_hhomogeneous() is True
@@ -745,27 +745,27 @@ def test_about_window_builds() -> None:
     gi.require_version("Adw", "1")
     from gi.repository import Adw
 
-    from linguafix.gui.about_page import build_about_window
+    from lingvix.gui.about_page import build_about_window
 
-    Adw.Application(application_id="io.github.pavel1778.LinguaFixTest3")
+    Adw.Application(application_id="io.github.pavel1778.LingvixTest3")
     dialog = build_about_window()
-    assert dialog.get_application_name() == "LinguaFix"
+    assert dialog.get_application_name() == "Lingvix"
 
 
 def test_gui_module_availability() -> None:
-    from linguafix.gui import gtk_available
+    from lingvix.gui import gtk_available
 
     assert gtk_available() is True
 
 
 def test_gui_main_runs_and_quits(monkeypatch: pytest.MonkeyPatch) -> None:
-    from linguafix.gui import app as app_module, main
+    from lingvix.gui import app as app_module, main
 
     class _App:
         def run(self, _argv: list[str]) -> int:
             return 0
 
-    monkeypatch.setattr(app_module, "LinguaFixApplication", _App)
+    monkeypatch.setattr(app_module, "LingvixApplication", _App)
     assert main([]) == 0
 
 
@@ -799,7 +799,7 @@ def test_history_page_formats_metadata_rows(
             },
         ],
     )
-    from linguafix.gui.history_page import HistoryPage
+    from lingvix.gui.history_page import HistoryPage
 
     class _Toasts:
         def add_toast(self, _t: object) -> None:
@@ -830,7 +830,7 @@ def test_history_page_undo_asks_daemon(gui_state: Any, monkeypatch: pytest.Monke
             }
         ],
     )
-    from linguafix.gui.history_page import HistoryPage
+    from lingvix.gui.history_page import HistoryPage
 
     class _Toasts:
         def add_toast(self, _t: object) -> None:
@@ -852,7 +852,7 @@ def test_history_page_does_not_poll_while_hidden(
     """
     calls: list[int] = []
     monkeypatch.setattr(gui_state, "read_history", lambda: calls.append(1) or [])
-    from linguafix.gui.history_page import HistoryPage
+    from lingvix.gui.history_page import HistoryPage
 
     class _Toasts:
         def add_toast(self, _t: object) -> None:
@@ -866,7 +866,7 @@ def test_history_page_does_not_poll_while_hidden(
 
 def test_home_page_quiet_hours_indicator(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gui_state, "in_quiet_hours", lambda: True)
-    from linguafix.gui.home_page import HomePage
+    from lingvix.gui.home_page import HomePage
 
     class _Toasts:
         def add_toast(self, _t: object) -> None:
@@ -880,8 +880,8 @@ def test_home_page_quiet_hours_indicator(gui_state: Any, monkeypatch: pytest.Mon
 
 
 def test_gui_state_in_quiet_hours() -> None:
-    from linguafix.config import Config
-    from linguafix.gui.state import GuiState
+    from lingvix.config import Config
+    from lingvix.gui.state import GuiState
 
     config = Config(quiet_hours_enabled=True, quiet_hours_start="00:00", quiet_hours_end="23:59")
     state = GuiState(config=config)
@@ -891,8 +891,8 @@ def test_gui_state_in_quiet_hours() -> None:
 def test_typo_page_master_toggle(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
     monkeypatch.setattr(gui_state, "reload_config", lambda: True)
-    from linguafix.gui.typo_page import TypoPage
-    from linguafix.gui.widgets.big_toggle import STATE_OFF, STATE_ON
+    from lingvix.gui.typo_page import TypoPage
+    from lingvix.gui.widgets.big_toggle import STATE_OFF, STATE_ON
 
     class _Toasts:
         def add_toast(self, _t: object) -> None:
@@ -912,7 +912,7 @@ def test_typo_page_master_toggle(gui_state: Any, monkeypatch: pytest.MonkeyPatch
 
 def test_typo_page_reset_restores_defaults(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
-    from linguafix.gui.typo_page import TypoPage
+    from lingvix.gui.typo_page import TypoPage
 
     class _Toasts:
         def add_toast(self, _t: object) -> None:
@@ -934,7 +934,7 @@ def test_typo_page_punctuation_switch_persists(
 ) -> None:
     saved: list[str] = []
     monkeypatch.setattr(gui_state, "save", lambda: saved.append("save"))
-    from linguafix.gui.typo_page import TypoPage
+    from lingvix.gui.typo_page import TypoPage
 
     class _Toasts:
         def add_toast(self, _t: object) -> None:
@@ -950,7 +950,7 @@ def test_typo_page_mode_combo_sets_independent_mode(
     gui_state: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
-    from linguafix.gui.typo_page import TypoPage
+    from lingvix.gui.typo_page import TypoPage
 
     class _Toasts:
         def add_toast(self, _t: object) -> None:
@@ -971,7 +971,7 @@ def test_typo_page_switch_enables_auto_mode(
     gui_state: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(gui_state, "save", lambda: None)
-    from linguafix.gui.typo_page import TypoPage
+    from lingvix.gui.typo_page import TypoPage
 
     class _Toasts:
         def add_toast(self, _t: object) -> None:
@@ -986,6 +986,43 @@ def test_typo_page_switch_enables_auto_mode(
     assert gui_state.config.typo_mode == "off"
 
 
+def test_typo_page_hotkey_rows_persist(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The T9 and punctuation hotkey rows write their fields and save."""
+    saved: list[str] = []
+    monkeypatch.setattr(gui_state, "save", lambda: saved.append("save"))
+    from lingvix.gui.typo_page import TypoPage
+
+    class _Toasts:
+        def add_toast(self, _t: object) -> None:
+            pass
+
+    page = TypoPage(gui_state, _Toasts())
+    assert page.typo_hotkey_row.value == gui_state.config.typo_hotkey
+    page.typo_hotkey_row._apply("CTRL+SHIFT+9")
+    assert gui_state.config.typo_hotkey == "CTRL+SHIFT+9"
+    page.punctuation_hotkey_row._apply("")
+    assert gui_state.config.punctuation_hotkey == ""
+    assert saved == ["save", "save"]
+
+
+def test_typo_page_reset_restores_hotkeys(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(gui_state, "save", lambda: None)
+    from lingvix.config import DEFAULT_PUNCTUATION_HOTKEY, DEFAULT_TYPO_HOTKEY
+    from lingvix.gui.typo_page import TypoPage
+
+    class _Toasts:
+        def add_toast(self, _t: object) -> None:
+            pass
+
+    gui_state.config.typo_hotkey = ""
+    gui_state.config.punctuation_hotkey = ""
+    page = TypoPage(gui_state, _Toasts())
+    page._on_reset(None)
+    assert gui_state.config.typo_hotkey == DEFAULT_TYPO_HOTKEY
+    assert gui_state.config.punctuation_hotkey == DEFAULT_PUNCTUATION_HOTKEY
+    assert page.typo_hotkey_row.value == DEFAULT_TYPO_HOTKEY
+
+
 def test_desktop_entry_matches_app_id() -> None:
     """The launcher must declare the same app-id the GUI runs under.
 
@@ -995,10 +1032,10 @@ def test_desktop_entry_matches_app_id() -> None:
     """
     from pathlib import Path
 
-    from linguafix.gui.app import APP_ID
+    from lingvix.gui.app import APP_ID
 
     root = Path(__file__).resolve().parents[1]
-    entry = (root / "data" / "linguafix.desktop").read_text(encoding="utf-8")
+    entry = (root / "data" / "lingvix.desktop").read_text(encoding="utf-8")
     assert f"StartupWMClass={APP_ID}\n" in entry
 
 
@@ -1019,7 +1056,7 @@ def test_toggle_failure_shows_reason(gui_state: Any, monkeypatch: pytest.MonkeyP
         gui_state, "last_error", lambda: "сервис не стал активным (проверьте journalctl)"
     )
 
-    from linguafix.gui.home_page import HomePage
+    from lingvix.gui.home_page import HomePage
 
     page = HomePage(gui_state, _Toasts())
     page._on_toggle_done(False)
@@ -1029,8 +1066,8 @@ def test_toggle_failure_shows_reason(gui_state: Any, monkeypatch: pytest.MonkeyP
 
 def test_toggle_reconcile_window_outlasts_start_timeout() -> None:
     """The reconcile loop must run longer than a worst-case ``start()``."""
-    from linguafix.daemon_control import START_TIMEOUT
-    from linguafix.gui import home_page
+    from lingvix.daemon_control import START_TIMEOUT
+    from lingvix.gui import home_page
 
     window = (home_page.RECONCILE_MS / 1000.0) * home_page.RECONCILE_ATTEMPTS
     # start() can spend START_TIMEOUT on systemd plus START_TIMEOUT on the
@@ -1048,7 +1085,7 @@ def test_service_unit_has_no_user_hostile_scheduling() -> None:
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    unit = (root / "data" / "linguafix.service").read_text(encoding="utf-8")
+    unit = (root / "data" / "lingvix.service").read_text(encoding="utf-8")
     active = [line for line in unit.splitlines() if not line.lstrip().startswith("#")]
     joined = "\n".join(active)
     assert "Nice=" not in joined

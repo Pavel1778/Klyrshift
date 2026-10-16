@@ -7,7 +7,7 @@
 # exercises the real installed entry point and its runtime dependencies.
 #
 # Usage:
-#   bash scripts/smoke_test.sh [path/to/linguafix_*.deb]
+#   bash scripts/smoke_test.sh [path/to/lingvix_*.deb]
 #
 # Environment:
 #   SMOKE_IMAGE   Docker image to use (default: debian:12)
@@ -23,7 +23,7 @@ log() { printf '\033[1;34m[smoke]\033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31m[smoke] FAIL:\033[0m %s\n' "$*" >&2; exit 1; }
 
 if [ -z "${DEB}" ]; then
-    DEB="$(ls -1 "${REPO_DIR}"/dist/linguafix_*.deb 2>/dev/null | head -1 || true)"
+    DEB="$(ls -1 "${REPO_DIR}"/dist/lingvix_*.deb 2>/dev/null | head -1 || true)"
 fi
 [ -n "${DEB}" ] && [ -f "${DEB}" ] || fail "no .deb found; run 'make build-deb' first"
 log "Testing package: ${DEB}"
@@ -43,43 +43,43 @@ apt-get update -qq
 apt-get install -y -qq "/pkg/'"${DEB_NAME}"'" >/dev/null
 
 echo "--- entry point ---"
-command -v linguafix >/dev/null || { echo "linguafix not on PATH"; exit 1; }
-test -x /usr/bin/linguafix || { echo "/usr/bin/linguafix missing or not executable"; exit 1; }
+command -v lingvix >/dev/null || { echo "lingvix not on PATH"; exit 1; }
+test -x /usr/bin/lingvix || { echo "/usr/bin/lingvix missing or not executable"; exit 1; }
 
 echo "--- version ---"
-linguafix version | grep -q "LinguaFix" || { echo "version check failed"; exit 1; }
+lingvix version | grep -q "Lingvix" || { echo "version check failed"; exit 1; }
 
 echo "--- help ---"
-linguafix --help | grep -q "doctor" || { echo "help missing doctor"; exit 1; }
+lingvix --help | grep -q "doctor" || { echo "help missing doctor"; exit 1; }
 
 echo "--- status ---"
-linguafix status >/dev/null
+lingvix status >/dev/null
 
 echo "--- data files present and loadable ---"
-DATA=/usr/lib/linguafix/linguafix/data
+DATA=/usr/lib/lingvix/lingvix/data
 for f in layouts.json ngrams_en.json ngrams_ru.json stop_words.txt; do
     test -f "${DATA}/${f}" || { echo "missing data file ${f}"; exit 1; }
 done
 python3 - <<PY || { echo "data files failed to load"; exit 1; }
 import sys
-sys.path.insert(0, "/usr/lib/linguafix")
-from linguafix.converter import LayoutConverter
-from linguafix.detector import LanguageDetector
+sys.path.insert(0, "/usr/lib/lingvix")
+from lingvix.converter import LayoutConverter
+from lingvix.detector import LanguageDetector
 assert LayoutConverter().convert("ghbdtn", "us", "ru") == "привет"
 assert LanguageDetector().detect("привет") == "ru"
 print("data load OK")
 PY
 
 echo "--- systemd unit points at the packaged launcher ---"
-grep -q "^ExecStart=/usr/bin/linguafix " /usr/lib/systemd/user/linguafix.service \
-    || { echo "unit ExecStart does not point at /usr/bin/linguafix"; exit 1; }
-! grep -q "@BIN@" /usr/lib/systemd/user/linguafix.service \
+grep -q "^ExecStart=/usr/bin/lingvix " /usr/lib/systemd/user/lingvix.service \
+    || { echo "unit ExecStart does not point at /usr/bin/lingvix"; exit 1; }
+! grep -q "@BIN@" /usr/lib/systemd/user/lingvix.service \
     || { echo "unit still contains @BIN@ placeholder"; exit 1; }
-! grep -q "@BIN@" /usr/share/applications/linguafix.desktop \
+! grep -q "@BIN@" /usr/share/applications/lingvix.desktop \
     || { echo "desktop file still contains @BIN@ placeholder"; exit 1; }
 
 echo "--- udev rule grants uaccess, not the input group ---"
-RULE=/usr/lib/udev/rules.d/71-linguafix.rules
+RULE=/usr/lib/udev/rules.d/71-lingvix.rules
 test -f "${RULE}" || { echo "udev rule not installed at ${RULE}"; exit 1; }
 grep -q "TAG+=\"uaccess\"" "${RULE}" || { echo "udev rule has no uaccess"; exit 1; }
 ! grep -q "GROUP=\"input\"" "${RULE}" || { echo "udev rule still uses GROUP=input"; exit 1; }
@@ -91,21 +91,21 @@ grep -E "^[^#]*KERNEL==" "${RULE}" | grep -q "ACTION!=\"remove\"" \
     || { echo "udev rule is missing ACTION!=\"remove\""; exit 1; }
 
 echo "--- install-autostart renders the packaged launcher ---"
-linguafix install-autostart >/dev/null
-grep -q "^Exec=/usr/bin/linguafix start" "${HOME}/.config/autostart/linguafix.desktop" \
+lingvix install-autostart >/dev/null
+grep -q "^Exec=/usr/bin/lingvix start" "${HOME}/.config/autostart/lingvix.desktop" \
     || { echo "autostart Exec not rendered"; exit 1; }
-grep -q "^ExecStart=/usr/bin/linguafix start" "${HOME}/.config/systemd/user/linguafix.service" \
+grep -q "^ExecStart=/usr/bin/lingvix start" "${HOME}/.config/systemd/user/lingvix.service" \
     || { echo "installed unit ExecStart not rendered"; exit 1; }
 
 echo "--- doctor (expected to report failures in a bare container) ---"
-linguafix doctor || true
+lingvix doctor || true
 
 echo "--- collect-logs ---"
-linguafix collect-logs --output /tmp | grep -q "архив создан" || { echo "collect-logs failed"; exit 1; }
-ls /tmp/linguafix-logs-*.tar.gz >/dev/null || { echo "no tarball produced"; exit 1; }
+lingvix collect-logs --output /tmp | grep -q "архив создан" || { echo "collect-logs failed"; exit 1; }
+ls /tmp/lingvix-logs-*.tar.gz >/dev/null || { echo "no tarball produced"; exit 1; }
 
 echo "--- daemon dry-run start (no input devices -> exit 2 is acceptable) ---"
-timeout 15 linguafix start --foreground --dry-run || true
+timeout 15 lingvix start --foreground --dry-run || true
 
 echo "SMOKE OK"
 ' || fail "smoke test failed inside the container"

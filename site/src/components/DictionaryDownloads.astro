@@ -86,7 +86,7 @@ const shownCategories = showAll ? categoryCards : categoryCards.slice(0, 6);
                   </span>
                   <a
                     class="shrink-0 text-[#1c71d8] underline dark:text-[#3584e4]"
-                    href={`${RAW}/linguafix-dict-${cat.slug}.tar.gz`}
+                    href={`${RAW}/lingvix-dict-${cat.slug}.tar.gz`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -95,7 +95,7 @@ const shownCategories = showAll ? categoryCards : categoryCards.slice(0, 6);
                 </li>
               ))}
             </ul>
-            <pre class="mt-3 overflow-x-auto rounded bg-[#1e1e1e] p-2 text-[11px] text-[#fafafa]"><code>{`linguafix dict install ${cat.slug} --lang ru`}</code></pre>
+            <pre class="mt-3 overflow-x-auto rounded bg-[#1e1e1e] p-2 text-[11px] text-[#fafafa]"><code>{`lingvix dict install ${cat.slug} --lang ru`}</code></pre>
           </div>
         ))
       }
