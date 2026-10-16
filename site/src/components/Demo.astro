@@ -133,12 +133,51 @@ import { pick } from "../lib/site";
     return true;
   }
 
-  /** True when the token is guarded (URL, code, or already plausible). */
-  function isGuarded(token: string, lang: string): boolean {
-    if (STRUCTURAL_SEPARATOR.test(token) || IDENTIFIER.test(token)) return true;
-    return isPlausible(token, lang);
+  /**
+   * The detector's vocabulary-validated override, ported to TypeScript.
+   *
+   * The plausibility test above protects real words, but it also vetoes a
+   * wrong-layout word whose source spelling happens to read as plausible noise
+   * (`ltym` is not English, yet its bigram score clears the floor, while the
+   * word it really is -- `день` -- is in the Russian vocabulary). A conversion
+   * whose every word is a known word of the target language is stronger
+   * evidence than the source's bigram plausibility, so it overrides the guard.
+   * The rule stays narrow: the token must not already be a known word of its
+   * own language, and exactly one layout may qualify.
+   *
+   * Returns the winning language, or null when no conversion qualifies.
+   */
+  function vocabularyValidatedLanguage(token: string, current: string): string | null {
+    const lowered = token.toLowerCase();
+    const currentVocab = vocab[current];
+    if (currentVocab?.has(lowered)) return null;
+
+    let validated: string | null = null;
+    for (const lang of Object.keys(models)) {
+      if (lang === current) continue;
+      const converted = flipTo(token, lang).trim();
+      if (!converted || converted === token) continue;
+      // JS `\w` is ASCII-only, so it would drop every Cyrillic word and make
+      // the override a no-op; Python's `re.UNICODE` `\w` does match Cyrillic.
+      const words = (converted.match(/[\p{L}\p{N}']+/gu) ?? []).filter(
+        (w) => w.length >= MIN_WORD_LENGTH,
+      );
+      if (words.length === 0) continue;
+      const table = vocab[lang];
+      if (!table || !words.every((w) => table.has(w.toLowerCase()))) continue;
+      if (validated !== null) return null; // two layouts qualify: ambiguous
+      validated = lang;
+    }
+    return validated;
   }
 
+  /** Flip a token from its own script into the given language's layout. */
+  function flipTo(token: string, lang: string): string {
+    const map = lang === "ru" ? toRu : toEn;
+    return [...token].map((ch) => map[ch] ?? ch).join("");
+  }
+
+  /** Flip a token into the layout of the other script. */
   function flip(token: string): string {
     const map = CYRILLIC.test(token) ? toEn : toRu;
     return [...token].map((ch) => map[ch] ?? ch).join("");
@@ -151,8 +190,16 @@ import { pick } from "../lib/site";
   function convert(text: string): string {
     return text.replace(/\S+/g, (token) => {
       const lang = CYRILLIC.test(token) ? "ru" : "en";
-      if (isGuarded(token, lang)) return token;
-      return flip(token);
+      // The structural and identifier guards are absolute: a URL, path or code
+      // token is never rewritten, whatever a conversion would produce.
+      if (STRUCTURAL_SEPARATOR.test(token) || IDENTIFIER.test(token)) return token;
+      if (!isPlausible(token, lang)) return flip(token);
+      // Plausible in its own layout: leave it alone unless every word of a
+      // single alternative layout is a known word there -- the daemon's
+      // vocabulary-validated override. Without it the demo left `ltym`
+      // untouched while the app corrected it to `день`.
+      const validated = vocabularyValidatedLanguage(token, lang);
+      return validated === null ? token : flipTo(token, validated);
     });
   }
 

@@ -27,6 +27,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      # tests/test_demo_parity.py runs the landing-page demo's TypeScript logic
+      # under Node and compares it with the detector; without Node it skips.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install system dependencies
         run: |
           sudo apt-get update

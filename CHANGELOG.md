@@ -49,6 +49,13 @@ The project is renamed and two long-standing autostart defects are fixed.
   forced fix (double Shift, force-in-manual app) ignores the threshold. The
   default was measured over the top 2000 Russian words typed on US: ~2.6% of
   true fixes fall below 3.0, the median margin is ~7.6.
+- **The landing-page demo no longer disagrees with the daemon.** It had no
+  vocabulary-validated override, so it left `ltym` untouched while the app
+  corrected it to `день`; porting the override then exposed a second bug — the
+  demo tokenised with JS `\w`, which is ASCII-only, so a Cyrillic conversion
+  never matched and the override was a silent no-op. `tests/test_demo_parity.py`
+  now runs the demo's TypeScript under Node and compares it with the real
+  detector, so the two cannot drift again.
 - **Live demo on the landing page** (`site/src/components/Demo.astro`). It ports
   the detector's per-word plausibility test to TypeScript, so a visitor can try
   the correction in the browser. Its vocabulary and bigram tables are generated
@@ -58,7 +65,7 @@ The project is renamed and two long-standing autostart defects are fixed.
   corruption / latency measurement on fixed slices of the shipped corpora.
 - `tests/test_demo_model.py` and new autostart cases in
   `tests/test_daemon_control.py`, plus hybrid-mode regression tests in
-  `tests/test_modes_hotkeys.py`.
+  `tests/test_modes_hotkeys.py` and `tests/test_demo_parity.py`.
 
 ### Removed
 
