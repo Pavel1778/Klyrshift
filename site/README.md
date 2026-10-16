@@ -56,7 +56,8 @@ python scripts/build_demo_model.py
 ### Vercel (основной)
 
 1. Зарегистрируйтесь на <https://vercel.com> через GitHub.
-2. **Add New → Project** → выберите репозиторий `Lingvix`.
+2. **Add New → Project** → выберите репозиторий `LinguaFix` (он получит
+   имя `Lingvix` после переименования на GitHub).
 3. **Root Directory** = `site`.
 4. Framework определится как Astro; build — `npm run build`, output — `dist`.
 5. **Deploy**. Сайт будет на `<проект>.vercel.app`.
