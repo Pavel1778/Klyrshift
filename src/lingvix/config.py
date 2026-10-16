@@ -55,6 +55,13 @@ DEFAULT_BACKSPACE_SETTLE_MS: Final[int] = 120
 DEFAULT_TRIGGER_SETTLE_MS: Final[int] = 50
 DEFAULT_PUNCTUATION_CHARS: Final[str] = ".!?,;:"
 DEFAULT_CONFIDENCE_THRESHOLD: Final[float] = 0.6
+# Hybrid mode fixes a wrong layout automatically only when the winning candidate
+# beats the text as typed by at least this margin; below it the fix is left to
+# the manual hotkey. 3.0 sits above the plausible-but-uncertain tail (measured
+# over the top 2000 Russian words typed on US, ~2.6% of true fixes fall below
+# it) while staying well under the median margin of a real fix (~7.6), so an
+# ordinary wrong-layout word is still fixed without the user noticing.
+DEFAULT_HYBRID_CONFIDENCE: Final[float] = 3.0
 DEFAULT_CONTEXT_WEIGHT: Final[float] = 0.3
 DEFAULT_UNDO_WINDOW_SECONDS: Final[int] = 10
 DEFAULT_UNDO_HISTORY_DEPTH: Final[int] = 3
@@ -462,6 +469,11 @@ class Config:
 
     # --- Task E: detector tuning, context, exceptions, dictionaries --------
     confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD
+    # Hybrid mode: minimum plausibility margin for an *automatic* layout fix.
+    # Below it the fix is offered only through the manual hotkey. Ignored in
+    # ``auto`` (fix everything the detector accepts) and in ``manual`` (fix
+    # nothing automatically).
+    hybrid_confidence: float = DEFAULT_HYBRID_CONFIDENCE
     context_analysis: bool = True
     context_weight: float = DEFAULT_CONTEXT_WEIGHT
     ignore_all_caps: bool = False
@@ -673,6 +685,9 @@ class Config:
         self.confidence_threshold = _round_float(float(self.confidence_threshold))
         if not 0.5 <= self.confidence_threshold <= 0.95:
             raise ValueError("confidence_threshold must be between 0.5 and 0.95")
+        self.hybrid_confidence = _round_float(float(self.hybrid_confidence))
+        if not 0.0 <= self.hybrid_confidence <= 20.0:
+            raise ValueError("hybrid_confidence must be between 0.0 and 20.0")
         self.context_analysis = bool(self.context_analysis)
         self.context_weight = _round_float(float(self.context_weight))
         if not 0.0 <= self.context_weight <= 1.0:

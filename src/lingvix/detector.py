@@ -729,9 +729,10 @@ class LanguageDetector:
     ) -> str | None:
         """Return the layout ``buffer`` should be converted to, if any.
 
-        Every other known layout is tried as a conversion target and scored in
-        its own language. A candidate wins only when it is clearly more
-        plausible than the buffer as typed.
+        A thin wrapper over :meth:`target_layout_with_confidence` that keeps the
+        historical signature. Every other known layout is tried as a conversion
+        target and scored in its own language. A candidate wins only when it is
+        clearly more plausible than the buffer as typed.
 
         Args:
             buffer: The typed text.
@@ -744,10 +745,29 @@ class LanguageDetector:
             A layout identifier to switch to, or ``None`` when no conversion
             is worthwhile.
         """
+        layout, _ = self.target_layout_with_confidence(buffer, current_layout, neighbor)
+        return layout
+
+    def target_layout_with_confidence(
+        self, buffer: str, current_layout: str, neighbor: str | None = None
+    ) -> tuple[str | None, float | None]:
+        """Return ``(layout, confidence)`` for a conversion of ``buffer``.
+
+        ``confidence`` is the plausibility margin by which the winning candidate
+        beat the buffer as typed. It is ``None`` when no layout was chosen, and
+        ``inf`` when the decision did not depend on a score at all: a conversion
+        the user taught, or one whose every word is already known in the target
+        language. Those are certain, not guesses, so a policy that withholds
+        uncertain automatic fixes (hybrid mode) must still apply them.
+
+        Returns:
+            A ``(layout, confidence)`` pair; ``layout`` is ``None`` when no
+            conversion is worthwhile.
+        """
         stripped = buffer.strip()
         if not stripped or self.is_stop_word(stripped):
             logger.debug("detect(len=%d): empty or stop word; skipping", len(stripped))
-            return None
+            return None, None
 
         # A word the user explicitly taught is correct, in any layout: never
         # rewrite it. This is an absolute override, stronger than stop words.
@@ -755,7 +775,7 @@ class LanguageDetector:
             logger.debug(
                 "detect(len=%d): typed word is in the user dictionary; skipping", len(stripped)
             )
-            return None
+            return None, None
 
         # A conversion the user taught is a *known good* result, not a guess: the
         # user dictionary validates the converted form (``муксуд`` -> ``vercel``),
@@ -769,7 +789,7 @@ class LanguageDetector:
                 len(stripped),
                 taught,
             )
-            return taught
+            return taught, float("inf")
 
         # A buffer that mixes Latin and Cyrillic within one word is not a layout
         # mistake we can repair as a unit: converting the whole thing produces
@@ -778,13 +798,13 @@ class LanguageDetector:
         # Convert as a unit only when each script occupies its own word.
         if _has_mixed_script_word(stripped):
             logger.debug("detect(len=%d): mixed-script word; skipping", len(stripped))
-            return None
+            return None, None
 
         # The structural and identifier guards are absolute: a URL, path or
         # code token is never rewritten, whatever a conversion would produce.
         if self._should_guard_structure_only(stripped):
             logger.debug("detect(len=%d): structural guard vetoed; skipping", len(stripped))
-            return None
+            return None, None
 
         # A conversion that turns the whole buffer into known words of another
         # language is stronger evidence than the source's plausibility. It is
@@ -798,17 +818,17 @@ class LanguageDetector:
                 len(stripped),
                 validated,
             )
-            return validated
+            return validated, float("inf")
 
         # The plausibility guard only ever prevents a conversion.
         if self.plausibility_check and self._looks_like_real_words(stripped, current_layout):
             logger.debug("detect(len=%d): plausibility guard vetoed; skipping", len(stripped))
-            return None
+            return None, None
 
         words = [w for w in WORD_RE.findall(stripped) if len(w) >= self.min_word_length]
         if not words:
             logger.debug("detect(len=%d): no word long enough; skipping", len(stripped))
-            return None
+            return None, None
 
         # A buffer that mixes scripts is always wrong: part of it was typed on
         # the wrong layout. Rewrite it into the layout of the majority script,
@@ -821,7 +841,7 @@ class LanguageDetector:
             candidate = self._language_layout(target_language)
             if candidate is not None and candidate != current_layout:
                 logger.debug("detect(len=%d): mixed script; target %s", len(stripped), candidate)
-                return candidate
+                return candidate, float("inf")
 
         current_language = self._layout_language(current_layout)
         current_score = self._plausibility(stripped, current_language) if current_language else 0.0
@@ -865,7 +885,7 @@ class LanguageDetector:
                 current_layout,
                 current_score,
             )
-            return None
+            return None, None
         improvement = best_score - current_score
         # ``confidence_threshold`` raises the bar above the absolute minimum so
         # the user can make detection more conservative. It is deliberately
@@ -880,7 +900,7 @@ class LanguageDetector:
                 best_score,
                 improvement,
             )
-            return None
+            return None, None
         # Guard against a same-alphabet target that merely re-labels the text
         # without changing it (``de`` -> ``en`` leaves letters untouched).
         if (
@@ -888,7 +908,7 @@ class LanguageDetector:
             and self.converter.convert(stripped, current_layout, best_layout) == stripped
         ):
             logger.debug("detect(len=%d): same-alphabet no-op; skipping", len(stripped))
-            return None
+            return None, None
         logger.debug(
             "detect(len=%d): current=%s score=%.3f best=%s score=%.3f; target %s",
             len(stripped),
@@ -898,7 +918,7 @@ class LanguageDetector:
             best_score,
             best_layout,
         )
-        return best_layout
+        return best_layout, improvement
 
     def should_fix(self, buffer: str, current_layout: str | None = None) -> bool:
         """Decide whether ``buffer`` should be corrected.

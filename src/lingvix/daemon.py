@@ -898,6 +898,38 @@ class LingvixDaemon:
             return app.lower() in {name.lower() for name in self.config.exceptions_force_in_manual}
         return True
 
+    def _layout_target(
+        self, buffer: str, current: str, neighbor: str | None, *, force: bool
+    ) -> str | None:
+        """Return the layout to convert ``buffer`` to, honouring the mode policy.
+
+        ``auto`` applies any conversion the detector accepts. ``hybrid`` applies
+        only the confident ones and leaves the rest to the manual hotkey, which
+        is the whole difference between the two modes: an uncertain guess is
+        withheld instead of rewritten. A forced fix (double Shift, or an app on
+        the force-in-manual list) is always applied, because the user asked for
+        it explicitly. ``manual`` never reaches here.
+
+        The detector reports ``inf`` confidence for a conversion the user taught
+        or one whose every word is already known in the target language; those
+        are certain and are applied in every mode.
+        """
+        layout, confidence = self.detector.target_layout_with_confidence(buffer, current, neighbor)
+        if layout is None:
+            return None
+        if force or self.config.mode != "hybrid":
+            return layout
+        if confidence is None or confidence < self.config.hybrid_confidence:
+            logger.debug(
+                "Hybrid mode: %r -> %s withheld (confidence %.3f < %.3f)",
+                buffer,
+                layout,
+                -1.0 if confidence is None else confidence,
+                self.config.hybrid_confidence,
+            )
+            return None
+        return layout
+
     def _cycle_mode(self) -> None:
         """Advance to the next working mode and persist it."""
         try:
@@ -1589,7 +1621,7 @@ class LingvixDaemon:
         if layout_allowed:
             # The hotkey may have resolved an unambiguous short-word conversion
             # itself; the ordinary detector would only see a below-min-length token.
-            target = forced_short or self.detector.target_layout(buffer, current, neighbor)
+            target = forced_short or self._layout_target(buffer, current, neighbor, force=force)
             # The detector returning the current layout is not a layout fix — it
             # means the text already belongs to the active layout. Treat it as
             # "no layout correction" and fall through to the opt-in typo pass,

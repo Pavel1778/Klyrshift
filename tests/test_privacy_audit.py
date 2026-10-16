@@ -68,6 +68,7 @@ _ALLOWED_CONFIG_KEYS = {
     "undo_window_seconds",
     "undo_history_depth",
     "confidence_threshold",
+    "hybrid_confidence",
     "context_analysis",
     "context_weight",
     "ignore_all_caps",

@@ -155,6 +155,67 @@ def test_hybrid_mode_fixes_automatically() -> None:
     assert _injector(daemon).replacements == [(7, "привет ", "ru")]
 
 
+def test_hybrid_withholds_a_low_confidence_fix(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hybrid applies only confident fixes; an uncertain one waits for the hotkey."""
+    daemon = make_daemon(mode="hybrid", hybrid_confidence=3.0)
+    monkeypatch.setattr(
+        daemon.detector, "target_layout_with_confidence", lambda *a, **k: ("ru", 1.0)
+    )
+    press(daemon, "ghbdtn")
+    tap(daemon, "KEY_SPACE")
+    assert _injector(daemon).replacements == []
+
+
+def test_hybrid_applies_a_high_confidence_fix(monkeypatch: pytest.MonkeyPatch) -> None:
+    daemon = make_daemon(mode="hybrid", hybrid_confidence=3.0)
+    monkeypatch.setattr(
+        daemon.detector, "target_layout_with_confidence", lambda *a, **k: ("ru", 7.5)
+    )
+    press(daemon, "ghbdtn")
+    tap(daemon, "KEY_SPACE")
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
+
+
+def test_auto_applies_a_low_confidence_fix(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The threshold is hybrid-only: auto still fixes what the detector accepts."""
+    daemon = make_daemon(mode="auto", hybrid_confidence=3.0)
+    monkeypatch.setattr(
+        daemon.detector, "target_layout_with_confidence", lambda *a, **k: ("ru", 1.0)
+    )
+    press(daemon, "ghbdtn")
+    tap(daemon, "KEY_SPACE")
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
+
+
+def test_hybrid_hotkey_overrides_the_confidence_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An explicit fix is the user's request and must ignore the threshold."""
+    daemon = make_daemon(mode="hybrid", hotkey_fix_last_word="PAUSE", hybrid_confidence=3.0)
+    monkeypatch.setattr(
+        daemon.detector, "target_layout_with_confidence", lambda *a, **k: ("ru", 1.0)
+    )
+    press(daemon, "ghbdtn")
+    tap(daemon, "KEY_PAUSE")
+    assert _injector(daemon).replacements == [(6, "привет", "ru")]
+
+
+def test_hybrid_applies_a_certain_fix_without_a_score(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A taught/known-word conversion reports ``inf`` and is never withheld."""
+    daemon = make_daemon(mode="hybrid", hybrid_confidence=3.0)
+    monkeypatch.setattr(
+        daemon.detector, "target_layout_with_confidence", lambda *a, **k: ("ru", float("inf"))
+    )
+    press(daemon, "ghbdtn")
+    tap(daemon, "KEY_SPACE")
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
+
+
+def test_hybrid_confidence_must_be_sane() -> None:
+    with pytest.raises(ValueError):
+        Config(hybrid_confidence=-1.0)
+    with pytest.raises(ValueError):
+        Config(hybrid_confidence=25.0)
+
+
 def test_hotkey_forces_fix_in_manual_mode() -> None:
     daemon = make_daemon(mode="manual", hotkey_fix_last_word="PAUSE")
     press(daemon, "ghbdtn")
@@ -322,7 +383,9 @@ def test_same_layout_layout_fix_is_refused(monkeypatch: pytest.MonkeyPatch) -> N
     buffer for no benefit, so the daemon refuses it.
     """
     daemon = make_daemon(mode="auto")
-    monkeypatch.setattr(daemon.detector, "target_layout", lambda *a, **k: "us")
+    monkeypatch.setattr(
+        daemon.detector, "target_layout_with_confidence", lambda *a, **k: ("us", float("inf"))
+    )
     press(daemon, "ghbdtn")  # switcher.current is "us"
     tap(daemon, "KEY_SPACE")
     assert _injector(daemon).replacements == []

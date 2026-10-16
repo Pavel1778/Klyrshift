@@ -62,6 +62,16 @@ class AdvancedPage(BoundPreferencesPage):
             step=0.05,
             digits=2,
         )
+        self.add_spin(
+            group,
+            "Гибрид: порог автозамены",
+            "hybrid_confidence",
+            lower=0.0,
+            upper=20.0,
+            step=0.5,
+            digits=1,
+            subtitle="Ниже порога исправление остаётся на горячую клавишу",
+        )
         self.add_switch(group, "Контекстный анализ", "context_analysis")
         self.add_spin(
             group,

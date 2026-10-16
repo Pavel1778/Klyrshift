@@ -37,13 +37,28 @@ The project is renamed and two long-standing autostart defects are fixed.
 
 ### Added
 
+- **Hybrid mode now differs from auto.** Previously `hybrid` behaved exactly
+  like `auto`, so the mode existed in name only. The detector gained
+  `target_layout_with_confidence()`, which reports the plausibility margin by
+  which a candidate beat the text as typed (and `inf` for a conversion that is
+  certain rather than scored: a taught word, or one whose every word is already
+  known in the target language). Hybrid applies an automatic fix only when that
+  margin clears `hybrid_confidence` (default `3.0`, tunable in the GUI under
+  Детектор); an uncertain guess is withheld for the manual hotkey instead of
+  being rewritten. `auto` still applies everything the detector accepts, and a
+  forced fix (double Shift, force-in-manual app) ignores the threshold. The
+  default was measured over the top 2000 Russian words typed on US: ~2.6% of
+  true fixes fall below 3.0, the median margin is ~7.6.
 - **Live demo on the landing page** (`site/src/components/Demo.astro`). It ports
   the detector's per-word plausibility test to TypeScript, so a visitor can try
   the correction in the browser. Its vocabulary and bigram tables are generated
   from the shipped corpora by `scripts/build_demo_model.py`
   (`tests/test_demo_model.py` fails if they drift).
+- `scripts/measure_detector.py` — reproducible recall / false-positive /
+  corruption / latency measurement on fixed slices of the shipped corpora.
 - `tests/test_demo_model.py` and new autostart cases in
-  `tests/test_daemon_control.py`.
+  `tests/test_daemon_control.py`, plus hybrid-mode regression tests in
+  `tests/test_modes_hotkeys.py`.
 
 ### Removed
 
