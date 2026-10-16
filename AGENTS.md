@@ -32,6 +32,15 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   container and is the only check that proves the package works.
 
 ## Invariants that have bitten before
+- **The live GitHub release predates the rename.** Its assets are named
+  `linguafix-*` (`linguafix_<v>_all.deb`, `linguafix-dict-<slug>.tar.gz`),
+  while the build scripts and `repo.py` emit `lingvix-*`. A hard-coded
+  `lingvix-dict-*` request 404s against the current release, so
+  `thematic.download_category` tries both prefixes (`_ASSET_PREFIXES`).
+  The next release built from this tree will ship `lingvix-*`, and the
+  fallback keeps the old one working meanwhile. The landing page's download
+  button points at the release *page*, not a versioned asset URL, for the
+  same reason (`site/src/consts.ts`).
 
 - The `.deb` must be **zero-config**: device access is granted by a udev rule
   with `TAG+="uaccess"`, never `GROUP="input"`/`usermod`. The user unit is
