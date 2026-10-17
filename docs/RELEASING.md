@@ -1,11 +1,11 @@
 # Releasing
 
 This is the checklist to run before publishing a release. It is written for
-`v0.2.8.2`, the first release under the new name, but the same steps apply to
+`v0.2.8.3`, the first release under the new name, but the same steps apply to
 any version.
 
 Nothing here is executed automatically. A release is published by pushing a tag
-(`git push origin v0.2.8.2`), which triggers
+(`git push origin v0.2.8.3`), which triggers
 [`.github/workflows/release.yml`](../.github/workflows/release.yml). Read the
 whole list before pushing the tag: the tag is the point of no return.
 
@@ -19,9 +19,8 @@ whole list before pushing the tag: the tag is the point of no return.
   `## [Unreleased]`. A released version must have its own `## [x.y.z] - date`
   heading, or the tree claims a version the changelog does not describe.
 - [ ] The version is not already used. `git ls-remote --tags origin` must not
-  list it. Note that `0.2.8.2` currently has a **changelog heading from
-  2026-10-08** that was never tagged; decide deliberately whether this release
-  reuses that number or takes the next one.
+  list it. `0.2.8.2` has a **changelog heading from 2026-10-08** that was never
+  tagged; `0.2.8.3` is the next number and does not reuse it.
 
 ## 1. Local checks
 
@@ -51,12 +50,13 @@ backend and the `tomli`/`tomllib` split differ between them.
 
 - [ ] Install the previous `linguafix_0.2.8_all.deb`, then install the new
   `klyrshift_<version>_all.deb` over it. After the upgrade:
-  - `dpkg -l | grep -E 'linguafix|klyrshift'` shows only `ii  klyrshift`;
+  - `dpkg -l | grep -E 'linguafix|lingvix|klyrshift'` shows only `ii  klyrshift`;
   - `ls /etc/systemd/user/default.target.wants/` lists only `klyrshift.service`;
   - `pgrep -af 'klyrshift start' | wc -l` is `1` — two daemons must never run.
-- [ ] The configuration is **not** migrated: `~/.config/linguafix` is left in
-  place and the new package starts from defaults. Confirm the documented manual
-  copy still works (see [INSTALL.md](INSTALL.md#upgrading-from-the-old-linguafix-package)).
+- [ ] The configuration **is** migrated on first load: `~/.config/lingvix` (or
+  `~/.config/linguafix`) is copied into `~/.config/klyrshift`, and the old file is
+  left in place. Confirm the manual copy still works (see
+  [INSTALL.md](INSTALL.md#upgrading-from-the-old-linguafix-package)).
 
 ## 4. On a real keyboard (this cannot be done in CI)
 
@@ -84,8 +84,7 @@ release may not claim the input path works until this section is done.
 ## 5. Documentation and the landing page
 
 - [ ] `CHANGELOG.md` describes every user-visible change since the last release,
-  including the breaking rename and the fact that the config directory is not
-  migrated.
+  including the breaking rename and the config-directory migration.
 - [ ] `README.md` and `docs/*` show the current version in every
   `apt install ./klyrshift_<version>_all.deb` example. A test enforces this.
 - [ ] The landing page builds (`cd site && npm run build`) and the JSON-LD
