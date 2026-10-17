@@ -11,9 +11,10 @@ whole list before pushing the tag: the tag is the point of no return.
 
 ## 0. Decide what the version is
 
-- [ ] The version is **one** value, in four places that a test compares:
-  `pyproject.toml`, `src/klyrshift/__init__.py`, `site/src/consts.ts` and the
-  landing page JSON-LD (which reads `VERSION` from `consts.ts`).
+- [ ] The version is **one** value, in five places that a test compares:
+  `pyproject.toml`, `src/klyrshift/__init__.py`, `site/src/consts.ts`,
+  `site/package.json` and the landing page JSON-LD (which reads `VERSION` from
+  `consts.ts`). `site/package-lock.json` carries it too and is bumped with it.
   `python3 scripts/release_consistency.py --source` must print `ok`.
 - [ ] The `CHANGELOG.md` section for this version exists and is not still under
   `## [Unreleased]`. A released version must have its own `## [x.y.z] - date`
@@ -94,6 +95,9 @@ release may not claim the input path works until this section is done.
   `apt install ./klyrshift_<version>_all.deb` example. A test enforces this.
 - [ ] The landing page builds (`cd site && npm run build`) and the JSON-LD
   `softwareVersion`, the hero version and the download links agree.
+- [ ] `python3 scripts/make_og_image.py` (after a site build — it needs the
+  emitted fonts) regenerates `site/public/og-image.png` with no diff: the link
+  preview is generated, and a hand-edited one shows the dead name again.
 - [ ] The canonical origin, `og:url` and the `hreflang` alternates point at the
   hosts that resolve (`linguafix.layero.app`, `linguafix.vercel.app`), not at
   the `klyrshift.*` names, which are still 404. A test enforces this.
