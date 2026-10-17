@@ -1106,7 +1106,9 @@ class LingvixDaemon:
         if self.detector.is_known_word_any_language(word):
             return None
         if not force and self._typo_recently_applied(word):
-            logger.debug("T9: %r was corrected recently; not repeating", word)
+            # Log the length, never the word: the typed characters must not
+            # reach any log (see tests/test_privacy_audit.py).
+            logger.debug("T9: word of length %d was corrected recently; not repeating", len(word))
             return None
         corrector = self._typo_correctors.get(language)
         if corrector is None:
@@ -1132,7 +1134,12 @@ class LingvixDaemon:
             and self.detector._word_is_plausible(word, language)
             and not self.detector._word_is_plausible(suggestion, language)
         ):
-            logger.debug("T9: %r is plausible; refusing the guess %r", word, suggestion)
+            # Lengths only; ``word`` and ``suggestion`` are the user's text.
+            logger.debug(
+                "T9: plausible word of length %d; refusing the guess of length %d",
+                len(word),
+                len(suggestion),
+            )
             return None
         # Preserve the user's capitalisation (``Teh`` -> ``The``).
         if word[0].isupper():

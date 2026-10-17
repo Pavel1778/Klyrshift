@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -350,6 +351,64 @@ def test_no_secret_in_user_journal(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     output = (result.stdout or "") + (result.stderr or "")
     for marker in SECRET_MARKERS:
         assert marker not in output, f"{marker!r} leaked into the journal"
+
+
+def test_t9_decision_path_never_logs_the_word(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The T9 guards log a *length*, not the word they inspected.
+
+    This path used to log ``%r`` of the inspected word and of the rejected
+    suggestion at DEBUG, so enabling debug logging wrote the user's typing to
+    ``lingvix.log``. ``_run_secret_session`` never reached it (the secret is not
+    a plain letter word), which is why the leak went unnoticed.
+    """
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    logging_setup.setup_logging("DEBUG", log_dir=state_dir(), console=True)
+
+    config = Config(
+        analysis_timeout=0.1,
+        min_word_length=1,
+        stop_words=[],
+        typo_mode="auto",
+        typo_correction=True,
+    )
+    save_config(config)
+    daemon = LingvixDaemon(
+        config,
+        detector=LanguageDetector(
+            converter=None,
+            stop_words=[],
+            min_word_length=1,
+            plausibility_check=False,
+            structural_boundaries=False,
+            identifier_guard=False,
+        ),
+        switcher=_Switcher("us"),
+        injector=_RecordingInjector(),
+    )
+
+    # A plain Cyrillic word, so every guard up to the T9 log lines is reached.
+    word = "секретноеслово"
+    # Debounce hit: logs the "corrected recently" branch.
+    daemon._typo_recent[word.lower()] = time.monotonic()
+    daemon._typo_correction(word, "ru", force=False)
+
+    # Plausibility veto: logs the "refusing the guess" branch.
+    daemon._typo_recent.clear()
+    monkeypatch.setattr(daemon.detector, "_word_is_plausible", lambda _w, _l: True)
+    daemon._typo_correction(word, "ru", force=False)
+
+    for handler in logging.getLogger().handlers:
+        handler.flush()
+
+    leaked: list[str] = []
+    for path in _walk(state_dir()):
+        if _search(path, ("секретное", "слово")):
+            leaked.append(str(path))
+    assert leaked == [], f"the T9 path logged the typed word into: {leaked}"
 
 
 def test_daemon_survives_injector_exception(

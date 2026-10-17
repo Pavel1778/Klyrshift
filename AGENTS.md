@@ -171,6 +171,12 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   the buffer is replaced with `<redacted>` before logging, because an exception
   message could otherwise embed it. `tests/test_privacy_audit.py` greps the log,
   cache, state, config, journal and argv for a known secret and must stay green.
+- **No `%r`/`%s` of a user word in a log call.** `_typo_correction` used to log
+  the inspected word and the rejected suggestion at DEBUG, so `log_level=DEBUG`
+  wrote the user's typing to `lingvix.log`. The existing audit missed it because
+  its secret is not a plain letter word and never reached those lines. Log a
+  length (`len(word)`), never the characters; the guard test for this is
+  `test_t9_decision_path_never_logs_the_word`.
 - The desktop notification is a fixed label, never the corrected text.
 - Replacement on the `uinput` backend is **atomic**: all backspaces and the new
   text are written and flushed with a single `syn`. `wtype`/`xdotool` are not
