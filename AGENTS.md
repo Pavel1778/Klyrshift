@@ -47,6 +47,32 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   button points at the release *page*, not a versioned asset URL, for the
   same reason (`site/src/consts.ts`).
 
+- **The version the tree carries is not necessarily the version that is
+  published.** The site advertised `0.2.8.2` while the newest release was
+  `v0.2.8`; `CHANGELOG.md` even has a `## [0.2.8.2]` heading dated 2026-10-08
+  that was never tagged. `tests/test_version_consistency.py` compared the source
+  files only with each other, so it could not see this. The check is now split:
+  `scripts/release_consistency.py --source` is offline and runs in the suite (the
+  tree against itself and against the asset names the build scripts emit), while
+  `--tag`/`--latest` need the network and run from the release workflow, which
+  gates the publish on them. When you bump the version, expect `--latest` to
+  fail until the tag is published; that is the point.
+
+- **Every version string must be derived, never typed.** `Base.astro` wrote
+  `softwareVersion: "0.2.8.2"` as a literal while `consts.ts` held `VERSION`, so
+  a bump updated the hero and left the JSON-LD behind -- two versions on one
+  page. The layout imports `VERSION` now, and
+  `test_release_consistency.py::test_jsonld_version_is_not_a_literal` fails if
+  the literal returns.
+
+- **The publish step checks the *staged* assets, not a comment.** The release
+  workflow lists `dist/*.deb`, `dist/dictionaries/*-50k.txt` and
+  `dist/dict-archives/*.tar.gz` into `/tmp/staged-assets.txt` and passes it to
+  the consistency check, so an asset a build script emits but the workflow
+  forgets to upload is caught before the release is public. It then verifies the
+  published download URLs, because only a real request proves an asset is
+  downloadable.
+
 - The `.deb` must be **zero-config**: device access is granted by a udev rule
   with `TAG+="uaccess"`, never `GROUP="input"`/`usermod`. The user unit is
   enabled with `systemctl --user enable --global` from `postinst`, not by the
