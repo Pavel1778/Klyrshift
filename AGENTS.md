@@ -177,6 +177,20 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   the edits with the Python heredoc above.
 - Detect damage by scanning tracked files for the mojibake lead characters
   (U+00D1, U+00E2) or by running the encoding test.
+- The signature set covers Cyrillic only, so a double-encoded **punctuation**
+  mark slipped past it: an arrow (→) re-saved through CP775 becomes the
+  three characters `\u014c\u00e5\u00c6`, and an em-dash (—) through
+  CP1252 becomes `\u00e2\u20ac\u201d`; the file still imports.
+  `test_source_encoding.py`
+  now also round-trips every line through the codecs a single-byte pipeline
+  plausibly uses (CP1252, CP775, Latin-1, CP437, CP850, MacRoman) and fails on
+  any line that decodes cleanly. Measured against the whole tracked tree: no
+  false positives, so extend `_MOJIBAKE_CODECS` rather than special-casing
+  characters. Note the examples in that file must stay as `\uXXXX` escapes --
+  written literally they would trip the guard itself.
+- Keep the fix for a damaged file in a Python heredoc / script with an explicit
+  `encoding="utf-8"`. Re-applying an edit through `file_editor` after a
+  `git checkout` is what produced the corruption in the first place.
 
 ## Security / privacy invariants (audited)
 
