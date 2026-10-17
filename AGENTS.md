@@ -30,6 +30,11 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 - The pytest suite replaces the OS boundary with fakes, so it **cannot** catch
   packaging bugs. `scripts/smoke_test.sh` installs the real `.deb` into a clean
   container and is the only check that proves the package works.
+- `tests/test_backend_integration.py` is the exception to the "fakes only" rule:
+  it writes real stub executables (`g3kb-switch`, `setxkbmap`, `wtype`,
+  `xdotool`) onto a throwaway `PATH` and drives the real `LayoutSwitcher` /
+  `TextInjector`, so backend *discovery* and argv construction are covered
+  without a display server. Talking to a live compositor still needs a desktop.
 
 ## Invariants that have bitten before
 - **The live GitHub release predates the rename.** Its assets are named
@@ -190,6 +195,12 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 - **`g3kb-switch -s` takes the layout name**, e.g. `g3kb-switch -s ru` (it also
   accepts the numeric group index). `-p` prints the current layout. A non-zero
   exit is the only reliable failure signal; stderr may be non-empty on success.
+- **The demo-parity harness needs a Node that runs TypeScript.** Node 20 (what
+  CI's lint job used to pin) cannot execute `.ts` at all: it fails with
+  `ERR_UNKNOWN_FILE_EXTENSION`, which turned `test_demo_parity.py` red on every
+  Python version. Node ≥ 23.6 runs it directly; 22.6+ needs
+  `--experimental-strip-types`; older Node now skips. `tests/test_demo_parity.py`
+  picks the invocation from `node --version`.
 - **The udev rule must be named below `73` and carry `ACTION!="remove"`.** On
   systemd 257+ (Debian 13) `73-seat-late.rules` turns `uaccess` into the ACL. It
   runs in filename order and only processes rules that guard the `remove` event,
