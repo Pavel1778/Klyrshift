@@ -24,6 +24,14 @@ The project is renamed and two long-standing autostart defects are fixed.
 
 ### Fixed
 
+- **The source-install snippet would break at the next rename.** The landing
+  page cloned from `${REPO}` (derived from `REPO_SLUG`) but then ran a
+  hard-coded `cd LinguaFix`. Both spell the same name today, so it works; the
+  moment the repository is renamed, the clone lands in the new directory and
+  `cd` fails for everyone who copies the snippet. `consts.ts` now exposes
+  `REPO_NAME` and the snippet derives the directory from it. A new guard pins
+  the `git clone`/`cd` pairs in `README.md` and `docs/*` to the live repository
+  name, so a rename cannot leave a stale one behind.
 - **The source installer had no way to opt out of autostart.** `install.sh`
   always wrote the XDG autostart entry and always ran
   `systemctl --user enable --now`, so a user who did not want the daemon

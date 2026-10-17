@@ -69,8 +69,44 @@ def test_no_hardcoded_repository_slug_in_source() -> None:
 
 def test_site_consts_match_the_python_slug() -> None:
     """The landing page links to the same repository the code downloads from."""
+    repo_name = repo.REPO_SLUG.split("/")[1]
     text = SITE_CONSTS.read_text(encoding="utf-8")
-    assert f'REPO_SLUG = `${{REPO_OWNER}}/{repo.REPO_SLUG.split("/")[1]}`' in text
+    assert f'export const REPO_NAME = "{repo_name}";' in text
+    assert "export const REPO_SLUG = `${REPO_OWNER}/${REPO_NAME}`;" in text
+
+
+def test_site_install_snippet_uses_the_derived_repository_name() -> None:
+    """``cd`` into the cloned directory must not hard-code the repository name.
+
+    The snippet cloned from ``REPO`` (derived from the slug) but then ran
+    ``cd LinguaFix``. Today both spell the same name, so it works; the moment
+    the repository is renamed, the clone lands in the new directory and the
+    ``cd`` breaks every source install. Derive it from the same constant.
+    """
+    text = (REPO_ROOT / "site" / "src" / "components" / "Install.astro").read_text(encoding="utf-8")
+    assert "cd ${REPO_NAME}" in text
+    assert "cd LinguaFix" not in text
+
+
+def test_document_clone_instructions_name_the_current_repository() -> None:
+    """``git clone`` and ``cd`` in the docs must match the live repository name.
+
+    Markdown cannot derive the name from ``repo.py``, so the four install docs
+    spell it out. Pin them to :data:`repo.REPO_SLUG` so the rename cannot leave
+    a stale ``cd`` behind that breaks the copy-paste install.
+    """
+    name = repo.REPO_SLUG.split("/")[1]
+    targets = [REPO_ROOT / "README.md", *sorted((REPO_ROOT / "docs").glob("*.md"))]
+    offenders: list[str] = []
+    for path in targets:
+        text = path.read_text(encoding="utf-8")
+        for match in re.findall(r"git clone \S+/([A-Za-z0-9_.-]+)\.git", text):
+            if match != name:
+                offenders.append(f"{path.relative_to(REPO_ROOT)}: clone {match}")
+        for match in re.findall(r"^cd (\S+)", text, re.M):
+            if match != name:
+                offenders.append(f"{path.relative_to(REPO_ROOT)}: cd {match}")
+    assert not offenders, "stale repository name in docs: " + ", ".join(offenders)
 
 
 def test_site_version_matches_the_package() -> None:

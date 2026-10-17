@@ -7,7 +7,8 @@
 export const VERSION = "0.2.8.2";
 
 export const REPO_OWNER = "Pavel1778";
-export const REPO_SLUG = `${REPO_OWNER}/LinguaFix`;
+export const REPO_NAME = "LinguaFix";
+export const REPO_SLUG = `${REPO_OWNER}/${REPO_NAME}`;
 export const REPO = `https://github.com/${REPO_SLUG}`;
 export const AUTHOR_URL = `https://github.com/${REPO_OWNER}`;
 export const RELEASES = `${REPO}/releases`;

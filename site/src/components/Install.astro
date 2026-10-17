@@ -1,6 +1,6 @@
 ---
 import CodeBlock from "./CodeBlock.astro";
-import { DOWNLOAD_URL, INSTALL_DOC, ISSUES, REPO, RELEASES } from "../consts";
+import { DOWNLOAD_URL, INSTALL_DOC, ISSUES, REPO, REPO_NAME, RELEASES } from "../consts";
 
 // The release asset is named after the package (``lingvix_<version>_all.deb``),
 // but the version changes every release and older releases still carry the
@@ -10,7 +10,7 @@ const debCode = `# Скачайте .deb со страницы последне�
 sudo apt install ./*_all.deb`;
 
 const srcCode = `git clone ${REPO}.git
-cd LinguaFix
+cd ${REPO_NAME}
 bash install.sh`;
 ---
 
