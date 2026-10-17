@@ -24,6 +24,13 @@ The project is renamed and two long-standing autostart defects are fixed.
 
 ### Fixed
 
+- **A `SITE_URL` build emitted two different origins.** The sitemap and
+  `robots.txt` take their origin from `astro.config.mjs`, but
+  `<link rel="canonical">`, `og:url` and the `hreflang` alternates take theirs
+  from `site.ts`. Only the config read the `SITE_URL` override, so a local
+  check produced a Vercel sitemap beside a Layero canonical and reported a
+  canonical the deployment would never ship. `site.ts` now honours the
+  override too, and a test fails if either side stops reading it.
 - **An upgrade from `linguafix` left two daemons installed.** dpkg treats a
   package rename as two unrelated packages: installing the new `.deb` over
   `linguafix` left the old package installed, and *both* kept a systemd user

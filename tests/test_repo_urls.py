@@ -150,3 +150,20 @@ def test_no_document_links_the_renamed_but_nonexistent_hosts() -> None:
         for match in re.findall(r"https://lingvix\.[a-z0-9.-]+", path.read_text(encoding="utf-8")):
             offenders.append(f"{path.relative_to(REPO_ROOT)}: {match}")
     assert not offenders, "links to nonexistent hosts: " + ", ".join(offenders)
+
+
+def test_both_origins_honour_site_url_override() -> None:
+    """A ``SITE_URL`` build must not contradict itself.
+
+    The sitemap and ``robots.txt`` take their origin from ``astro.config.mjs``
+    (``site``), while ``<link rel="canonical">``, ``og:url`` and the ``hreflang``
+    alternates take theirs from ``site.ts`` (``siteUrl``). When only the config
+    read the override, a ``SITE_URL`` build emitted a Vercel sitemap next to a
+    Layero canonical -- so a local check reported a canonical it would never
+    ship, and the two origins silently disagreed. Both files must read the
+    override.
+    """
+    config = ASTRO_CONFIG.read_text(encoding="utf-8")
+    lib = SITE_LIB.read_text(encoding="utf-8")
+    assert "process.env.SITE_URL" in config, "astro.config.mjs ignores SITE_URL"
+    assert "import.meta.env.SITE_URL" in lib, "site.ts ignores SITE_URL"
