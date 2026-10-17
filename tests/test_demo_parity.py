@@ -5,7 +5,8 @@ it can silently drift from the product it advertises: an earlier revision had no
 vocabulary-validated override, so the demo left ``ltym`` alone while the daemon
 rewrote it to ``день``. The demo's per-token decision is executed here with Node
 and compared against the real ``LanguageDetector``; the test skips when Node is
-unavailable (it runs in CI's ``site`` job, which has it).
+unavailable or too old to execute TypeScript (CI's lint job installs a Node that
+can).
 """
 
 from __future__ import annotations
@@ -50,6 +51,28 @@ def _node() -> str:
     return node
 
 
+def _node_command(path: Path) -> list[str]:
+    """Return a Node command that can execute the TypeScript harness.
+
+    The harness keeps the demo's type annotations, so it only runs on a runtime
+    that strips types: from Node 23.6 that is the default, Node 22.6+ needs
+    ``--experimental-strip-types``, and anything older cannot run it at all --
+    skip there rather than report a false mismatch. Node 20 in CI used to fail
+    here with ``ERR_UNKNOWN_FILE_EXTENSION``.
+    """
+    node = _node()
+    raw = subprocess.run(
+        [node, "--version"], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    match = re.match(r"v(\d+)\.(\d+)", raw)
+    major, minor = (int(match.group(1)), int(match.group(2))) if match else (0, 0)
+    if (major, minor) >= (23, 6):
+        return [node, str(path)]
+    if (major, minor) >= (22, 6):
+        return [node, "--experimental-strip-types", str(path)]
+    pytest.skip(f"node {major}.{minor} cannot execute TypeScript")
+
+
 def _extract_script() -> str:
     """Return the demo's inline script, adapted to run under plain Node.
 
@@ -81,7 +104,7 @@ def _demo_convert(tokens: list[str], tmp_dir: Path) -> dict[str, str]:
     path = tmp_dir / "demo_harness.ts"
     path.write_text(harness, encoding="utf-8")
     result = subprocess.run(
-        [_node(), str(path)],
+        _node_command(path),
         capture_output=True,
         text=True,
         check=True,
