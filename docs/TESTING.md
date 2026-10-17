@@ -34,6 +34,20 @@ with fakes. It cannot verify permissions, D-Bus behaviour or how real
 applications react to synthetic input. This plan covers what must be checked by
 hand on a real desktop.
 
+`scripts/acceptance_check.sh` automates the parts of this plan a script *can*
+check on a real machine (installed package, no leftover pre-rename package,
+session type, layout backend, text injector, device access, the daemon, the
+autostart toggle). Run it first, inside the graphical session:
+
+```bash
+scripts/acceptance_check.sh          # diagnose
+scripts/acceptance_check.sh --fix    # also load the uinput module
+```
+
+It exits non-zero on a hard failure and prints the manual steps that still need
+a human (a real correction, the hotkeys, the undo, the log). A container cannot
+run it meaningfully: there is no seat and no `/dev/uinput`.
+
 ### Quick start (copy-paste)
 
 Run this block first. It installs Lingvix, prints a diagnosis and starts
