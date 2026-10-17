@@ -170,6 +170,7 @@ def test_release_workflow_builds_and_verifies_the_deb() -> None:
     assert "build_deb.sh" in text
     assert "smoke_test.sh" in text
     assert "deb_selfsufficiency_test.sh" in text
+    assert "upgrade_test.sh" in text
     assert "action-gh-release" in text
 
 

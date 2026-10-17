@@ -48,6 +48,11 @@ backend and the `tomli`/`tomllib` split differ between them.
 
 ## 3. Upgrade from the old `linguafix` package
 
+`bash scripts/upgrade_test.sh` automates this on a clean `debian:13` image
+(`UPGRADE_IMAGE=debian:12` for the other release): it installs a stand-in for the
+old package, installs the new `.deb` over it with apt, and checks the three
+conditions below plus the config migration. The manual steps, for a real machine:
+
 - [ ] Install the previous `linguafix_0.2.8_all.deb`, then install the new
   `klyrshift_<version>_all.deb` over it. After the upgrade:
   - `dpkg -l | grep -E 'linguafix|lingvix|klyrshift'` shows only `ii  klyrshift`;

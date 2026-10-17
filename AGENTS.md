@@ -8,8 +8,9 @@ Repository-specific notes for agents working on Klyrshift.
 - `data/` — system integration files (systemd unit, XDG autostart, udev rule, icon).
 - `src/klyrshift/data/` — data files **shipped inside the package** (`layouts.json`,
   `ngrams_*.json`, `stop_words.txt`, and copies of the unit/desktop/icon).
-- `scripts/` — `build_deb.sh`, `smoke_test.sh`, `dev_setup.sh`,
-  `build_demo_model.py` (generates the landing page's demo data).
+- `scripts/` — `build_deb.sh`, `smoke_test.sh`, `deb_selfsufficiency_test.sh`,
+    `upgrade_test.sh`, `dev_setup.sh`, `build_demo_model.py` (generates the
+    landing page's demo data).
 
 `klyrshift.service`, `klyrshift.desktop` and `klyrshift.svg` exist in **both**
 `data/` and `src/klyrshift/data/` and must stay byte-identical — a test enforces

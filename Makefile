@@ -1,4 +1,4 @@
-.PHONY: help install uninstall test lint format typecheck check build-deb smoke-test zero-config clean dev
+.PHONY: help install uninstall test lint format typecheck check build-deb smoke-test zero-config upgrade-test clean dev
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -47,6 +47,9 @@ smoke-test: ## Install the built .deb in a clean Debian container and run the CL
 	bash scripts/smoke_test.sh
 zero-config: ## Prove the .deb installs with no manual step (no usermod, no enable)
 	bash scripts/deb_selfsufficiency_test.sh
+
+upgrade-test: ## Install the .deb over the pre-rename linguafix package and check the upgrade
+	bash scripts/upgrade_test.sh
 
 clean: ## Remove build artifacts and caches
 	rm -rf build dist *.egg-info .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage

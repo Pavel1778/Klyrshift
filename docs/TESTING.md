@@ -27,6 +27,13 @@ make smoke-test
 The container has no keyboard devices, so `doctor` is expected to report
 failures there; the smoke test only asserts that the commands execute.
 
+`scripts/deb_selfsufficiency_test.sh` installs the `.deb` with no manual step
+and checks that a purge leaves nothing behind. `scripts/upgrade_test.sh`
+installs a stand-in for the pre-rename `linguafix` package and then the new
+`.deb` over it, and checks that the old package is removed, only one daemon
+unit is enabled and the user's config survived the rename. Neither needs a
+desktop.
+
 ## Level 3: manual test plan
 
 The automated suite runs headless and replaces the operating-system boundary

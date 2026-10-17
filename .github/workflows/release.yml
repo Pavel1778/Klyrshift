@@ -41,6 +41,11 @@ jobs:
       - name: Prove the .deb installs with no manual step (zero-config)
         run: bash scripts/deb_selfsufficiency_test.sh
 
+      # The rename is the one change that can strand an existing user: the new
+      # package must displace the old one and carry the settings across.
+      - name: Upgrade from the pre-rename package
+        run: bash scripts/upgrade_test.sh
+
       - name: Build source distribution
         run: python -m build --sdist
 
