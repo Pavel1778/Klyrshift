@@ -28,6 +28,9 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 
 - Quality bar: `ruff check .`, `black --check .`, `mypy --strict .` clean;
   pytest coverage ≥ 80 %.
+- GUI tests need a display: run them under `xvfb-run -a` with
+  `PYTHONPATH=/usr/lib/python3/dist-packages` so `gi` (GTK4/libadwaita) is
+  importable. Without it the GUI modules fail to import, not to assert.
 - The pytest suite replaces the OS boundary with fakes, so it **cannot** catch
   packaging bugs. `scripts/smoke_test.sh` installs the real `.deb` into a clean
   container and is the only check that proves the package works.

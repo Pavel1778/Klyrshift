@@ -49,7 +49,7 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- detector ---------------------------------------------------------
     def _build_detector_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Детектор")
+        group = self.attach_help(Adw.PreferencesGroup(title="Детектор"), "guards")
         self.add_spin(
             group, "Минимальная длина слова", "min_word_length", lower=1, upper=10, step=1
         )
@@ -114,7 +114,7 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- triggers ---------------------------------------------------------
     def _build_triggers_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Триггеры")
+        group = self.attach_help(Adw.PreferencesGroup(title="Триггеры"), "triggers")
         self.add_switch(group, "По пробелу", "on_space")
         self.add_switch(group, "По Enter", "on_enter")
         self.add_switch(group, "По Tab", "on_tab")
@@ -149,7 +149,7 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- injection --------------------------------------------------------
     def _build_injection_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Инъекция")
+        group = self.attach_help(Adw.PreferencesGroup(title="Инъекция"), "timing")
         self.add_spin(
             group, "Максимальный размер буфера", "max_buffer_size", lower=50, upper=1000, step=10
         )
@@ -162,10 +162,13 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- quiet hours ------------------------------------------------------
     def _build_quiet_hours_group(self) -> None:
-        group = Adw.PreferencesGroup(
-            title="Тихие часы",
-            description="В это время автоматическая коррекция приостановлена; "
-            "ручной fix (двойной Shift) продолжает работать.",
+        group = self.attach_help(
+            Adw.PreferencesGroup(
+                title="Тихие часы",
+                description="В это время автоматическая коррекция приостановлена; "
+                "ручной fix (двойной Shift) продолжает работать.",
+            ),
+            "quiet_hours",
         )
         self.add_switch(group, "Включить тихие часы", "quiet_hours_enabled")
         self.add_entry(group, "Начало (ЧЧ:ММ)", "quiet_hours_start")
@@ -174,27 +177,36 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- exceptions -------------------------------------------------------
     def _build_exceptions_group(self) -> None:
-        self._exceptions = AppExceptionsList(
-            "Исключения приложений",
-            "В этих приложениях автокоррекция отключена",
-            self._config.exceptions_apps,
-            on_change=self._on_exceptions_changed,
-            on_detect=self._detect_current_app,
+        self._exceptions = self.attach_help(
+            AppExceptionsList(
+                "Исключения приложений",
+                "В этих приложениях автокоррекция отключена",
+                self._config.exceptions_apps,
+                on_change=self._on_exceptions_changed,
+                on_detect=self._detect_current_app,
+            ),
+            "exceptions",
         )
         self.add(self._exceptions)
-        self._force_manual = AppExceptionsList(
-            "Исправлять даже в ручном режиме",
-            "Эти приложения исправляются автоматически в режиме «Ручной»",
-            self._config.exceptions_force_in_manual,
-            on_change=self._on_force_manual_changed,
+        self._force_manual = self.attach_help(
+            AppExceptionsList(
+                "Исправлять даже в ручном режиме",
+                "Эти приложения исправляются автоматически в режиме «Ручной»",
+                self._config.exceptions_force_in_manual,
+                on_change=self._on_force_manual_changed,
+            ),
+            "exceptions",
         )
         self.add(self._force_manual)
-        self._app_layouts = AppLayoutMap(
-            "Раскладка по приложениям",
-            "При переключении на приложение включать эту раскладку",
-            self._config.app_layouts,
-            on_change=self._on_app_layouts_changed,
-            on_detect=self._detect_current_app,
+        self._app_layouts = self.attach_help(
+            AppLayoutMap(
+                "Раскладка по приложениям",
+                "При переключении на приложение включать эту раскладку",
+                self._config.app_layouts,
+                on_change=self._on_app_layouts_changed,
+                on_detect=self._detect_current_app,
+            ),
+            "app_layouts",
         )
         self.add(self._app_layouts)
         self.add_switch(
@@ -224,7 +236,7 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- dictionaries -----------------------------------------------------
     def _build_dictionary_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Словари")
+        group = self.attach_help(Adw.PreferencesGroup(title="Словари"), "dictionary")
         self.add_combo(
             group,
             "Размер словаря",
@@ -242,11 +254,14 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- typo correction (T9) ---------------------------------------------
     def _build_typo_group(self) -> None:
-        group = Adw.PreferencesGroup(
-            title="Исправление опечаток (T9)",
-            description="Меняет слово на ближайшее из словаря, только если "
-            "вариант однозначен: одну опечатку в коротком слове, до двух — "
-            "в слове длиной от 6 символов. Выключено по умолчанию.",
+        group = self.attach_help(
+            Adw.PreferencesGroup(
+                title="Исправление опечаток (T9)",
+                description="Меняет слово на ближайшее из словаря, только если "
+                "вариант однозначен: одну опечатку в коротком слове, до двух — "
+                "в слове длиной от 6 символов. Выключено по умолчанию.",
+            ),
+            "typo",
         )
         self._typo_switch = self.add_switch(group, "Исправлять опечатки", "typo_correction")
         self.add_spin(
@@ -277,10 +292,13 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- text expansion (snippets) ----------------------------------------
     def _build_expander_group(self) -> None:
-        group = Adw.PreferencesGroup(
-            title="Текстовые сокращения",
-            description="Короткий триггер превращается в длинный текст, "
-            "например !!email → адрес. Выключено по умолчанию.",
+        group = self.attach_help(
+            Adw.PreferencesGroup(
+                title="Текстовые сокращения",
+                description="Короткий триггер превращается в длинный текст, "
+                "например !!email → адрес. Выключено по умолчанию.",
+            ),
+            "snippets",
         )
         self.add_switch(group, "Включить сокращения", "text_expander_enabled")
         self.add_entry(group, "Файл сокращений", "text_expander_snippets_path")
@@ -288,7 +306,7 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- hotkeys ----------------------------------------------------------
     def _build_hotkeys_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Хоткеи")
+        group = self.attach_help(Adw.PreferencesGroup(title="Хоткеи"), "hotkeys")
         self._toggle_row = HotkeyRow(
             "Переключить режим",
             "",
@@ -343,7 +361,7 @@ class AdvancedPage(BoundPreferencesPage):
 
     # --- notifications ----------------------------------------------------
     def _build_notifications_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Уведомления")
+        group = self.attach_help(Adw.PreferencesGroup(title="Уведомления"), "notifications")
         self.add_switch(group, "Уведомлять об исправлении", "notify_on_fix")
         self.add_switch(group, "Уведомлять об ошибке", "notify_on_error")
         self.add_switch(group, "Звук при исправлении", "sound_on_fix")
@@ -388,7 +406,7 @@ class AdvancedPage(BoundPreferencesPage):
         return True
 
     def _build_logs_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Логи")
+        group = self.attach_help(Adw.PreferencesGroup(title="Логи"), "logs")
         self.add_combo(
             group,
             "Уровень логирования",

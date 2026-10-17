@@ -30,7 +30,7 @@ class SettingsPage(BoundPreferencesPage):
 
     # --- groups -----------------------------------------------------------
     def _build_mode_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Основные")
+        group = self.attach_help(Adw.PreferencesGroup(title="Основные"), "mode")
         self.add_combo(
             group,
             "Режим работы",
@@ -53,9 +53,12 @@ class SettingsPage(BoundPreferencesPage):
         self._save(f"Режим изменён на {MODE_LABELS.get(mode, mode)}")
 
     def _build_hotkeys_group(self) -> None:
-        group = Adw.PreferencesGroup(
-            title="Хоткеи",
-            description="Нажмите «Изменить», затем нужную комбинацию. Esc — отмена.",
+        group = self.attach_help(
+            Adw.PreferencesGroup(
+                title="Хоткеи",
+                description="Нажмите «Изменить», затем нужную комбинацию. Esc — отмена.",
+            ),
+            "hotkeys",
         )
         self.add_switch(group, "Хоткеи включены", "hotkeys_enabled")
         self._hotkey_fix = HotkeyRow(
@@ -91,9 +94,12 @@ class SettingsPage(BoundPreferencesPage):
         return handler
 
     def _build_languages_group(self) -> None:
-        group = Adw.PreferencesGroup(
-            title="Языки",
-            description="Какие раскладки Klyrshift должен распознавать",
+        group = self.attach_help(
+            Adw.PreferencesGroup(
+                title="Языки",
+                description="Какие раскладки Klyrshift должен распознавать",
+            ),
+            "languages",
         )
         self._language_rows: dict[str, Adw.SwitchRow] = {}
         for lang in SUPPORTED_LANGUAGES:
@@ -121,7 +127,7 @@ class SettingsPage(BoundPreferencesPage):
             self._on_saved("Языки сохранены")
 
     def _build_notifications_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Уведомления и тайминги")
+        group = self.attach_help(Adw.PreferencesGroup(title="Уведомления и тайминги"), "timing")
         self.add_switch(group, "Уведомления при исправлении", "notify_on_fix")
         self.add_spin(
             group,
@@ -138,3 +144,8 @@ class SettingsPage(BoundPreferencesPage):
     def language_rows(self) -> dict[str, Adw.SwitchRow]:
         """Expose the language switches for tests."""
         return self._language_rows
+
+    @property
+    def hotkey_fix_row(self) -> HotkeyRow:
+        """Expose the fix hotkey row (also a tour target)."""
+        return self._hotkey_fix

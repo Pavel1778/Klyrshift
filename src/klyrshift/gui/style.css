@@ -55,3 +55,23 @@
 .big-toggle.reduce-motion image {
   transition: none;
 }
+
+/* Guided tour: the scrim is drawn in code (so the target stays readable), while
+ * the step card is a normal themed widget. The card needs a background because
+ * it sits on top of the scrim, not on the window background. */
+.tour-card {
+  background-color: @window_bg_color;
+  border-radius: 12px;
+  border: 1px solid alpha(@window_fg_color, 0.15);
+  box-shadow: 0 8px 28px alpha(black, 0.35);
+  padding: 16px;
+  margin: 12px;
+}
+
+/* The "?" button next to a setting opens its context help. */
+.help-button {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 999px;
+}

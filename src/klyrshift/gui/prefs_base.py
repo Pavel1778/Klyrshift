@@ -17,7 +17,9 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
+from ..onboarding import HELP_TOPICS  # noqa: E402
 from .state import GuiState  # noqa: E402
+from .widgets.help_button import HelpButton  # noqa: E402
 
 
 class BoundPreferencesPage(Adw.PreferencesPage):
@@ -28,6 +30,18 @@ class BoundPreferencesPage(Adw.PreferencesPage):
         self._state = state
         self._on_saved = on_saved
         self._config = state.config
+
+    def attach_help(self, group: Adw.PreferencesGroup, topic_key: str) -> Adw.PreferencesGroup:
+        """Add a "?" button to a settings group's header.
+
+        The button opens the context help for ``topic_key`` from
+        :mod:`klyrshift.onboarding`, so the explanation lives next to the settings
+        it describes instead of in a separate document that drifts.
+        """
+        topic = HELP_TOPICS.get(topic_key)
+        if topic is not None:
+            group.set_header_suffix(HelpButton(topic))
+        return group
 
     def _save(self, message: str) -> None:
         try:

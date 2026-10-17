@@ -64,13 +64,22 @@ def test_window_creates_with_expected_pages(gui_state: Any) -> None:
     app = Adw.Application(application_id="io.github.pavel1778.KlyrshiftTest")
     window = KlyrshiftWindow(gui_state, app)
     names = {page.get_name() for page in window.stack.get_pages()}
-    assert names == {"home", "settings", "dictionary", "typo", "history", "advanced"}
+    assert names == {
+        "home",
+        "settings",
+        "dictionary",
+        "typo",
+        "history",
+        "advanced",
+        "help",
+    }
     # The advanced page exists but is hidden from the switcher until revealed.
     assert window.advanced_page.get_visible() is False
+    assert window.help_page.get_visible() is False
     assert window.home.toggle.state == "off"
     window._on_show_advanced(None, None)
     assert window.advanced_page.get_visible() is True
-    assert len(window.stack.get_pages()) == 6
+    assert len(window.stack.get_pages()) == 7
 
 
 def test_big_toggle_start_and_stop(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -713,8 +722,20 @@ def test_window_menu_actions(gui_state: Any) -> None:
     window._on_show_advanced(None, None)
     window._on_show_advanced(None, None)
     names = {page.get_name() for page in window.stack.get_pages()}
-    assert names == {"home", "settings", "dictionary", "typo", "history", "advanced"}
+    assert names == {
+        "home",
+        "settings",
+        "dictionary",
+        "typo",
+        "history",
+        "advanced",
+        "help",
+    }
     assert window.stack.get_visible_child_name() == "advanced"
+    # The help page is reachable from the menu and from the tour's action.
+    window._on_show_help(None, None)
+    assert window.help_page.get_visible() is True
+    assert window.stack.get_visible_child_name() == "help"
 
 
 def test_window_resizes_without_breaking(gui_state: Any) -> None:
@@ -736,6 +757,10 @@ def test_window_resizes_without_breaking(gui_state: Any) -> None:
         window.set_default_size(width, height)
         for page in window.stack.get_pages():
             window.stack.set_visible_child_name(page.get_name())
+    # The loop leaves the last page in the stack visible; every page survived the
+    # resizes, including the help page added for onboarding.
+    assert window.stack.get_visible_child_name() == "help"
+    window.stack.set_visible_child_name("advanced")
     assert window.stack.get_visible_child_name() == "advanced"
 
 

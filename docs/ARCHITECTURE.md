@@ -438,6 +438,7 @@ word. A word already corrected by the boundary is remembered in
 | `update_check.py` | Opt-in GitHub release check (daily, off by default) |
 | `doctor.py` | `klyrshift doctor`: environment and permission diagnosis |
 | `collect_logs.py` | `klyrshift collect-logs`: bundle logs for a bug report |
+| `onboarding.py` | Tour steps and help texts as plain data (no GTK import) |
 | `tray.py` | Optional AppIndicator icon |
 | `cli.py` | `argparse` command-line interface |
 | `gui/` | Optional GTK4 + libadwaita preferences window |

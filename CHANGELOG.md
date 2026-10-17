@@ -129,6 +129,16 @@ release tree, the changelog and the published release are reconciled.
 
 ### Added
 
+- **A guided tour, context help and a "Помощь и обучение" page.** A first-run
+  offer leads into a six-step tour — home screen, languages, mode, fix hotkey,
+  environment check, closing card — that highlights the real widget at each step
+  and can be skipped or replayed. The tour and the help texts live in `klyrshift.onboarding`
+  as plain data, so the scenario is validated without a display and each topic
+  names the `Config` fields it explains — a renamed field fails the suite instead
+  of silently orphaning its text. Settings groups carry a "?" button that opens
+  the matching topic, the help page repeats the tour, lists every topic, runs the
+  environment check and states the known limitations, and finishing or skipping
+  records the tour version so a routine start stays quiet.
 - **`scripts/acceptance_check.sh` now checks detection and the modes without a
   keyboard.** It drives the *installed* package's detector directly and pins
   nine cases: a word typed in the wrong layout converts in both directions, an

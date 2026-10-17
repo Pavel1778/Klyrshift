@@ -201,6 +201,14 @@ Run `klyrshift gui` and check the window stays up.
 6. **Export/import** — export to JSON, reset, import; the settings come back
    (`klyrshift export` / `klyrshift import` work too).
 
+7. **Guided tour** — on a fresh config the first-run offer appears; starting it
+   walks the steps, each highlighting the widget it describes. Skipping,
+   finishing and the "Повторить вводный тур" button on the help page all work,
+   and a restart after finishing shows no offer.
+8. **Context help** — the "?" on a settings group opens the matching topic; the
+   "Помощь и обучение" page lists every topic, runs the environment check and
+   shows the known limitations.
+
 ## Reporting
 
 File one issue per problem found, using the bug report template

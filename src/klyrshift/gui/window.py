@@ -6,16 +6,24 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio, GObject, Gtk  # noqa: E402
+from gi.repository import Adw, Gio, GLib, GObject, Gtk  # noqa: E402
 
+from ..onboarding import (  # noqa: E402
+    TOUR_VERSION,
+    load_onboarding_state,
+    save_onboarding_state,
+    should_offer_tour,
+)
 from .about_page import build_about_window  # noqa: E402
 from .advanced_page import AdvancedPage  # noqa: E402
 from .dictionary_page import DictionaryPage  # noqa: E402
+from .help_page import HelpPage  # noqa: E402
 from .history_page import HistoryPage  # noqa: E402
 from .home_page import HomePage  # noqa: E402
 from .settings_page import SettingsPage  # noqa: E402
 from .state import GuiState  # noqa: E402
 from .typo_page import TypoPage  # noqa: E402
+from .widgets.tour_overlay import TourOverlay, bounds_rect  # noqa: E402
 
 
 def _scrollable(page: Gtk.Widget) -> Gtk.ScrolledWindow:
@@ -41,6 +49,7 @@ TAB_ICONS: dict[str, str] = {
     "typo": "input-keyboard-symbolic",
     "history": "document-open-recent-symbolic",
     "advanced": "preferences-other-symbolic",
+    "help": "help-about-symbolic",
 }
 
 
@@ -75,8 +84,14 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
 
         self._toasts = Adw.ToastOverlay()
         toolbar = Adw.ToolbarView()
+        self._toolbar = toolbar
         self._toasts.set_child(toolbar)
-        self.set_content(self._toasts)
+        # A plain overlay owns the toast layer as its base child; the tour is added
+        # on top of it. The tour must not own the window content: a hidden widget
+        # that owns the content would hide the whole window.
+        self._root_overlay = Gtk.Overlay()
+        self._root_overlay.set_child(self._toasts)
+        self.set_content(self._root_overlay)
 
         header = Adw.HeaderBar()
         self._stack = Adw.ViewStack()
@@ -94,6 +109,8 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         header.set_title_widget(self._switcher_title)
 
         menu = Gio.Menu()
+        menu.append("Помощь и обучение", "win.show-help")
+        menu.append("Пройти тур заново", "win.start-tour")
         menu.append("О программе", "win.about")
         menu.append("Открыть config.toml", "win.open-config")
         menu_button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu)
@@ -115,6 +132,7 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         self._typo = TypoPage(state, self._toasts, on_saved=self._on_saved)
         self._history = HistoryPage(state, self._toasts)
         self._advanced = AdvancedPage(state, on_saved=self._on_saved)
+        self._help = HelpPage(on_start_tour=self.start_tour)
 
         self._stack.add_titled(_scrollable(self._home), "home", "Главная")
         self._stack.add_titled(self._settings, "settings", "Настройки")
@@ -127,6 +145,10 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         # switcher until the user reveals it, keeping the basic settings clean.
         self._advanced_page = self._stack.add_titled(self._advanced, "advanced", "Продвинутые")
         self._advanced_page.set_visible(False)
+        # Help is reached from the header menu, not the switcher: it is not a
+        # setting, and an extra tab would crowd the narrow-window bar.
+        self._help_page = self._stack.add_titled(self._help, "help", "Помощь")
+        self._help_page.set_visible(False)
         # Give every tab a real icon. Adwaita names verified against the theme;
         # a name the theme lacks is skipped rather than shown as a placeholder.
         for name, icon in TAB_ICONS.items():
@@ -136,6 +158,7 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         toolbar.set_content(self._stack)
 
         self._install_actions()
+        self._install_tour()
 
     def _install_actions(self) -> None:
         about = Gio.SimpleAction.new("about", None)
@@ -150,6 +173,117 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         self._show_advanced_action.connect("activate", self._on_show_advanced)
         self.add_action(self._show_advanced_action)
         self._settings.add(self._make_advanced_group())
+
+        show_help = Gio.SimpleAction.new("show-help", None)
+        show_help.connect("activate", self._on_show_help)
+        self.add_action(show_help)
+
+        tour = Gio.SimpleAction.new("start-tour", None)
+        tour.connect("activate", lambda _a, _p: self.start_tour())
+        self.add_action(tour)
+
+    def _install_tour(self) -> None:
+        """Create the tour overlay above the whole window and offer it once.
+
+        The overlay wraps the window's content (not the pages), so its scrim
+        covers the header and the tab bar as well. The scenario is offered only
+        to a user who has neither finished nor skipped this version; a
+        long-standing user who already dismissed it sees nothing.
+        """
+        self._tour = TourOverlay(
+            self._resolve_tour_target,
+            measure_target=self._measure_in_overlay,
+            on_finished=self._on_tour_finished,
+            on_skipped=self._on_tour_skipped,
+            show_step=self._show_tour_step,
+        )
+        # The tour is an overlay child of the window's content, so its scrim and
+        # card cover the header and the tab bar too, not just the pages.
+        self._root_overlay.add_overlay(self._tour)
+
+        self._onboarding = load_onboarding_state()
+        if should_offer_tour(self._onboarding):
+            GLib.idle_add(self._offer_tour)
+
+    def _offer_tour(self) -> bool:
+        """Show the first-run tour offer; return ``False`` to run once."""
+        self._offer = Adw.AlertDialog(
+            heading="Познакомиться с Klyrshift?",
+            body=(
+                "Короткий тур из нескольких шагов покажет главный экран, выбор "
+                "языков, режим работы и проверку окружения. Его можно пропустить "
+                "и повторить позже на странице «Помощь»."
+            ),
+        )
+        self._offer.add_response("skip", "Пропустить")
+        self._offer.add_response("start", "Начать тур")
+        self._offer.set_response_appearance("start", Adw.ResponseAppearance.SUGGESTED)
+        self._offer.set_default_response("start")
+        self._offer.connect("response", self._on_offer_response)
+        self._offer.present(self)
+        return False
+
+    def _on_offer_response(self, _dialog: Adw.AlertDialog, response: str) -> None:
+        if response == "start":
+            self.start_tour()
+            return
+        # Remember the decline so the offer never reappears on a routine start.
+        self._onboarding.skipped_version = TOUR_VERSION
+        save_onboarding_state(self._onboarding)
+
+    def start_tour(self) -> bool:
+        """Start (or restart) the guided tour; return whether it is showing."""
+        return self._tour.open()
+
+    def _on_tour_finished(self, _index: int) -> None:
+        self._onboarding.completed_version = TOUR_VERSION
+        save_onboarding_state(self._onboarding)
+
+    def _on_tour_skipped(self, _index: int) -> None:
+        self._onboarding.skipped_version = TOUR_VERSION
+        save_onboarding_state(self._onboarding)
+
+    def _resolve_tour_target(self, name: str) -> Gtk.Widget | None:
+        """Return the live widget a tour step points at, or ``None``.
+
+        The mapping is explicit so a renamed widget fails the GUI test instead of
+        silently degrading the tour to a series of centred cards. This method has
+        no side effects: it may be called to probe whether a step is displayable.
+        """
+        widgets: dict[str, Gtk.Widget | None] = {
+            "home.toggle": self._home.toggle,
+            "home.mode": self._home.mode_switcher,
+            "settings.languages": self._settings.language_rows.get("ru"),
+            "settings.hotkey_fix": self._settings.hotkey_fix_row,
+            "help.diagnostics": self._help.diagnostics_button,
+        }
+        return widgets.get(name)
+
+    def _show_tour_step(self, step: object) -> None:
+        """Switch to the step's page and reveal it so the target can be measured."""
+        page_name = getattr(step, "page", "")
+        if not page_name:
+            return
+        page = self._stack.get_child_by_name(page_name)
+        if page is None:
+            return
+        if page_name in {"advanced", "help"}:
+            self._stack.get_page(page).set_visible(True)
+        self._stack.set_visible_child_name(page_name)
+
+    def _measure_in_overlay(self, target: Gtk.Widget) -> tuple[float, float, float, float] | None:
+        """Return ``target``'s rectangle in the tour overlay's coordinates.
+
+        ``compute_bounds`` needs the target to be a descendant of the reference
+        widget; the overlay is the window's content, so it is an ancestor of every
+        page and the bounds are directly comparable.
+        """
+        bounds = target.compute_bounds(self._root_overlay)
+        return bounds_rect(bounds)
+
+    def _on_show_help(self, _action: object, _param: object) -> None:
+        self._help_page.set_visible(True)
+        self._stack.set_visible_child_name("help")
 
     def _make_advanced_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup()
@@ -221,3 +355,13 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
     def history_page(self) -> HistoryPage:
         """Expose the history page for tests."""
         return self._history
+
+    @property
+    def tour(self) -> TourOverlay:
+        """Expose the guided-tour overlay for tests."""
+        return self._tour
+
+    @property
+    def help_page(self) -> Adw.ViewStackPage:
+        """Expose the help stack page (for reveal tests)."""
+        return self._help_page
