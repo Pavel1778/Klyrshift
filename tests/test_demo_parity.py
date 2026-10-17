@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from lingvix.converter import LayoutConverter
-from lingvix.detector import LanguageDetector
+from klyrshift.converter import LayoutConverter
+from klyrshift.detector import LanguageDetector
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEMO = REPO_ROOT / "site" / "src" / "components" / "Demo.astro"

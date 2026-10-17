@@ -6,7 +6,7 @@ reload. Without that, a switch flipped in the GUI (typo correction, a trigger, a
 guard) is saved but the feature silently does nothing -- the "T9 is on but does
 not correct" bug.
 
-These tests import ``lingvix.gui.state``, which has no GTK dependency, so they
+These tests import ``klyrshift.gui.state``, which has no GTK dependency, so they
 run everywhere (no display required).
 """
 
@@ -16,9 +16,9 @@ from pathlib import Path
 
 import pytest
 
-from lingvix.config import Config, load_config
-from lingvix.gui import state as gui_state
-from lingvix.gui.state import GuiState
+from klyrshift.config import Config, load_config
+from klyrshift.gui import state as gui_state
+from klyrshift.gui.state import GuiState
 
 
 @pytest.fixture

@@ -4,8 +4,8 @@
 //   - Layero (primary, Russian):  https://linguafix.layero.app
 //   - Vercel (mirror, English):   https://linguafix.vercel.app
 //
-// The hosts are still named ``linguafix.*``: the ``Lingvix`` rename is done in
-// the source but the DNS entries were never renamed, so the ``lingvix.*`` names
+// The hosts are still named ``linguafix.*``: the ``Klyrshift`` rename is done in
+// the source but the DNS entries were never renamed, so the ``klyrshift.*`` names
 // are 404. The canonical URL, ``og:url`` and the sitemap all derive from these
 // constants, and a 404 origin makes search engines drop the page. When the hosts
 // are renamed, only these two constants change.

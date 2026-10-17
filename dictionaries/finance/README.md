@@ -9,12 +9,12 @@
 
 ## Источник и лицензия
 
-Составлено вручную (manual curation) для проекта Lingvix, лицензия — MIT.
+Составлено вручную (manual curation) для проекта Klyrshift, лицензия — MIT.
 Термины — общеупотребительные финансовые понятия; списки не являются
 финансовой рекомендацией.
 
 ## Установка
 
 ```bash
-lingvix dict install finance --lang ru
+klyrshift dict install finance --lang ru
 ```

@@ -3,7 +3,7 @@
 
 The demo runs the same per-word plausibility test as the daemon, so it needs the
 same inputs: a frequency vocabulary and a character-bigram model per language.
-Both are derived here from the shipped corpora (``src/lingvix/data/ngrams_*.json``,
+Both are derived here from the shipped corpora (``src/klyrshift/data/ngrams_*.json``,
 which ``scripts/build_corpora.py`` builds from the dictionaries). Keeping it
 generated means the demo can never drift from the shipped model.
 
@@ -29,7 +29,7 @@ LANGUAGES = ("ru", "en")
 # likely to type; a larger list would bloat the page bundle for no gain.
 VOCAB_LIMIT = 3000
 ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "src" / "lingvix" / "data"
+DATA_DIR = ROOT / "src" / "klyrshift" / "data"
 
 
 def build(language: str) -> dict[str, object]:

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from lingvix import backup, cli
-from lingvix.config import Config, load_config
+from klyrshift import backup, cli
+from klyrshift.config import Config, load_config
 
 
 @pytest.fixture
@@ -34,8 +34,8 @@ def test_roundtrip_config_dictionary_snippets(
 ) -> None:
     # Configure something non-default, a dictionary word and a snippet.
     config = Config(mode="hybrid", typo_correction=True)
-    from lingvix.config import save_config
-    from lingvix.dictionary import add_user_word
+    from klyrshift.config import save_config
+    from klyrshift.dictionary import add_user_word
 
     save_config(config)
     add_user_word("vercel")
@@ -51,7 +51,7 @@ def test_roundtrip_config_dictionary_snippets(
     assert payload["dictionary"] == ["vercel"]
 
     # Wipe and restore.
-    from lingvix.dictionary import load_user_dictionary, save_user_dictionary
+    from klyrshift.dictionary import load_user_dictionary, save_user_dictionary
 
     save_user_dictionary([])
     save_config(Config())
@@ -81,7 +81,7 @@ def test_apply_backup_selective(isolated_env: Path) -> None:
 def test_read_backup_rejects_foreign_file(isolated_env: Path, tmp_path: Path) -> None:
     path = tmp_path / "nope.json"
     path.write_text("{}", encoding="utf-8")
-    with pytest.raises(ValueError, match="not a Lingvix backup"):
+    with pytest.raises(ValueError, match="not a Klyrshift backup"):
         backup.read_backup(path)
 
 
@@ -105,7 +105,7 @@ def test_config_path_command(isolated_env: Path, capsys: pytest.CaptureFixture[s
 def test_restart_command(
     isolated_env: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    import lingvix.daemon_control as dc
+    import klyrshift.daemon_control as dc
 
     monkeypatch.setattr(dc, "restart", lambda: True)
     assert cli.main(["restart"]) == 0

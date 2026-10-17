@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from lingvix.injector import TextInjector
-from lingvix.switcher import LayoutSwitcher
+from klyrshift.injector import TextInjector
+from klyrshift.switcher import LayoutSwitcher
 
 STUB = """#!/bin/sh
 # Record the invocation, then behave like the tool it stands in for.

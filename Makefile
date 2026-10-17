@@ -23,7 +23,7 @@ uninstall: ## Run the system uninstaller (bash uninstall.sh)
 	bash uninstall.sh
 
 test: ## Run the test suite with coverage
-	$(VENV_PY) -m pytest tests/ -q --cov=lingvix --cov-report=term-missing
+	$(VENV_PY) -m pytest tests/ -q --cov=klyrshift --cov-report=term-missing
 
 lint: ## Run ruff, isort and black checks
 	$(VENV)/bin/ruff check .

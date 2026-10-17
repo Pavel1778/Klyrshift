@@ -10,7 +10,7 @@ Usage::
 
     scripts/build_corpora.py en:/path/en_50k.txt ru:/path/ru_50k.txt ...
 
-The generated files are written to ``src/lingvix/data/``. Words are stored in
+The generated files are written to ``src/klyrshift/data/``. Words are stored in
 frequency order because ``LanguageDetector`` keeps the first
 ``Config.dictionary_size`` of them.
 """
@@ -31,7 +31,7 @@ MAX_WORDS = 10000
 BIGRAM_WORDS = 5000
 # Only plain letter words (plus the apostrophe) are useful for detection.
 _WORD_RE = re.compile(r"^[^\W\d_]+(?:'[^\W\d_]+)*$", re.UNICODE)
-DATA_DIR = Path(__file__).resolve().parent.parent / "src" / "lingvix" / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent / "src" / "klyrshift" / "data"
 
 
 def read_words(path: Path, limit: int) -> list[str]:

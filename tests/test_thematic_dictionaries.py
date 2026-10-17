@@ -10,10 +10,10 @@ from pathlib import Path
 
 import pytest
 
-from lingvix import __version__, cli
-from lingvix.config import Config
-from lingvix.detector import LanguageDetector
-from lingvix.thematic import (
+from klyrshift import __version__, cli
+from klyrshift.config import Config
+from klyrshift.detector import LanguageDetector
+from klyrshift.thematic import (
     CATEGORIES,
     category,
     category_slugs,
@@ -31,7 +31,7 @@ DICTIONARIES = REPO_ROOT / "dictionaries"
 
 
 def _run_cli(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> int:
-    monkeypatch.setattr("sys.argv", ["lingvix", *argv])
+    monkeypatch.setattr("sys.argv", ["klyrshift", *argv])
     return cli.main()
 
 
@@ -145,7 +145,7 @@ def test_download_category_prefers_release_archive(
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     _, count = download_category("it", "ru", str(tmp_path))
-    assert seen[0].endswith("lingvix-dict-it.tar.gz")
+    assert seen[0].endswith("klyrshift-dict-it.tar.gz")
     assert count == 2
     assert load_thematic_words("it", "ru", str(tmp_path)) == {"алгоритм", "деплой"}
 
@@ -153,10 +153,11 @@ def test_download_category_prefers_release_archive(
 def test_download_category_falls_back_to_the_pre_rename_asset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The live release only ships ``linguafix-dict-*``: it predates the rename.
+    """The live release only ships the old asset names: it predates both renames.
 
     A single attempt under the new name would 404 on every install and quietly
-    drop to the branch mirror, so the legacy spelling has to be tried too.
+    drop to the branch mirror, so the earlier spellings have to be tried too, in
+    order: ``klyrshift-`` then ``lingvix-`` then ``linguafix-``.
     """
     seen: list[str] = []
 
@@ -171,14 +172,15 @@ def test_download_category_falls_back_to_the_pre_rename_asset(
 
     def fake_urlopen(url: str, timeout: float = 0) -> io.BytesIO:
         seen.append(url)
-        if "lingvix-dict-" in url:
+        if "klyrshift-dict-" in url or "lingvix-dict-" in url:
             raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
         return io.BytesIO(make_archive("ru-it-1k.txt", "алгоритм\nдеплой\n"))
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     _, count = download_category("it", "ru", str(tmp_path))
-    assert seen[0].endswith("lingvix-dict-it.tar.gz")
-    assert seen[1].endswith("linguafix-dict-it.tar.gz")
+    assert seen[0].endswith("klyrshift-dict-it.tar.gz")
+    assert seen[1].endswith("lingvix-dict-it.tar.gz")
+    assert seen[2].endswith("linguafix-dict-it.tar.gz")
     assert count == 2
 
 
@@ -272,7 +274,7 @@ def test_cli_install_and_remove_category(
     code = _run_cli(monkeypatch, ["dict", "install", "it", "--lang", "ru"])
     assert code == 0
     assert "Установлено" in capsys.readouterr().out
-    directory = isolated_home / "xdg_data_home" / "lingvix" / "dictionaries"
+    directory = isolated_home / "xdg_data_home" / "klyrshift" / "dictionaries"
     assert thematic_path("it", "ru", str(directory)).is_file()
 
     assert _run_cli(monkeypatch, ["dict", "list-installed"]) == 0
@@ -280,7 +282,7 @@ def test_cli_install_and_remove_category(
 
     assert _run_cli(monkeypatch, ["dict", "remove-category", "it"]) == 0
     assert "отключена" in capsys.readouterr().out
-    from lingvix.config import load_config
+    from klyrshift.config import load_config
 
     assert load_config().installed_dict_categories == ["base"]
 
@@ -302,7 +304,7 @@ def test_installed_category_slugs_reports_disk(
         raise urllib.error.URLError("offline")
 
     monkeypatch.setattr("urllib.request.urlopen", fail)
-    directory = isolated_home / "xdg_data_home" / "lingvix" / "dictionaries"
+    directory = isolated_home / "xdg_data_home" / "klyrshift" / "dictionaries"
     download_category("medicine", "ru", str(directory))
     assert installed_category_slugs("ru", str(directory)) == ("medicine",)
     assert installed_category_slugs("en", str(directory)) == ()
@@ -322,7 +324,7 @@ def test_thematic_lists_are_not_bundled_in_the_deb() -> None:
 
 def test_base_lists_are_in_the_built_deb() -> None:
     """When a .deb exists, every base list must be inside it."""
-    deb = REPO_ROOT / "dist" / f"lingvix_{__version__}_all.deb"
+    deb = REPO_ROOT / "dist" / f"klyrshift_{__version__}_all.deb"
     if not deb.is_file():
         pytest.skip("no built .deb to inspect")
     listing = subprocess.run(
@@ -339,5 +341,5 @@ def test_base_lists_are_in_the_built_deb() -> None:
 
 def test_release_workflow_attaches_category_archives() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    assert "lingvix-dict-" in workflow
+    assert "klyrshift-dict-" in workflow
     assert "dist/dict-archives" in workflow

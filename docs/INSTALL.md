@@ -1,6 +1,6 @@
 # Installation
 
-Lingvix targets Debian 12+ / Ubuntu 22.04+ with GNOME 45+ on either X11 or
+Klyrshift targets Debian 12+ / Ubuntu 22.04+ with GNOME 45+ on either X11 or
 Wayland. Python 3.10 or newer is required.
 
 ## Zero-config .deb path (recommended)
@@ -8,25 +8,25 @@ Wayland. Python 3.10 or newer is required.
 This is the path for regular users. Nothing has to be configured by hand:
 
 ```bash
-sudo apt install ./lingvix_0.2.8.2_all.deb
+sudo apt install ./klyrshift_0.2.8.3_all.deb
 ```
 
 That is the whole procedure. The package:
 
-- installs `/usr/lib/udev/rules.d/71-lingvix.rules`, which grants access to
+- installs `/usr/lib/udev/rules.d/71-klyrshift.rules`, which grants access to
   `/dev/input/event*` and `/dev/uinput` to the active session user with
   `TAG+="uaccess"` — no `usermod`, no group membership, no relogin;
 - loads the `uinput` module so `/dev/uinput` exists;
 - enables the systemd user service **globally**
-  (`systemctl --user enable --global lingvix.service`), so it starts at the
+  (`systemctl --user enable --global klyrshift.service`), so it starts at the
   next login. It is not started during installation because there may be no
   graphical session yet.
 
 After the next login the daemon is running. Verify with:
 
 ```bash
-lingvix doctor
-systemctl --user is-enabled lingvix.service   # -> enabled
+klyrshift doctor
+systemctl --user is-enabled klyrshift.service   # -> enabled
 ```
 
 `uaccess` grants the ACL when the user logs in at the seat. If the package is
@@ -42,33 +42,39 @@ reports a permission problem after a relogin, see
 
 ## Upgrading from the old `linguafix` package
 
-The project was renamed `LinguaFix` → `Lingvix`, and the Debian package with
-it (`linguafix` → `lingvix`). Install the new package the same way:
+The project was renamed twice — `LinguaFix` → `Lingvix` → `Klyrshift` — and the
+Debian package with it (`linguafix` → `klyrshift`). Install the new package the
+same way:
 
 ```bash
-sudo apt install ./lingvix_0.2.8.2_all.deb
+sudo apt install ./klyrshift_0.2.8.3_all.deb
 ```
 
-apt sees `Conflicts: linguafix` and `Replaces: linguafix` in the new package and
-removes the old one first, so the two do not coexist. Do not end up with both:
-each package ships a systemd user unit, and two enabled units means two daemons
-reading the keyboard at once.
+apt sees `Conflicts: linguafix, lingvix` and `Replaces: linguafix, lingvix` in the
+new package and removes the old one first, so the two do not coexist. Do not end up
+with both: each package ships a systemd user unit, and two enabled units means two
+daemons reading the keyboard at once.
 
 Verify that only the new package remains:
 
 ```bash
-dpkg -l | grep -E 'linguafix|lingvix'          # only 'ii  lingvix' expected
-systemctl --user is-enabled lingvix.service    # -> enabled
+dpkg -l | grep -E 'linguafix|lingvix|klyrshift'   # only 'ii  klyrshift' expected
+systemctl --user is-enabled klyrshift.service    # -> enabled
 ```
 
-The configuration directory is **not** migrated. The old package used
-`~/.config/linguafix` and the new one uses `~/.config/lingvix`; the new package
-starts from its defaults. If you had customised settings, copy them across
-before removing the old directory:
+The configuration directory **is migrated** on first load. The old package used
+`~/.config/linguafix` (and, between the renames, `~/.config/lingvix`) while the new
+one uses `~/.config/klyrshift`; on the first start the new package copies
+`config.toml` and `snippets.toml` across. The copy happens once, only when
+`~/.config/klyrshift/config.toml` does not exist yet, and it leaves the old file in
+place — so an existing current config is never overwritten and a downgrade still
+finds its settings. To migrate by hand instead (or to check what was copied):
 
 ```bash
-mkdir -p ~/.config/lingvix
-cp ~/.config/linguafix/config.toml ~/.config/lingvix/config.toml
+ls ~/.config/klyrshift/config.toml
+# manual equivalent, if you prefer:
+mkdir -p ~/.config/klyrshift
+cp ~/.config/linguafix/config.toml ~/.config/klyrshift/config.toml
 ```
 
 A `dpkg -i` install (rather than `apt install ./…`) also removes the old
@@ -82,7 +88,7 @@ On GNOME Wayland the active layout is changed through `g3kb-switch`, which
 talks to a GNOME Shell extension and is tied to the shell's D-Bus API. That API
 has changed between GNOME releases, so the supported range is **GNOME 45+ (tested on 48)**.
 `install.sh` prints a warning when it detects a GNOME version outside that
-range. If `g3kb-switch` is missing or incompatible, Lingvix still replaces the
+range. If `g3kb-switch` is missing or incompatible, Klyrshift still replaces the
 text but cannot change the active layout.
 
 `g3kb-switch` is **not in the Debian repositories** (verified: no candidate in
@@ -92,7 +98,7 @@ otherwise refuse to install the package. The X11 backend `setxkbmap` ships in
 install keeps a working layout backend. Check what is available with:
 
 ```bash
-lingvix doctor     # reports the detected layout backend
+klyrshift doctor     # reports the detected layout backend
 gnome-shell --version
 ```
 
@@ -102,8 +108,8 @@ This path is for contributors who work from a clone. Regular users should use
 the `.deb` above.
 
 ```bash
-git clone https://github.com/Pavel1778/LinguaFix.git
-cd LinguaFix
+git clone https://github.com/Pavel1778/Klyrshift.git
+cd Klyrshift
 bash install.sh
 ```
 
@@ -124,7 +130,7 @@ bash install.sh --no-autostart
 ```
 
 Either way the autostart can be toggled later from the GUI switch, or with
-`lingvix install-autostart` / `lingvix uninstall-autostart`.
+`klyrshift install-autostart` / `klyrshift uninstall-autostart`.
 
 ## What the installer does
 
@@ -135,16 +141,16 @@ Either way the autostart can be toggled later from the GUI switch, or with
    xdotool libnotify-bin`.
 4. Optionally helps you install `g3kb-switch` for GNOME Wayland layout
    switching.
-5. Creates a virtual environment in `~/.local/share/lingvix/venv/` and
+5. Creates a virtual environment in `~/.local/share/klyrshift/venv/` and
    installs the package with `pip install -e .`.
-6. Installs the udev rule `/etc/udev/rules.d/71-lingvix.rules` (asks for sudo).
+6. Installs the udev rule `/etc/udev/rules.d/71-klyrshift.rules` (asks for sudo).
    The rule grants access with `TAG+="uaccess"`, so no group change is needed.
 7. Loads the `uinput` module.
-8. Installs the systemd user service `~/.config/systemd/user/lingvix.service`.
+8. Installs the systemd user service `~/.config/systemd/user/klyrshift.service`.
 9. Installs the XDG autostart entry
-   `~/.config/autostart/lingvix.desktop` (skipped with `--no-autostart`).
+   `~/.config/autostart/klyrshift.desktop` (skipped with `--no-autostart`).
 10. Copies the icon to
-    `~/.local/share/icons/hicolor/scalable/apps/lingvix.svg`.
+    `~/.local/share/icons/hicolor/scalable/apps/klyrshift.svg`.
 11. Enables and starts the service (with `--no-autostart`, starts it without
     enabling it at login).
 12. Sends a desktop notification.
@@ -164,19 +170,19 @@ involved.
 ## Verifying the install
 
 ```bash
-lingvix status
-systemctl --user status lingvix.service
-journalctl --user -u lingvix.service -n 50 --no-pager
+klyrshift status
+systemctl --user status klyrshift.service
+journalctl --user -u klyrshift.service -n 50 --no-pager
 ```
 
-`lingvix status` should report that the daemon is running, the current layout,
+`klyrshift status` should report that the daemon is running, the current layout,
 and the active injector backend.
 
 Run the built-in self-diagnosis to check permissions, devices, tools, the GNOME
 version and the resolved backends at once:
 
 ```bash
-lingvix doctor
+klyrshift doctor
 ```
 
 The output is a table with a marker per check (`✅` pass, `⚠️` warning, `❌`
@@ -194,7 +200,7 @@ repository, so a missing package never aborts the install:
   Ubuntu; `install.sh` reuses it through `--system-site-packages`, so no
   compiler is needed.
 - `wtype` and `g3kb-switch` may need a third-party repository on older Ubuntu
-  releases. Without `wtype`, Lingvix falls back to `xdotool` (X11) or
+  releases. Without `wtype`, Klyrshift falls back to `xdotool` (X11) or
   `uinput`.
 
 ## Manual install
@@ -202,19 +208,19 @@ repository, so a missing package never aborts the install:
 If you prefer to install by hand:
 
 ```bash
-python3 -m venv ~/.local/share/lingvix/venv
-~/.local/share/lingvix/venv/bin/pip install -e .
+python3 -m venv ~/.local/share/klyrshift/venv
+~/.local/share/klyrshift/venv/bin/pip install -e .
 mkdir -p ~/.config/systemd/user
-cp data/lingvix.service ~/.config/systemd/user/
+cp data/klyrshift.service ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now lingvix.service
+systemctl --user enable --now klyrshift.service
 ```
 
 Then install the udev rule manually (it uses `uaccess`, so no group change is
 needed):
 
 ```bash
-sudo cp data/71-lingvix.rules /etc/udev/rules.d/
+sudo cp data/71-klyrshift.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
@@ -223,7 +229,7 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 For a `.deb` install:
 
 ```bash
-sudo apt remove --purge lingvix
+sudo apt remove --purge klyrshift
 ```
 
 For a source install:

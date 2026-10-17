@@ -9,7 +9,7 @@
 
 ## Источник и лицензия
 
-Составлено вручную (manual curation) для проекта Lingvix, лицензия — MIT
+Составлено вручную (manual curation) для проекта Klyrshift, лицензия — MIT
 (см. корневой `LICENSE`). Термины — общеупотребительные названия понятий
 («алгоритм», «framework», «commit»), они не являются объектами авторского
 права как отдельные слова.
@@ -17,5 +17,5 @@
 ## Установка
 
 ```bash
-lingvix dict install it --lang ru
+klyrshift dict install it --lang ru
 ```

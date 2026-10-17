@@ -1,7 +1,7 @@
-# Lingvix — лендинг
+# Klyrshift — лендинг
 
 Статический сайт (Astro 5 + Tailwind CSS) для проекта
-[Lingvix](https://github.com/Pavel1778/LinguaFix).
+[Klyrshift](https://github.com/Pavel1778/Klyrshift).
 
 ## Локальный запуск
 
@@ -42,7 +42,7 @@ site/
 Секция «Попробовать» (`src/components/Demo.astro`) повторяет логику детектора в
 TypeScript, чтобы посетитель мог исправить текст без установки. Её входные
 данные — словарь и биграммы — лежат в `src/data/demo-model.json` и
-**генерируются** из боевых корпусов `src/lingvix/data/ngrams_*.json`:
+**генерируются** из боевых корпусов `src/klyrshift/data/ngrams_*.json`:
 
 ```bash
 python scripts/build_demo_model.py
@@ -56,8 +56,8 @@ python scripts/build_demo_model.py
 ### Vercel (основной)
 
 1. Зарегистрируйтесь на <https://vercel.com> через GitHub.
-2. **Add New → Project** → выберите репозиторий `LinguaFix` (он получит
-   имя `Lingvix` после переименования на GitHub).
+2. **Add New → Project** → выберите репозиторий `Klyrshift` (он получит
+   имя `Klyrshift` после переименования на GitHub).
 3. **Root Directory** = `site`.
 4. Framework определится как Astro; build — `npm run build`, output — `dist`.
 5. **Deploy**. Сайт будет на `<проект>.vercel.app`.

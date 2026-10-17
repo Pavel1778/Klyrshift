@@ -17,11 +17,11 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from lingvix import daemon_control  # noqa: E402
-from lingvix.config import Config  # noqa: E402
-from lingvix.converter import LayoutConverter  # noqa: E402
-from lingvix.daemon import LingvixDaemon  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
+from klyrshift import daemon_control  # noqa: E402
+from klyrshift.config import Config  # noqa: E402
+from klyrshift.converter import LayoutConverter  # noqa: E402
+from klyrshift.daemon import KlyrshiftDaemon  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -69,26 +69,26 @@ def make_event(name: str, value: int = 1) -> FakeEvent:
     return FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), value)
 
 
-def press(daemon: LingvixDaemon, text: str) -> None:
+def press(daemon: KlyrshiftDaemon, text: str) -> None:
     for char in text:
         name, _ = _KEY_BY_CHAR[char]
         daemon._handle_event(make_event(name, 1))
         daemon._handle_event(make_event(name, 0))
 
 
-def tap(daemon: LingvixDaemon, name: str) -> None:
+def tap(daemon: KlyrshiftDaemon, name: str) -> None:
     daemon._handle_event(make_event(name, 1))
     daemon._handle_event(make_event(name, 0))
 
 
-def make_daemon(**kwargs: object) -> LingvixDaemon:
+def make_daemon(**kwargs: object) -> KlyrshiftDaemon:
     config = Config(stop_words=["password"], **kwargs)
     detector = LanguageDetector(
         converter=LayoutConverter(),
         stop_words=config.stop_words,
         min_word_length=config.min_word_length,
     )
-    return LingvixDaemon(
+    return KlyrshiftDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -220,7 +220,7 @@ def test_gui_reads_the_snapshot_without_signalling(
     file has no display requirement, and reading history must not either.
     """
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
-    from lingvix.gui.state import GuiState
+    from klyrshift.gui.state import GuiState
 
     daemon = make_daemon()
     press(daemon, "ghbdtn")
@@ -243,7 +243,7 @@ def test_persist_config_does_not_clobber_other_fields(
     the mode.
     """
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
-    from lingvix.config import Config as Cfg, load_config, save_config
+    from klyrshift.config import Config as Cfg, load_config, save_config
 
     saved = Cfg()
     saved.typo_correction = True
@@ -270,7 +270,7 @@ def test_history_reader_never_signals_the_daemon(
     whether a GTK display is available.
     """
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
-    from lingvix.gui import state as gui_state
+    from klyrshift.gui import state as gui_state
 
     # The GUI state module must not even import the signalling helper, so a
     # future edit cannot quietly reintroduce the poll-time signal.
@@ -300,7 +300,7 @@ def test_sigusr2_handler_logs_at_debug_not_info(
     """
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
     daemon = make_daemon()
-    with caplog.at_level(logging.INFO, logger="lingvix.daemon"):
+    with caplog.at_level(logging.INFO, logger="klyrshift.daemon"):
         daemon._handle_history(signal.SIGUSR2, None)
     info_lines = [r for r in caplog.records if r.levelno >= logging.INFO]
     assert not info_lines, [r.getMessage() for r in info_lines]

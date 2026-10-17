@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Klyrshift
+Comment=Автоматическое переключение раскладки клавиатуры
+# @BIN@ is substituted at install time (venv launcher or /usr/bin/klyrshift).
+Exec=@BIN@ start --foreground
+Icon=klyrshift
+Terminal=false
+Hidden=false
+X-GNOME-Autostart-enabled=true

@@ -2,7 +2,7 @@
 
 They were SVG placeholders with a note telling the reader to replace them, which
 is a promise the repository never kept. ``scripts/make_screenshots.py`` now
-builds the actual ``LingvixWindow`` and renders it, so these tests fail if the
+builds the actual ``KlyrshiftWindow`` and renders it, so these tests fail if the
 PNGs are deleted, replaced by placeholders, or dropped from the README.
 """
 

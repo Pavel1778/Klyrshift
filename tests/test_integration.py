@@ -1,7 +1,7 @@
 """Integration tests for the daemon using fake evdev devices and injectors.
 
 The tests exercise the real event-handling logic of
-:class:`lingvix.daemon.LingvixDaemon`; only the operating-system boundary
+:class:`klyrshift.daemon.KlyrshiftDaemon`; only the operating-system boundary
 (``evdev`` devices, the layout switcher and the text injector) is replaced with
 lightweight fakes so the suite runs on a headless CI machine.
 """
@@ -18,9 +18,9 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from lingvix.config import Config  # noqa: E402
-from lingvix.daemon import LingvixDaemon  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
+from klyrshift.config import Config  # noqa: E402
+from klyrshift.daemon import KlyrshiftDaemon  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -142,13 +142,13 @@ def type_text(text: str) -> list[FakeEvent]:
 
 
 @pytest.fixture
-def daemon() -> LingvixDaemon:
+def daemon() -> KlyrshiftDaemon:
     """Return a daemon wired to fakes with a short analysis timeout."""
     config = Config(analysis_timeout=0.1, stop_words=["password"], notify_on_fix=False)
     detector = LanguageDetector(
         converter=None, stop_words=config.stop_words, min_word_length=config.min_word_length
     )
-    return LingvixDaemon(
+    return KlyrshiftDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -159,25 +159,25 @@ def daemon() -> LingvixDaemon:
 # --- event handling ---------------------------------------------------------
 
 
-def test_buffer_accumulates_letters(daemon: LingvixDaemon) -> None:
+def test_buffer_accumulates_letters(daemon: KlyrshiftDaemon) -> None:
     for event in type_text("ghbdtn"):
         daemon._handle_event(event)
     assert daemon.buffer == "ghbdtn"
 
 
-def test_backspace_removes_last_char(daemon: LingvixDaemon) -> None:
+def test_backspace_removes_last_char(daemon: KlyrshiftDaemon) -> None:
     for event in type_text("ghb"):
         daemon._handle_event(event)
     daemon._handle_event(make_key_event("KEY_BACKSPACE", 1))
     assert daemon.buffer == "gh"
 
 
-def test_backspace_on_empty_buffer_is_safe(daemon: LingvixDaemon) -> None:
+def test_backspace_on_empty_buffer_is_safe(daemon: KlyrshiftDaemon) -> None:
     daemon._handle_event(make_key_event("KEY_BACKSPACE", 1))
     assert daemon.buffer == ""
 
 
-def test_enter_flushes_buffer(daemon: LingvixDaemon) -> None:
+def test_enter_flushes_buffer(daemon: KlyrshiftDaemon) -> None:
     for event in type_text("ghbdtn"):
         daemon._handle_event(event)
     daemon._handle_event(make_key_event("KEY_ENTER", 1))
@@ -187,20 +187,20 @@ def test_enter_flushes_buffer(daemon: LingvixDaemon) -> None:
     assert injector.replacements == [(6, "привет", "ru")]
 
 
-def test_shift_produces_uppercase(daemon: LingvixDaemon) -> None:
+def test_shift_produces_uppercase(daemon: KlyrshiftDaemon) -> None:
     daemon._handle_event(make_key_event("KEY_LEFTSHIFT", 1))
     daemon._handle_event(make_key_event("KEY_G", 1))
     daemon._handle_event(make_key_event("KEY_LEFTSHIFT", 0))
     assert daemon.buffer == "G"
 
 
-def test_auto_repeat_is_ignored_for_letters(daemon: LingvixDaemon) -> None:
+def test_auto_repeat_is_ignored_for_letters(daemon: KlyrshiftDaemon) -> None:
     daemon._handle_event(make_key_event("KEY_G", 1))
     daemon._handle_event(make_key_event("KEY_G", 2))
     assert daemon.buffer == "g"
 
 
-def test_mixed_script_word_is_left_alone(daemon: LingvixDaemon) -> None:
+def test_mixed_script_word_is_left_alone(daemon: KlyrshiftDaemon) -> None:
     # A single token mixing both scripts cannot be repaired as a unit; the
     # separator between the two halves flushes each of them instead.
     daemon.buffer = "приветhello"
@@ -211,7 +211,7 @@ def test_mixed_script_word_is_left_alone(daemon: LingvixDaemon) -> None:
     assert injector.replacements == []
 
 
-def test_mixed_script_words_are_fixed(daemon: LingvixDaemon) -> None:
+def test_mixed_script_words_are_fixed(daemon: KlyrshiftDaemon) -> None:
     # Scripts in separate words: the whole buffer can be converted as a unit.
     daemon.buffer = "привет hello"
     daemon.last_key_time = time.time()
@@ -224,7 +224,7 @@ def test_mixed_script_words_are_fixed(daemon: LingvixDaemon) -> None:
 # --- buffer processing ------------------------------------------------------
 
 
-def test_process_buffer_switches_and_replaces(daemon: LingvixDaemon) -> None:
+def test_process_buffer_switches_and_replaces(daemon: KlyrshiftDaemon) -> None:
     for event in type_text("ghbdtn"):
         daemon._handle_event(event)
     daemon._process_buffer()
@@ -237,7 +237,7 @@ def test_process_buffer_switches_and_replaces(daemon: LingvixDaemon) -> None:
     assert injector.replacements == [(6, "привет", "ru")]
 
 
-def test_process_buffer_noop_for_correct_layout(daemon: LingvixDaemon) -> None:
+def test_process_buffer_noop_for_correct_layout(daemon: KlyrshiftDaemon) -> None:
     daemon.buffer = "hello"
     daemon._process_buffer()
     injector = daemon.injector
@@ -245,7 +245,7 @@ def test_process_buffer_noop_for_correct_layout(daemon: LingvixDaemon) -> None:
     assert injector.replacements == []
 
 
-def test_process_buffer_skips_stop_words(daemon: LingvixDaemon) -> None:
+def test_process_buffer_skips_stop_words(daemon: KlyrshiftDaemon) -> None:
     daemon.buffer = "password"
     daemon._process_buffer()
     injector = daemon.injector
@@ -253,13 +253,13 @@ def test_process_buffer_skips_stop_words(daemon: LingvixDaemon) -> None:
     assert injector.replacements == []
 
 
-def test_process_buffer_clears_buffer(daemon: LingvixDaemon) -> None:
+def test_process_buffer_clears_buffer(daemon: KlyrshiftDaemon) -> None:
     daemon.buffer = "ghbdtn"
     daemon._process_buffer()
     assert daemon.buffer == ""
 
 
-def test_process_buffer_skips_short_text(daemon: LingvixDaemon) -> None:
+def test_process_buffer_skips_short_text(daemon: KlyrshiftDaemon) -> None:
     daemon.buffer = "ab"
     daemon._process_buffer()
     injector = daemon.injector
@@ -271,7 +271,7 @@ def test_process_buffer_skips_short_text(daemon: LingvixDaemon) -> None:
 
 
 def test_dry_run_does_not_switch_or_replace() -> None:
-    daemon = LingvixDaemon(
+    daemon = KlyrshiftDaemon(
         Config(analysis_timeout=0.1),
         switcher=FakeSwitcher("us"),
         injector=FakeInjector(),
@@ -288,14 +288,14 @@ def test_dry_run_does_not_switch_or_replace() -> None:
 
 
 def test_status_text_reports_layout() -> None:
-    daemon = LingvixDaemon(Config(), switcher=FakeSwitcher("ru"), injector=FakeInjector())
+    daemon = KlyrshiftDaemon(Config(), switcher=FakeSwitcher("ru"), injector=FakeInjector())
     daemon._running = True
     assert "ru" in daemon.status_text()
     assert "active" in daemon.status_text()
 
 
 def test_tray_fix_processes_pending_buffer() -> None:
-    daemon = LingvixDaemon(
+    daemon = KlyrshiftDaemon(
         Config(analysis_timeout=0.1),
         switcher=FakeSwitcher("us"),
         injector=FakeInjector(),
@@ -309,7 +309,7 @@ def test_tray_fix_processes_pending_buffer() -> None:
 
 
 def test_tray_fix_without_buffer_is_noop() -> None:
-    daemon = LingvixDaemon(Config(), switcher=FakeSwitcher(), injector=FakeInjector())
+    daemon = KlyrshiftDaemon(Config(), switcher=FakeSwitcher(), injector=FakeInjector())
     daemon._tray_fix()  # must not raise
 
 
@@ -317,7 +317,7 @@ def test_tray_fix_without_buffer_is_noop() -> None:
 
 
 def test_typed_text_is_not_written_to_logs(
-    daemon: LingvixDaemon, caplog: pytest.LogCaptureFixture
+    daemon: KlyrshiftDaemon, caplog: pytest.LogCaptureFixture
 ) -> None:
     caplog.set_level("DEBUG")
     daemon.buffer = "ghbdtn"
@@ -329,7 +329,7 @@ def test_typed_text_is_not_written_to_logs(
 
 
 def test_stop_word_text_is_not_written_to_logs(
-    daemon: LingvixDaemon, caplog: pytest.LogCaptureFixture
+    daemon: KlyrshiftDaemon, caplog: pytest.LogCaptureFixture
 ) -> None:
     caplog.set_level("DEBUG")
     daemon.buffer = "password"
@@ -341,10 +341,10 @@ def test_stop_word_text_is_not_written_to_logs(
 
 
 def test_reload_config_updates_detector(
-    daemon: LingvixDaemon, monkeypatch: pytest.MonkeyPatch
+    daemon: KlyrshiftDaemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     new_config = Config(stop_words=["brandnew"], min_word_length=5)
-    monkeypatch.setattr("lingvix.config.load_config", lambda: new_config)
+    monkeypatch.setattr("klyrshift.config.load_config", lambda: new_config)
     daemon.reload_config()
     assert daemon.config is new_config
     assert "brandnew" in daemon.detector.stop_words
@@ -352,12 +352,12 @@ def test_reload_config_updates_detector(
 
 
 def test_reload_config_survives_errors(
-    daemon: LingvixDaemon, monkeypatch: pytest.MonkeyPatch
+    daemon: KlyrshiftDaemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def boom() -> Config:
         raise RuntimeError("broken config")
 
-    monkeypatch.setattr("lingvix.config.load_config", boom)
+    monkeypatch.setattr("klyrshift.config.load_config", boom)
     daemon.reload_config()  # must not raise
     assert daemon.config.analysis_timeout == 0.1
 
@@ -367,8 +367,8 @@ def test_reload_config_survives_errors(
 
 def test_lock_is_exclusive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
-    first = LingvixDaemon(Config())
-    second = LingvixDaemon(Config())
+    first = KlyrshiftDaemon(Config())
+    second = KlyrshiftDaemon(Config())
     try:
         assert first.acquire_lock() is True
         assert second.acquire_lock() is False
@@ -385,7 +385,7 @@ def test_run_processes_events_and_stops(monkeypatch: pytest.MonkeyPatch) -> None
     device = FakeDevice(events=type_text("ghbdtn"))
     switcher = FakeSwitcher("us")
     injector = FakeInjector()
-    daemon = LingvixDaemon(
+    daemon = KlyrshiftDaemon(
         config,
         switcher=switcher,
         injector=injector,
@@ -410,7 +410,7 @@ def test_run_processes_events_and_stops(monkeypatch: pytest.MonkeyPatch) -> None
 def test_run_without_devices_returns_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    daemon = LingvixDaemon(Config(), switcher=FakeSwitcher(), injector=FakeInjector())
+    daemon = KlyrshiftDaemon(Config(), switcher=FakeSwitcher(), injector=FakeInjector())
     monkeypatch.setattr(daemon, "acquire_lock", lambda: True)
     monkeypatch.setattr(daemon, "release_lock", lambda: None)
     monkeypatch.setattr(daemon, "_install_signal_handlers", lambda: None)

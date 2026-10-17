@@ -4,7 +4,7 @@
 Two questions are deliberately kept apart, because they fail for different
 reasons and at different times:
 
-* **Source consistency** -- ``pyproject.toml``, ``src/lingvix/__init__.py``,
+* **Source consistency** -- ``pyproject.toml``, ``src/klyrshift/__init__.py``,
   ``site/src/consts.ts`` and the landing page's JSON-LD must all name one
   version, and the asset names the build scripts emit must match the ones the
   release workflow attaches. This is checkable offline and is what the unit
@@ -116,7 +116,7 @@ def collect_source_facts(repo_dir: Path = REPO_DIR) -> SourceFacts:
     frequency = tuple(sorted(p.name for p in (repo_dir / "dictionaries").glob(_FREQUENCY_GLOB)))
     archives = tuple(
         sorted(
-            f"lingvix-dict-{d.name}.tar.gz"
+            f"klyrshift-dict-{d.name}.tar.gz"
             for d in _THEMATIC_ROOT.iterdir()
             if d.is_dir() and (d / "README.md").is_file()
         )
@@ -234,7 +234,7 @@ def fetch_release(repo_slug: str, tag: str | None) -> dict[str, object]:
     """Fetch one release (or ``latest`` when ``tag`` is None) from the GitHub API."""
     suffix = f"tags/{tag}" if tag else "latest"
     url = f"https://api.github.com/repos/{repo_slug}/releases/{suffix}"
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "lingvix-release-check"}
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "klyrshift-release-check"}
     token = os.environ.get("GITHUB_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"

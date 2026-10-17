@@ -1,10 +1,10 @@
 # Bundled dictionaries
 
-Lingvix ships two kinds of word lists.
+Klyrshift ships two kinds of word lists.
 
 ## Base — general frequency lists
 
-Top-50k word lists used by `lingvix dict download <lang>`. Each file keeps
+Top-50k word lists used by `klyrshift dict download <lang>`. Each file keeps
 only the word column of the upstream list, one word per line.
 
 Source: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) by Hermit
@@ -22,7 +22,7 @@ first lines are the most common words.
 ## Thematic — professional vocabulary
 
 Domain word lists that widen the detector's vocabulary for a field. They are
-**not** bundled in the `.deb`; `lingvix dict install <category>` downloads the
+**not** bundled in the `.deb`; `klyrshift dict install <category>` downloads the
 matching archive from the GitHub Release and adds it to the vocabulary on top of
 the base list.
 
@@ -48,10 +48,10 @@ the source. No list with an unclear or proprietary licence is included.
 ## Installing
 
 ```bash
-lingvix dict categories                     # list categories and languages
-lingvix dict install it --lang ru           # download and enable
-lingvix dict list-installed                 # what is enabled
-lingvix dict remove-category it             # disable
+klyrshift dict categories                     # list categories and languages
+klyrshift dict install it --lang ru           # download and enable
+klyrshift dict list-installed                 # what is enabled
+klyrshift dict remove-category it             # disable
 ```
 
 Detection priority is **user dictionary → thematic → base → T9**: a word the

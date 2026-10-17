@@ -13,11 +13,11 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from lingvix.config import Config  # noqa: E402
-from lingvix.converter import LayoutConverter  # noqa: E402
-from lingvix.daemon import LingvixDaemon  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
-from lingvix.punctuation import PunctuationCorrector  # noqa: E402
+from klyrshift.config import Config  # noqa: E402
+from klyrshift.converter import LayoutConverter  # noqa: E402
+from klyrshift.daemon import KlyrshiftDaemon  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
+from klyrshift.punctuation import PunctuationCorrector  # noqa: E402
 
 
 def test_empty_string_is_returned_unchanged() -> None:
@@ -102,7 +102,7 @@ class FakeInjector:
         return "backend=fake"
 
 
-def _make_daemon(untypable: str = "", **kwargs: object) -> LingvixDaemon:
+def _make_daemon(untypable: str = "", **kwargs: object) -> KlyrshiftDaemon:
     options: dict[str, object] = {"stop_words": [], "min_word_length": 1}
     options.update(kwargs)
     config = Config(**options)
@@ -112,7 +112,7 @@ def _make_daemon(untypable: str = "", **kwargs: object) -> LingvixDaemon:
         min_word_length=config.min_word_length,
         confidence_threshold=config.confidence_threshold,
     )
-    return LingvixDaemon(
+    return KlyrshiftDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("ru"),

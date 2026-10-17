@@ -12,11 +12,11 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from lingvix.app_layouts import POLL_INTERVAL, AppLayoutManager, normalise_app  # noqa: E402
-from lingvix.config import Config  # noqa: E402
-from lingvix.converter import LayoutConverter  # noqa: E402
-from lingvix.daemon import LingvixDaemon  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
+from klyrshift.app_layouts import POLL_INTERVAL, AppLayoutManager, normalise_app  # noqa: E402
+from klyrshift.config import Config  # noqa: E402
+from klyrshift.converter import LayoutConverter  # noqa: E402
+from klyrshift.daemon import KlyrshiftDaemon  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
 
 
 @dataclass
@@ -153,7 +153,7 @@ def test_manager_update_resets_current() -> None:
 # --- daemon wiring ---------------------------------------------------------------
 
 
-def _make_daemon(switcher: FakeSwitcher, **kwargs: object) -> LingvixDaemon:
+def _make_daemon(switcher: FakeSwitcher, **kwargs: object) -> KlyrshiftDaemon:
     options: dict[str, object] = {"stop_words": [], "analysis_timeout": 0.8}
     options.update(kwargs)
     config = Config(**options)
@@ -163,7 +163,7 @@ def _make_daemon(switcher: FakeSwitcher, **kwargs: object) -> LingvixDaemon:
         min_word_length=config.min_word_length,
         confidence_threshold=config.confidence_threshold,
     )
-    return LingvixDaemon(config, detector=detector, switcher=switcher, injector=FakeInjector())
+    return KlyrshiftDaemon(config, detector=detector, switcher=switcher, injector=FakeInjector())
 
 
 def test_daemon_app_layout_manager_wired() -> None:
@@ -180,7 +180,7 @@ def test_daemon_app_layout_reload(monkeypatch: pytest.MonkeyPatch) -> None:
     daemon = _make_daemon(switcher)
     assert daemon.app_layout_manager.layouts == {}
     updated = Config(app_layouts={"code": "us"}, app_layout_switch=True, stop_words=[])
-    monkeypatch.setattr("lingvix.config.load_config", lambda *_a, **_k: updated)
+    monkeypatch.setattr("klyrshift.config.load_config", lambda *_a, **_k: updated)
     daemon.reload_config()
     assert daemon.app_layout_manager.layouts == {"code": "us"}
     assert daemon.app_layout_manager.enabled is True
@@ -193,7 +193,7 @@ def test_config_normalises_app_layouts() -> None:
 
 
 def test_config_app_layout_section_flattens() -> None:
-    from lingvix.config import Config as C
+    from klyrshift.config import Config as C
 
     config = C.from_dict({"app_layouts": {"kitty": "ru"}, "app_layout_switch": True})
     assert config.app_layouts == {"kitty": "ru"}

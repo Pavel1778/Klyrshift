@@ -4,7 +4,7 @@ Three places carry the release version and they must agree, or a build ships a
 ``.deb`` whose name, metadata and ``__version__`` disagree:
 
 * ``pyproject.toml`` (packaging metadata; ``scripts/build_deb.sh`` reads it),
-* ``src/lingvix/__init__.py`` (``__version__``),
+* ``src/klyrshift/__init__.py`` (``__version__``),
 * ``CHANGELOG.md`` (the newest released heading).
 """
 
@@ -19,7 +19,7 @@ if sys.version_info >= (3, 11):
 else:  # pragma: no cover - exercised on 3.10 only
     import tomli as tomllib
 
-from lingvix import __version__
+from klyrshift import __version__
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # Allow an optional fourth component for hotfix releases (``0.2.8.1``).
@@ -48,10 +48,10 @@ def test_version_matches_changelog() -> None:
 
 
 # Docs that a user follows to install a downloaded package. A stale version in
-# the example makes ``apt install ./lingvix_<old>_all.deb`` fail with
+# the example makes ``apt install ./klyrshift_<old>_all.deb`` fail with
 # "no such file", which is exactly what a first-time user hits.
 _INSTALL_DOCS = ("README.md", "docs/INSTALL.md", "docs/TESTING.md")
-_DEB_EXAMPLE = re.compile(r"lingvix_(\d+\.\d+\.\d+(?:\.\d+)?)_all\.deb")
+_DEB_EXAMPLE = re.compile(r"klyrshift_(\d+\.\d+\.\d+(?:\.\d+)?)_all\.deb")
 
 
 def test_install_docs_use_current_version() -> None:

@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from lingvix.config import Config
+from klyrshift.config import Config
 
 _DIST_PACKAGES = "/usr/lib/python3/dist-packages"
 if os.path.isdir(_DIST_PACKAGES) and _DIST_PACKAGES not in sys.path:
@@ -64,8 +64,8 @@ def _pump_until(event: threading.Event, timeout: float = 2.0) -> None:
 
 @pytest.fixture
 def gui_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
-    from lingvix.gui import state as state_module
-    from lingvix.gui.state import GuiState
+    from klyrshift.gui import state as state_module
+    from klyrshift.gui.state import GuiState
 
     config = Config()
     monkeypatch.setattr(state_module, "load_config", lambda: config)
@@ -84,12 +84,12 @@ def test_refresh_returns_before_probes_finish(
     """``refresh`` must return at once even when the probes are slow."""
     import gi
 
-    import lingvix.app_focus as app_focus
+    import klyrshift.app_focus as app_focus
 
     gi.require_version("Adw", "1")
     from gi.repository import Adw
 
-    from lingvix.gui.home_page import HomePage
+    from klyrshift.gui.home_page import HomePage
 
     started = threading.Event()
 
@@ -116,13 +116,13 @@ def test_toggle_click_returns_immediately(gui_state: Any, monkeypatch: pytest.Mo
     """Clicking the big button must not wait for a slow start/stop."""
     import gi
 
-    import lingvix.app_focus as app_focus
+    import klyrshift.app_focus as app_focus
 
     gi.require_version("Adw", "1")
     from gi.repository import Adw
 
-    from lingvix.gui.home_page import HomePage
-    from lingvix.gui.widgets.big_toggle import STATE_BUSY
+    from klyrshift.gui.home_page import HomePage
+    from klyrshift.gui.widgets.big_toggle import STATE_BUSY
 
     monkeypatch.setattr(app_focus, "get_active_app", lambda: None)
     monkeypatch.setattr(gui_state, "is_active", lambda: False)
@@ -144,7 +144,7 @@ def test_async_helper_delivers_on_main_thread(monkeypatch: pytest.MonkeyPatch) -
 
     gi.require_version("GLib", "2.0")
 
-    from lingvix.gui.async_utils import run_in_background
+    from klyrshift.gui.async_utils import run_in_background
 
     results: list[Any] = []
     done = threading.Event()

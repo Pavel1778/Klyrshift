@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Klyrshift
+GenericName=Auto Layout Switcher
+Comment=Автоматическое переключение раскладки клавиатуры
+# @BIN@ is substituted at install time: install.sh uses the venv launcher,
+# the .deb uses /usr/bin/klyrshift.
+Exec=@BIN@ gui
+Icon=klyrshift
+StartupWMClass=io.github.pavel1778.Klyrshift
+Terminal=false
+Categories=Utility;Accessibility;
+Keywords=keyboard;layout;switcher;
+StartupNotify=true

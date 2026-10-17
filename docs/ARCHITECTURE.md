@@ -1,11 +1,11 @@
 # Architecture
 
-This document explains how Lingvix is put together, why the individual
+This document explains how Klyrshift is put together, why the individual
 components were chosen, and where the boundaries of the design are.
 
 ## Overview
 
-Lingvix is a background daemon with no main window. It observes raw keyboard
+Klyrshift is a background daemon with no main window. It observes raw keyboard
 events, keeps the word currently being typed as a sequence of physical keys, and
 — the moment the user presses a word boundary (Space or Enter) — decides whether
 the word was typed in the wrong layout. When it is confident, it rewrites the
@@ -13,7 +13,7 @@ word and switches the active layout, all within that one keystroke.
 
 ```
                        ┌──────────────────────────────────────────┐
-                       │              LingvixDaemon             │
+                       │              KlyrshiftDaemon             │
                        │                                          │
   /dev/input/event*    │  ┌────────────────┐   ┌───────────────┐  │
   ────────────────►    │  │ word buffer    │   │  boundary     │  │
@@ -101,7 +101,7 @@ extra keystroke.
 
 ## Why evdev + uinput
 
-- `evdev` reads events straight from the kernel, so Lingvix sees the physical
+- `evdev` reads events straight from the kernel, so Klyrshift sees the physical
   keys the user pressed regardless of the current layout or the toolkit the
   focused application uses. This is what makes detection possible at all: the
   application only ever sees the *translated* characters.
@@ -123,7 +123,7 @@ dependency and the version skew in one move.
 ## Device access: uaccess instead of the input group
 
 Reading `/dev/input/event*` and writing `/dev/uinput` both need elevated
-device permissions. There are two common ways to grant them, and Lingvix
+device permissions. There are two common ways to grant them, and Klyrshift
 deliberately uses the first.
 
 - **`TAG+="uaccess"` in a udev rule (chosen).** `systemd-logind` grants a POSIX
@@ -149,14 +149,14 @@ module is loaded, so the node exists before the daemon starts.
 
 Two details are easy to get wrong and both are load-bearing:
 
-- The file is named `71-lingvix.rules`, not `99-*`. On systemd 257+ (Debian 13)
+- The file is named `71-klyrshift.rules`, not `99-*`. On systemd 257+ (Debian 13)
   the rule that turns `uaccess` into an ACL is `73-seat-late.rules`. udev applies
   a tag in filename order, so a `99-*` rule runs after `73-seat-late.rules` and
   the ACL is never applied. Installing the rule before 73 makes it effective.
 - Every rule carries `ACTION!="remove"`. `73-seat-late.rules` only processes
   rules that guard against the `remove` event, so a rule without it is skipped.
 
-`lingvix doctor` accepts either mechanism so the developer path (which may
+`klyrshift doctor` accepts either mechanism so the developer path (which may
 still use the `input` group) is not reported as broken, but the packaged path
 never touches group membership.
 
@@ -171,7 +171,7 @@ subprocess on every keystroke.
 ## Wayland limitations
 
 Wayland deliberately hides the notion of "which widget has focus" from
-unprivileged clients. Lingvix therefore cannot know whether the caret is in a
+unprivileged clients. Klyrshift therefore cannot know whether the caret is in a
 password field, a terminal, or a game. The consequences are documented and
 mitigated rather than solved:
 
@@ -184,11 +184,11 @@ mitigated rather than solved:
 
 ## Logging and privacy
 
-Lingvix reads everything you type, so it must never persist that text. The
+Klyrshift reads everything you type, so it must never persist that text. The
 log records only metadata: the buffer length, the source and target layout, and
 the action taken. The typed string itself is never written to the log file,
 which is rotated at 5 MB with three backups
-(`~/.local/state/lingvix/lingvix.log`). The `--dry-run` flag analyses and
+(`~/.local/state/klyrshift/klyrshift.log`). The `--dry-run` flag analyses and
 logs the same metadata without switching the layout or touching the text, which
 makes it safe to run while investigating behaviour.
 
@@ -243,7 +243,7 @@ reading process will meet in practice:
   A held key or a paste-like burst is analysed and cleared early rather than
   growing without bound.
 - **Shutdown.** `SIGTERM`/`SIGINT` set a flag. A fix is skipped if shutdown was
-  requested before it started, and always finishes once started. `lingvix
+  requested before it started, and always finishes once started. `klyrshift
   stop` (and `kill`) stop the systemd user unit first when it is the manager,
   because the unit carries `Restart=always` and would otherwise respawn a
   process killed out from under systemd; `stop` then escalates to `SIGKILL` if
@@ -260,7 +260,7 @@ language (`us` → `en`, `ru` → `ru`, `uk` → `uk`, `fr` → `fr`, `de` → `
 word is scored against the corpora whose *layout could have produced it*.
 
 - **Bundled languages.** `en`, `ru`, `uk`, `de` and `fr` all ship corpora under
-  `src/lingvix/data/`. Only `en` and `ru` are loaded by default: the Latin
+  `src/klyrshift/data/`. Only `en` and `ru` are loaded by default: the Latin
   layouts (`us`, `de`, `fr`) share physical positions, so loading every corpus
   at once makes them compete and blurs borderline words. Enable the rest with
   `languages = ["en", "ru", "uk", "fr"]` in the config. This is why
@@ -308,7 +308,7 @@ word is scored against the corpora whose *layout could have produced it*.
   (`муксуд` → `vercel`) is still fixed even when the source looks plausible.
 - **User dictionary** (`dictionary_size`, `dictionary_custom_path`). A
   newline-separated list of words the user taught the daemon. It is a deliberate,
-  explicit file (`~/.local/share/lingvix/dictionary.txt` by default) — the
+  explicit file (`~/.local/share/klyrshift/dictionary.txt` by default) — the
   daemon never writes typed text to it on its own. The list is consulted in two
   directions. A taught word is an absolute override: when the buffer *equals* a
   taught word, `target_layout` returns `None` for it in every layout. The
@@ -333,9 +333,9 @@ word is scored against the corpora whose *layout could have produced it*.
   the categories at construction and rebuilds its vocabularies when
   `set_thematic_categories` is called on `reload_config`. Thematic files are
   never bundled in the `.deb`; they are fetched from the GitHub Release
-  (`lingvix-dict-<slug>.tar.gz`, falling back to the pre-rename
-  `linguafix-dict-<slug>.tar.gz` that the live release ships) or the offline
-  repository copy.
+  (`klyrshift-dict-<slug>.tar.gz`, falling back to the older
+  `lingvix-dict-<slug>.tar.gz` and `linguafix-dict-<slug>.tar.gz` that the live
+  release ships) or the offline repository copy.
 - **Typo correction (T9)** (`typo_mode`, `typo_max_distance`,
   `typo_max_distance_long`, `typo_min_word_length`). A second, independent
   correction path, off by default. Its own `typo_mode` (`off` / `manual` /
@@ -405,9 +405,9 @@ word. A word already corrected by the boundary is remembered in
 ## Extension points
 
 - `LanguageDetector` — add a language by dropping `ngrams_<lang>.json` and a
-  word list into `src/lingvix/data/` and extending the layout map. Then add the
+  word list into `src/klyrshift/data/` and extending the layout map. Then add the
   language to `SUPPORTED_LANGUAGES` in `config.py`.
-- `LayoutConverter` — layouts live in `src/lingvix/data/layouts.json`; adding a
+- `LayoutConverter` — layouts live in `src/klyrshift/data/layouts.json`; adding a
   pair is a data-only change.
 - `TextInjector` — new backends implement `replace_text` and register in the
   backend-selection logic.
@@ -420,7 +420,7 @@ word. A word already corrected by the boundary is remembered in
 | Module | Responsibility |
 |---|---|
 | `config.py` | `Config` dataclass, XDG paths, TOML load/save |
-| `logging_setup.py` | Rotating file logger under `~/.local/state/lingvix/` |
+| `logging_setup.py` | Rotating file logger under `~/.local/state/klyrshift/` |
 | `converter.py` | Character maps between layouts (`us`, `ru`, `uk`, `de`, `fr`) |
 | `detector.py` | Language detection, context, user dictionary, `target_layout` |
 | `dictionary.py` | User dictionary file, plus extended frequency dictionaries (`import-file`/`download`) |
@@ -432,12 +432,12 @@ word. A word already corrected by the boundary is remembered in
 | `app_layouts.py` | `AppLayoutManager`: switch layout when a mapped app gains focus |
 | `switcher.py` | `g3kb-switch` / `setxkbmap` layout control |
 | `injector.py` | Text replacement via `uinput` / `wtype` / `xdotool` |
-| `daemon.py` | `LingvixDaemon`: event loop, buffering, orchestration |
+| `daemon.py` | `KlyrshiftDaemon`: event loop, buffering, orchestration |
 | `daemon_control.py` | Start/stop/reload/undo a daemon however it was launched |
 | `backup.py` | Export/import a JSON bundle of config + dictionary + snippets |
 | `update_check.py` | Opt-in GitHub release check (daily, off by default) |
-| `doctor.py` | `lingvix doctor`: environment and permission diagnosis |
-| `collect_logs.py` | `lingvix collect-logs`: bundle logs for a bug report |
+| `doctor.py` | `klyrshift doctor`: environment and permission diagnosis |
+| `collect_logs.py` | `klyrshift collect-logs`: bundle logs for a bug report |
 | `tray.py` | Optional AppIndicator icon |
 | `cli.py` | `argparse` command-line interface |
 | `gui/` | Optional GTK4 + libadwaita preferences window |

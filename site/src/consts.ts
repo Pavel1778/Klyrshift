@@ -1,23 +1,26 @@
 // Single source of truth for the landing page's external URLs and version.
 //
-// The repository is still named ``LinguaFix`` on GitHub: the ``Lingvix``
-// rename is done in the source but the GitHub repository rename has not been
-// performed yet, and a link to ``.../Lingvix`` is a 404. When the rename is
-// finally done, only ``REPO_SLUG`` changes here.
-export const VERSION = "0.2.8.2";
+// The GitHub repository is named ``Klyrshift``: the rename from ``LinguaFix`` is
+// done both in the source and on GitHub, and GitHub redirects the old slug.
+//
+// The canonical *hosts*, however, are still the ``linguafix.*`` ones. The DNS
+// entries for ``klyrshift.layero.app`` and ``klyrshift.vercel.app`` exist but
+// resolve to no deployment (404), and the origin below is written into
+// ``<link rel="canonical">``, ``og:url`` and the sitemap -- pointing it at a 404
+// makes search engines drop the page. When the hosts are renamed, only the two
+// origin constants in ``astro.config.mjs``/``lib/site.ts`` change.
+export const VERSION = "0.2.8.3";
 
 export const REPO_OWNER = "Pavel1778";
-export const REPO_NAME = "LinguaFix";
+export const REPO_NAME = "Klyrshift";
 export const REPO_SLUG = `${REPO_OWNER}/${REPO_NAME}`;
 export const REPO = `https://github.com/${REPO_SLUG}`;
 export const AUTHOR_URL = `https://github.com/${REPO_OWNER}`;
 export const RELEASES = `${REPO}/releases`;
 export const LATEST_RELEASE = `${RELEASES}/latest`;
 // The download button points at the release page rather than a versioned asset
-// URL: the published asset is named after the *previous* package name
-// (``linguafix_<version>_all.deb``) and the ``v${VERSION}`` tag may not exist
-// yet, so a hard-coded asset URL 404s. The release page always lists whatever
-// the latest tag actually ships.
+// URL: the tag may not exist yet while the page is live, so a hard-coded asset
+// URL 404s. The release page always lists whatever the latest tag actually ships.
 export const DOWNLOAD_URL = LATEST_RELEASE;
 export const ISSUES = `${REPO}/issues`;
 export const CONTRIBUTING = `${REPO}/blob/main/docs/CONTRIBUTING.md`;

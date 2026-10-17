@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Post-install verification for Lingvix v0.2.8.
+# Post-install verification for Klyrshift v0.2.8.
 #
 # Collects, in one file, everything a reviewer needs to confirm the v0.2.8
 # fixes on a live GNOME/Wayland box:
@@ -11,7 +11,7 @@
 # It does not need root for the read-only parts. Run it right after installing
 # the .deb and logging back in:
 #
-#   bash scripts/verify_v028.sh > ~/lingvix-verify.txt 2>&1
+#   bash scripts/verify_v028.sh > ~/klyrshift-verify.txt 2>&1
 #
 # The last section (reproduction) needs `ydotool` or `wtype` to type into a
 # focused field; if neither is installed the script says so and skips it.
@@ -19,37 +19,37 @@ set -u
 
 OUT_HEADER() { printf '\n===== %s =====\n' "$1"; }
 
-OUT_HEADER "lingvix version"
-lingvix --version 2>&1 || true
+OUT_HEADER "klyrshift version"
+klyrshift --version 2>&1 || true
 
 OUT_HEADER "daemon status"
-lingvix status 2>&1 || true
+klyrshift status 2>&1 || true
 
 OUT_HEADER "config show (effective, after migrations)"
-lingvix config show 2>&1 || true
+klyrshift config show 2>&1 || true
 
 OUT_HEADER "top-level help (dict present?)"
-lingvix --help 2>&1 | grep -i dict || true
+klyrshift --help 2>&1 | grep -i dict || true
 
 OUT_HEADER "dict subcommands"
-lingvix dict --help 2>&1 || true
+klyrshift dict --help 2>&1 || true
 
 # SIGUSR2: the v0.2.5 spam was 2 s apart. Watch the journal for 12 s and count
 # every SIGUSR2 line. The handler now logs at DEBUG, so at the default level the
 # count must be 0 even if something still signals the daemon.
 OUT_HEADER "SIGUSR2 watch (12 s; expected 0 at default level)"
 if command -v journalctl >/dev/null 2>&1; then
-    timeout 12 journalctl --user -u lingvix.service -f 2>/dev/null \
+    timeout 12 journalctl --user -u klyrshift.service -f 2>/dev/null \
         | grep -c SIGUSR2 &
     WATCH_PID=$!
     wait "$WATCH_PID" 2>/dev/null || true
     echo "(0 = no SIGUSR2 line surfaced)"
 else
-    echo "journalctl not available; run: lingvix logs -f | grep -c SIGUSR2"
+    echo "journalctl not available; run: klyrshift logs -f | grep -c SIGUSR2"
 fi
 
 OUT_HEADER "log tail"
-lingvix logs -n 20 2>&1 || true
+klyrshift logs -n 20 2>&1 || true
 
 # Boundary-Space reproduction. The bug was `руддщ` + Space rendering `рhello`.
 # We type into whatever window has focus, so this section is interactive: the

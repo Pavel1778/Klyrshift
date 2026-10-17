@@ -13,7 +13,7 @@ works on a real desktop.
 ## Level 2: package smoke test
 
 `scripts/smoke_test.sh` builds nothing itself; it installs `dist/*.deb` into a
-throwaway `debian:12` container and checks that `lingvix version`, `--help`,
+throwaway `debian:12` container and checks that `klyrshift version`, `--help`,
 `status` and `doctor` run, and that the daemon starts in `--dry-run`. It catches
 the class of bug that pytest cannot: a missing runtime dependency or a broken
 entry point in the installed package. It does **not** need a GUI, so it also
@@ -50,40 +50,40 @@ run it meaningfully: there is no seat and no `/dev/uinput`.
 
 ### Quick start (copy-paste)
 
-Run this block first. It installs Lingvix, prints a diagnosis and starts
+Run this block first. It installs Klyrshift, prints a diagnosis and starts
 watching the log. It is safe to paste as one piece. It exercises the
 **zero-config `.deb` path** — the one a regular user takes.
 
 ```bash
 # 1. Install the package. No usermod, no manual enable.
-sudo apt install ./lingvix_0.2.8.2_all.deb
+sudo apt install ./klyrshift_0.2.8.3_all.deb
 
 # 2. Verify that nothing else is required.
-systemctl --user is-enabled lingvix.service   # -> enabled
-cat /usr/lib/udev/rules.d/71-lingvix.rules    # -> TAG+="uaccess", no GROUP="input"
+systemctl --user is-enabled klyrshift.service   # -> enabled
+cat /usr/lib/udev/rules.d/71-klyrshift.rules    # -> TAG+="uaccess", no GROUP="input"
 
 # 3. If a session was already open during install, log out and back in once.
 #    uaccess is granted when the user logs in at the seat.
 
 # 4. After (re)login — verify the environment.
 getfacl /dev/input/event3 2>/dev/null | grep "user:$(id -un)" && echo "OK: ACL present"
-lingvix doctor
-lingvix status
+klyrshift doctor
+klyrshift status
 
 # 5. Watch the daemon while you test (Ctrl-C to stop).
-journalctl --user -u lingvix.service -f
+journalctl --user -u klyrshift.service -f
 ```
 
 For the **developer path** instead, replace step 1 with:
 
 ```bash
-git clone https://github.com/Pavel1778/LinguaFix.git
-cd LinguaFix
+git clone https://github.com/Pavel1778/Klyrshift.git
+cd Klyrshift
 bash install.sh --yes
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-If `lingvix doctor` shows no ❌, continue with the scenarios below. If it
+If `klyrshift doctor` shows no ❌, continue with the scenarios below. If it
 shows a ❌, stop and attach the output to issue #5 — that is already a useful
 result.
 
@@ -103,35 +103,35 @@ GDM).
 
 `.deb` path (primary):
 
-1. `sudo apt install ./lingvix_0.2.8.2_all.deb` — note every prompt and any failure.
-2. Confirm the udev rule: `cat /usr/lib/udev/rules.d/71-lingvix.rules` — uses
+1. `sudo apt install ./klyrshift_0.2.8.3_all.deb` — note every prompt and any failure.
+2. Confirm the udev rule: `cat /usr/lib/udev/rules.d/71-klyrshift.rules` — uses
    `TAG+="uaccess"`, no `GROUP="input"`.
-3. `systemctl --user is-enabled lingvix.service` — prints `enabled`, without
+3. `systemctl --user is-enabled klyrshift.service` — prints `enabled`, without
    you running `systemctl --user enable` by hand.
 4. Log out completely and back in (only needed if a session was already open).
 5. `getfacl /dev/input/event3` — shows a `user:<you>:rw-` ACL entry.
-6. `lingvix status` — daemon running, backends reported.
+6. `klyrshift status` — daemon running, backends reported.
 7. `ls -l /dev/input/event*` — readable by your user.
 
 Developer path:
 
 1. Run `bash install.sh` interactively. Note every prompt and any failure.
 2. Confirm the apt packages: `dpkg -l | grep -E 'evdev|uinput|wtype|xdotool|appindicator'`.
-3. Confirm the udev rule: `cat /etc/udev/rules.d/71-lingvix.rules` — `uaccess`.
+3. Confirm the udev rule: `cat /etc/udev/rules.d/71-klyrshift.rules` — `uaccess`.
 4. `sudo udevadm control --reload-rules && sudo udevadm trigger`.
-5. `lingvix doctor` — no ❌.
+5. `klyrshift doctor` — no ❌.
 
 ## B. Daemon startup
 
-1. `systemctl --user status lingvix.service` — active, no restart loop.
-2. `journalctl --user -u lingvix.service -n 50 --no-pager` — no tracebacks.
-3. `lingvix start --foreground --dry-run` — the daemon runs and logs
+1. `systemctl --user status klyrshift.service` — active, no restart loop.
+2. `journalctl --user -u klyrshift.service -n 50 --no-pager` — no tracebacks.
+3. `klyrshift start --foreground --dry-run` — the daemon runs and logs
    "Dry run" instead of touching the text.
 
 ## C. Correction matrix
 
 In each application, switch to the **wrong** layout, type `ghbdtn` (meaning
-"привет"), and record whether Lingvix corrected it:
+"привет"), and record whether Klyrshift corrected it:
 
 | Application | Wayland | X11 | Notes |
 |---|---|---|---|
@@ -168,7 +168,7 @@ Also test:
 ## F. Privacy and logs
 
 1. Type a word, trigger a correction, then inspect
-   `~/.local/state/lingvix/lingvix.log`.
+   `~/.local/state/klyrshift/klyrshift.log`.
 2. The log must contain only metadata (length, layouts) — never the typed text.
 3. Confirm rotation config: 5 MB × 3 files.
 
@@ -179,20 +179,20 @@ Also test:
 
 ## H. GUI
 
-Run `lingvix gui` and check the window stays up.
+Run `klyrshift gui` and check the window stays up.
 
 1. **Big on/off toggle** — turns on and off, and the state agrees with
-   `lingvix status` in both directions, several times in a row.
+   `klyrshift status` in both directions, several times in a row.
 2. **Autostart switch** — toggles, and the setting survives a GUI restart.
-   Verify with `systemctl --user is-enabled lingvix.service` (or the presence of
-   `~/.config/autostart/lingvix.desktop`): turning it off must remove both.
-3. **Mode switcher** Auto/Manual/Hybrid — agrees with `lingvix mode`.
-4. **Dictionary tab** — add `vercel`, confirm `lingvix dict list` shows it, then
+   Verify with `systemctl --user is-enabled klyrshift.service` (or the presence of
+   `~/.config/autostart/klyrshift.desktop`): turning it off must remove both.
+3. **Mode switcher** Auto/Manual/Hybrid — agrees with `klyrshift mode`.
+4. **Dictionary tab** — add `vercel`, confirm `klyrshift dict list` shows it, then
    remove it and confirm it disappears. Type `муксуд ` and expect `vercel `.
 5. **Advanced tab** — every group expands, and a change is saved to
-   `config.toml` and survives `lingvix restart`.
+   `config.toml` and survives `klyrshift restart`.
 6. **Export/import** — export to JSON, reset, import; the settings come back
-   (`lingvix export` / `lingvix import` work too).
+   (`klyrshift export` / `klyrshift import` work too).
 
 ## Reporting
 
@@ -205,8 +205,8 @@ Attach a diagnostic bundle — one command collects everything a maintainer need
 device permissions and package versions):
 
 ```bash
-lingvix collect-logs
-# -> ~/lingvix-logs-YYYYMMDD-HHMMSS.tar.gz
+klyrshift collect-logs
+# -> ~/klyrshift-logs-YYYYMMDD-HHMMSS.tar.gz
 ```
 
 The daemon logs only metadata, so the bundle never contains the text you typed.

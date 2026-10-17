@@ -2,7 +2,7 @@
 
 The demo ports the detector's per-word plausibility test to TypeScript so a
 visitor can try it without installing anything. Its inputs (the vocabulary and
-bigram tables) are generated from ``src/lingvix/data/ngrams_*.json`` by
+bigram tables) are generated from ``src/klyrshift/data/ngrams_*.json`` by
 ``scripts/build_demo_model.py``. If a corpus is rebuilt and the generated file
 is not, the demo silently disagrees with the product it advertises -- it would
 start "correcting" words the daemon leaves alone. This test regenerates the

@@ -9,11 +9,11 @@
 
 ## Источник и лицензия
 
-Составлено вручную (manual curation) для проекта Lingvix, лицензия — MIT.
+Составлено вручную (manual curation) для проекта Klyrshift, лицензия — MIT.
 Термины — общеупотребительные технические понятия.
 
 ## Установка
 
 ```bash
-lingvix dict install engineering --lang ru
+klyrshift dict install engineering --lang ru
 ```

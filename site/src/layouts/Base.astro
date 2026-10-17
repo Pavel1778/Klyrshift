@@ -11,12 +11,12 @@ interface Props {
 
 const {
   title = pick(
-    "Lingvix — автоматическое исправление раскладки для Linux",
-    "Lingvix — automatic keyboard layout switcher for Linux",
+    "Klyrshift — автоматическое исправление раскладки для Linux",
+    "Klyrshift — automatic keyboard layout switcher for Linux",
   ),
   description = pick(
-    "Lingvix — автоматический переключатель раскладки клавиатуры для Linux. Исправляет ghbdtn → привет мгновенно. Работает в Wayland и X11, GNOME 45+, KDE, Sway. Аналог Caramba Switcher и Punto Switcher. Бесплатно, MIT, без телеметрии.",
-    "Lingvix — automatic keyboard layout switcher for Linux. Fixes ghbdtn → privet instantly. Works in Wayland and X11, GNOME 45+, KDE, Sway. Free, MIT, no telemetry.",
+    "Klyrshift — автоматический переключатель раскладки клавиатуры для Linux. Исправляет ghbdtn → привет мгновенно. Работает в Wayland и X11, GNOME 45+, KDE, Sway. Аналог Caramba Switcher и Punto Switcher. Бесплатно, MIT, без телеметрии.",
+    "Klyrshift — automatic keyboard layout switcher for Linux. Fixes ghbdtn → privet instantly. Works in Wayland and X11, GNOME 45+, KDE, Sway. Free, MIT, no telemetry.",
   ),
 } = Astro.props;
 
@@ -29,7 +29,7 @@ const ogImage = new URL("/og-image.png", siteUrl);
 const schema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "Lingvix",
+  name: "Klyrshift",
   description: pick(
     "Автоматический переключатель раскладки клавиатуры для Linux",
     "Automatic keyboard layout switcher for Linux",
@@ -68,7 +68,7 @@ const schema = {
     <meta name="description" content={description} />
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Lingvix" />
+    <meta property="og:site_name" content="Klyrshift" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />

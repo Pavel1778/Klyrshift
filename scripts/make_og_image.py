@@ -1,6 +1,6 @@
 """Render the 1200x630 social preview (``site/public/og-image.png``).
 
-The previous image was produced by hand, so the ``LinguaFix`` -> ``Lingvix``
+The previous image was produced by hand, so the ``LinguaFix`` -> ``Klyrshift``
 rename never reached it and link previews kept showing the dead name. This
 script builds the card from the landing page's own assets so the two cannot
 drift again: it reuses ``site/public/logo.svg`` and the exact self-hosted Inter
@@ -38,7 +38,7 @@ LOGO = SITE / "public" / "logo.svg"
 WIDTH, HEIGHT = 1200, 630
 
 # Family aliases so the template never depends on Astro's per-build hashes.
-FAMILY_ALIASES = {"Inter": "LingvixOgSans", "JetBrains Mono": "LingvixOgMono"}
+FAMILY_ALIASES = {"Inter": "KlyrshiftOgSans", "JetBrains Mono": "KlyrshiftOgMono"}
 
 FOOTER = "Debian 13+ · GNOME 45+ · Wayland / X11 · MIT"
 
@@ -93,7 +93,7 @@ def _card_html(logo: str, font_css: str) -> str:
 {font_css}
 * {{ box-sizing: border-box; }}
 html, body {{ margin: 0; width: {WIDTH}px; height: {HEIGHT}px; overflow: hidden; }}
-body {{ background: #1e1e1e; font-family: LingvixOgSans; -webkit-font-smoothing: antialiased; }}
+body {{ background: #1e1e1e; font-family: KlyrshiftOgSans; -webkit-font-smoothing: antialiased; }}
 .logo {{ position: absolute; left: 79.15px; top: 109.15px; width: 173.4px; height: 173.4px; }}
 .logo svg {{ width: 100%; height: 100%; display: block; }}
 .title {{ position: absolute; left: 272px; top: 121px; font-size: 97.2px; font-weight: 700;
@@ -103,14 +103,14 @@ body {{ background: #1e1e1e; font-family: LingvixOgSans; -webkit-font-smoothing:
             white-space: nowrap; }}
 .card {{ position: absolute; left: 90px; top: 400px; width: 1020px; height: 120px;
         background: #2d2d2d; border-radius: 16px; display: flex; align-items: center;
-        padding: 0 42px; font-family: LingvixOgMono; font-size: 40px; }}
+        padding: 0 42px; font-family: KlyrshiftOgMono; font-size: 40px; }}
 .card .wrong {{ color: #aaaaaa; }}
 .card .arrow {{ color: #3584e4; margin: 0 67px 0 127px; }}
 .card .right {{ color: #fafafa; }}
 .footer {{ position: absolute; left: 95px; top: 558px; font-size: 34px; color: #aaaaaa; }}
 </style></head><body>
 <div class="logo">{logo}</div>
-<div class="title">Lingvix</div>
+<div class="title">Klyrshift</div>
 <div class="subtitle">Автоматическое исправление раскладки</div>
 <div class="card"><span class="wrong">ghbdtn</span><span class="arrow">-&gt;</span><span class="right">привет</span></div>
 <div class="footer">{FOOTER}</div>
@@ -212,8 +212,8 @@ def main() -> int:
         html = build_html()
     except SiteNotBuilt as exc:
         sys.exit(str(exc))
-    if "LinguaFix" in html:
-        sys.exit("refusing to render: the card still mentions the old name")
+    if "LinguaFix" in html or "Lingvix" in html:
+        sys.exit("refusing to render: the card still mentions an old name")
 
     _screenshot(html, OUT)
     size = _png_size(OUT)

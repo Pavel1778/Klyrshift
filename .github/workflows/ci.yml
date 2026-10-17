@@ -60,7 +60,7 @@ jobs:
         run: mypy --strict .
 
       - name: Pytest
-        run: pytest tests/ -q --cov=lingvix --cov-report=term-missing --cov-fail-under=80
+        run: pytest tests/ -q --cov=klyrshift --cov-report=term-missing --cov-fail-under=80
 
   gui:
     name: GUI (GTK4 under xvfb)
@@ -96,7 +96,7 @@ jobs:
       - name: Pytest (GUI included in coverage)
         run: |
           PYTHONPATH=/usr/lib/python3/dist-packages xvfb-run -a python -m pytest tests/ -q \
-            --cov=lingvix --cov-config=coverage-gui.rc \
+            --cov=klyrshift --cov-config=coverage-gui.rc \
             --cov-report=term-missing --cov-fail-under=85
 
   package:
@@ -137,8 +137,8 @@ jobs:
       - name: Verify thematic archives are usable
         run: |
           set -euo pipefail
-          for archive in dist/dict-archives/lingvix-dict-*.tar.gz; do
-            slug="$(basename "${archive}" | sed -E 's/^lingvix-dict-(.*)\.tar\.gz$/\1/')"
+          for archive in dist/dict-archives/klyrshift-dict-*.tar.gz; do
+            slug="$(basename "${archive}" | sed -E 's/^klyrshift-dict-(.*)\.tar\.gz$/\1/')"
             for lang in ru en; do
               member="${lang}-${slug}-1k.txt"
               if ! tar -tzf "${archive}" | grep -q "/${member}$"; then
@@ -152,7 +152,7 @@ jobs:
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lingvix-deb
+          name: klyrshift-deb
           path: |
             dist/*.deb
             dist/SHA256SUMS.txt

@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lingvix import dictionary
-from lingvix.converter import LayoutConverter
-from lingvix.detector import LanguageDetector
+from klyrshift import dictionary
+from klyrshift.converter import LayoutConverter
+from klyrshift.detector import LanguageDetector
 
 
 def make_detector(user_words: list[str] | None = None) -> LanguageDetector:

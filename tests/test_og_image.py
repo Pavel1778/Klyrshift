@@ -1,7 +1,7 @@
 """The social preview image must be a real render and must not carry the old name.
 
 ``site/public/og-image.png`` is what every link preview shows, but it was
-produced by hand before the ``LinguaFix`` -> ``Lingvix`` rename, so the old name
+produced by hand before the ``LinguaFix`` -> ``Klyrshift`` rename, so the old name
 survived in the one asset a search engine and a chat client display. The
 generator (``scripts/make_og_image.py``) now builds it from the landing page's
 own logo and webfonts, and these tests fail if the card is replaced by a blank,
@@ -82,8 +82,9 @@ def test_generator_builds_the_card_from_the_current_brand() -> None:
         html = generator.build_html()
     except generator.SiteNotBuilt as exc:
         pytest.skip(f"site not built: {exc}")
-    assert "Lingvix" in html
-    assert "LinguaFix" not in html, "the card still renders the old name"
+    assert "Klyrshift" in html
+    assert "LinguaFix" not in html, "the card still renders an old name"
+    assert "Lingvix" not in html, "the card still renders an intermediate name"
     # The card must come from the shipped logo and the site's own webfonts, so
     # a rebrand or a font change reaches the preview without a manual redraw.
     assert "<svg" in html
@@ -108,4 +109,4 @@ def test_og_image_does_not_show_the_old_name() -> None:
     )
     text = result.stdout.replace(" ", "").lower()
     assert "linguafix" not in text, result.stdout
-    assert "lingvix" in text, f"brand not found in OCR output: {result.stdout!r}"
+    assert "klyrshift" in text, f"brand not found in OCR output: {result.stdout!r}"

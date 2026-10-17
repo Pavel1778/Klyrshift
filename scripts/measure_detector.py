@@ -25,8 +25,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from lingvix.converter import LayoutConverter  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
+from klyrshift.converter import LayoutConverter  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
 
 CORPORA = REPO_ROOT / "dictionaries"
 # (corpus language, corpus file, the word's own layout, the layout typed by mistake)

@@ -9,11 +9,11 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from lingvix import dictionary  # noqa: E402
-from lingvix.config import Config  # noqa: E402
-from lingvix.converter import LayoutConverter  # noqa: E402
-from lingvix.daemon import LingvixDaemon  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
+from klyrshift import dictionary  # noqa: E402
+from klyrshift.config import Config  # noqa: E402
+from klyrshift.converter import LayoutConverter  # noqa: E402
+from klyrshift.daemon import KlyrshiftDaemon  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -69,19 +69,19 @@ def make_event(name: str, value: int = 1) -> FakeEvent:
     return FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), value)
 
 
-def press(daemon: LingvixDaemon, text: str) -> None:
+def press(daemon: KlyrshiftDaemon, text: str) -> None:
     for char in text:
         name, _shift = _KEY_BY_CHAR[char]
         daemon._handle_event(make_event(name, 1))
         daemon._handle_event(make_event(name, 0))
 
 
-def tap(daemon: LingvixDaemon, name: str) -> None:
+def tap(daemon: KlyrshiftDaemon, name: str) -> None:
     daemon._handle_event(make_event(name, 1))
     daemon._handle_event(make_event(name, 0))
 
 
-def make_daemon(monkeypatch: pytest.MonkeyPatch, **kwargs: object) -> LingvixDaemon:
+def make_daemon(monkeypatch: pytest.MonkeyPatch, **kwargs: object) -> KlyrshiftDaemon:
     options: dict[str, object] = {"stop_words": ["password"]}
     options.update(kwargs)
     config = Config(**options)
@@ -93,10 +93,10 @@ def make_daemon(monkeypatch: pytest.MonkeyPatch, **kwargs: object) -> LingvixDae
     )
     if "dictionary_custom_path" in kwargs:
         monkeypatch.setattr(
-            "lingvix.daemon.load_user_dictionary",
+            "klyrshift.daemon.load_user_dictionary",
             lambda path: dictionary.load_user_dictionary(path),
         )
-    return LingvixDaemon(
+    return KlyrshiftDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher(),
@@ -104,7 +104,7 @@ def make_daemon(monkeypatch: pytest.MonkeyPatch, **kwargs: object) -> LingvixDae
     )
 
 
-def _injector(daemon: LingvixDaemon) -> FakeInjector:
+def _injector(daemon: KlyrshiftDaemon) -> FakeInjector:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector
@@ -155,7 +155,7 @@ def test_context_disabled_ignores_neighbour(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_app_exception_skips_even_in_auto_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("lingvix.daemon.get_active_app", lambda: "gnome-terminal")
+    monkeypatch.setattr("klyrshift.daemon.get_active_app", lambda: "gnome-terminal")
     daemon = make_daemon(monkeypatch, mode="auto", exceptions_apps=["gnome-terminal"])
     press(daemon, "ghbdtn")
     tap(daemon, "KEY_SPACE")
@@ -163,7 +163,7 @@ def test_app_exception_skips_even_in_auto_mode(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_unlisted_app_still_fixes(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("lingvix.daemon.get_active_app", lambda: "firefox")
+    monkeypatch.setattr("klyrshift.daemon.get_active_app", lambda: "firefox")
     daemon = make_daemon(monkeypatch, mode="auto", exceptions_apps=["gnome-terminal"])
     press(daemon, "ghbdtn")
     tap(daemon, "KEY_SPACE")
@@ -173,7 +173,7 @@ def test_unlisted_app_still_fixes(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_force_in_manual_list_applies_to_manual_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("lingvix.daemon.get_active_app", lambda: "myeditor")
+    monkeypatch.setattr("klyrshift.daemon.get_active_app", lambda: "myeditor")
     daemon = make_daemon(monkeypatch, mode="manual", exceptions_force_in_manual=["myeditor"])
     press(daemon, "ghbdtn")
     tap(daemon, "KEY_SPACE")
@@ -221,7 +221,7 @@ def test_invalid_custom_skip_regex_rejected_by_config() -> None:
 
 
 def test_invalid_custom_skip_regex_is_ignored_by_daemon() -> None:
-    from lingvix.daemon import _compile_skip_regex
+    from klyrshift.daemon import _compile_skip_regex
 
     assert _compile_skip_regex(r"([unclosed") is None
 
@@ -231,7 +231,7 @@ def test_invalid_custom_skip_regex_is_ignored_by_daemon() -> None:
 
 def test_user_dictionary_path_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
-    assert dictionary.user_dictionary_path() == tmp_path / "lingvix" / "dictionary.txt"
+    assert dictionary.user_dictionary_path() == tmp_path / "klyrshift" / "dictionary.txt"
 
 
 def test_user_dictionary_roundtrip(tmp_path: Path) -> None:

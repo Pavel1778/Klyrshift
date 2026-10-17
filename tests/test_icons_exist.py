@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-GUI_DIR = Path(__file__).resolve().parent.parent / "src" / "lingvix" / "gui"
+GUI_DIR = Path(__file__).resolve().parent.parent / "src" / "klyrshift" / "gui"
 
 # ``icon_name="foo-symbolic"`` and ``Gtk.Image.new_from_icon_name("foo")``.
 _ICON_PATTERNS = [
@@ -84,7 +84,7 @@ def test_every_tab_icon_name_exists() -> None:
     """
     if not _gi_available():
         pytest.skip("GTK4 unavailable")
-    from lingvix.gui.window import TAB_ICONS
+    from klyrshift.gui.window import TAB_ICONS
 
     assert TAB_ICONS, "no tab icons defined"
     missing = sorted(name for name in TAB_ICONS.values() if not _icon_present(name))
@@ -95,7 +95,7 @@ def test_every_tab_icon_name_exists() -> None:
 def test_the_power_glyph_is_the_one_adwaita_ships() -> None:
     # Regression: ``power-symbolic`` does not exist in Adwaita 48 and rendered
     # as a broken image; the real name is ``system-shutdown-symbolic``.
-    from lingvix.gui.widgets.big_toggle import ICON_NAME
+    from klyrshift.gui.widgets.big_toggle import ICON_NAME
 
     assert ICON_NAME == "system-shutdown-symbolic"
 
@@ -109,7 +109,7 @@ def test_big_toggle_falls_back_to_drawn_glyph(monkeypatch: pytest.MonkeyPatch) -
     """
     if not _gi_available() or not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
         pytest.skip("GTK4 or display unavailable")
-    from lingvix.gui.widgets import big_toggle
+    from klyrshift.gui.widgets import big_toggle
 
     monkeypatch.setattr(big_toggle, "theme_has_icon", lambda *a, **k: False)
     button = big_toggle.BigToggle()

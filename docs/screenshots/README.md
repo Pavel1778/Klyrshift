@@ -1,7 +1,7 @@
 # Скриншоты / Screenshots
 
 Это **реальные снимки** GUI, а не плейсхолдеры. Их делает
-`scripts/make_screenshots.py`: скрипт строит настоящее окно `LingvixWindow`,
+`scripts/make_screenshots.py`: скрипт строит настоящее окно `KlyrshiftWindow`,
 даёт GTK разложить виджеты и рендерит дерево в PNG через `Gtk.WidgetPaintable`
 и `Gsk.CairoRenderer`. То есть на картинках тот же интерфейс, который видит
 пользователь, отрисованный самим GTK.

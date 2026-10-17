@@ -8,9 +8,9 @@ import sitemap from "@astrojs/sitemap";
 // canonical URLs, og:url and the sitemap point at the host that serves them,
 // otherwise the two copies compete as duplicate content.
 //
-// The hosts are still named ``linguafix.*``: the ``Lingvix`` rename is done in
-// the source but the DNS entries were never renamed, so ``lingvix.layero.app``
-// and ``lingvix.vercel.app`` are 404. Pointing the canonical URL at a 404 makes
+// The hosts are still named ``linguafix.*``: the ``Klyrshift`` rename is done in
+// the source but the DNS entries were never renamed, so ``klyrshift.layero.app``
+// and ``klyrshift.vercel.app`` are 404. Pointing the canonical URL at a 404 makes
 // search engines drop the page, so the names that resolve are used here. When
 // the hosts are renamed, only these two constants change.
 //

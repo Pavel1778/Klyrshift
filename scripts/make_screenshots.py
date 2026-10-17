@@ -1,6 +1,6 @@
-"""Render real Lingvix GUI screenshots to PNG.
+"""Render real Klyrshift GUI screenshots to PNG.
 
-Builds the actual ``LingvixWindow`` (the same widget tree the app shows), lets
+Builds the actual ``KlyrshiftWindow`` (the same widget tree the app shows), lets
 GTK lay it out under the current display, and renders the widget tree into a
 PNG through ``Gtk.WidgetPaintable`` + a ``Gsk`` renderer. This is a real render
 of the real UI, not a hand-drawn mock.
@@ -68,20 +68,20 @@ def main() -> int:
     out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else REPO_ROOT / "docs" / "screenshots"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    from lingvix.config import Config
-    from lingvix.gui.state import GuiState
-    from lingvix.gui.window import LingvixWindow
+    from klyrshift.config import Config
+    from klyrshift.gui.state import GuiState
+    from klyrshift.gui.window import KlyrshiftWindow
 
     shots: list[str] = []
 
-    app = Adw.Application(application_id="io.github.pavel1778.LingvixShots")
+    app = Adw.Application(application_id="io.github.pavel1778.KlyrshiftShots")
     # GTK ships no type stubs, so every widget is ``Any``; keep the holders
     # ``Any`` too rather than sprinkling ``type: ignore`` on each access.
     holder: dict[str, Any] = {}
 
     def on_activate(application: Adw.Application) -> None:
         state = GuiState(config=Config())
-        window = LingvixWindow(state, application)
+        window = KlyrshiftWindow(state, application)
         holder["window"] = window
         holder["renderer"] = _make_renderer()
         window.set_default_size(WIDTH, HEIGHT)

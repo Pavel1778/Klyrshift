@@ -1,4 +1,4 @@
-"""Tests for :mod:`lingvix.injector`."""
+"""Tests for :mod:`klyrshift.injector`."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ import types
 
 import pytest
 
-from lingvix import injector as injector_module
-from lingvix.converter import LayoutConverter
-from lingvix.injector import TextInjector
+from klyrshift import injector as injector_module
+from klyrshift.converter import LayoutConverter
+from klyrshift.injector import TextInjector
 
 
 def fake_completed(returncode: int = 0) -> subprocess.CompletedProcess[str]:

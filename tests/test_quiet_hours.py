@@ -8,10 +8,10 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from lingvix.config import Config, in_quiet_hours  # noqa: E402
-from lingvix.converter import LayoutConverter  # noqa: E402
-from lingvix.daemon import LingvixDaemon  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
+from klyrshift.config import Config, in_quiet_hours  # noqa: E402
+from klyrshift.converter import LayoutConverter  # noqa: E402
+from klyrshift.daemon import KlyrshiftDaemon  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -59,26 +59,26 @@ def make_event(name: str, value: int = 1) -> FakeEvent:
     return FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), value)
 
 
-def press(daemon: LingvixDaemon, text: str) -> None:
+def press(daemon: KlyrshiftDaemon, text: str) -> None:
     for char in text:
         name, _ = _KEY_BY_CHAR[char]
         daemon._handle_event(make_event(name, 1))
         daemon._handle_event(make_event(name, 0))
 
 
-def tap(daemon: LingvixDaemon, name: str) -> None:
+def tap(daemon: KlyrshiftDaemon, name: str) -> None:
     daemon._handle_event(make_event(name, 1))
     daemon._handle_event(make_event(name, 0))
 
 
-def make_daemon(**kwargs: object) -> LingvixDaemon:
+def make_daemon(**kwargs: object) -> KlyrshiftDaemon:
     config = Config(stop_words=["password"], **kwargs)
     detector = LanguageDetector(
         converter=LayoutConverter(),
         stop_words=config.stop_words,
         min_word_length=config.min_word_length,
     )
-    return LingvixDaemon(
+    return KlyrshiftDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),

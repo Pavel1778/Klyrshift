@@ -20,10 +20,10 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from lingvix.config import Config  # noqa: E402
-from lingvix.converter import LayoutConverter  # noqa: E402
-from lingvix.daemon import LingvixDaemon  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
+from klyrshift.config import Config  # noqa: E402
+from klyrshift.converter import LayoutConverter  # noqa: E402
+from klyrshift.daemon import KlyrshiftDaemon  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -76,14 +76,14 @@ for _letter in "abcdefghijklmnopqrstuvwxyz":
     _KEY_BY_CHAR[_letter] = f"KEY_{_letter.upper()}"
 
 
-def _press(daemon: LingvixDaemon, text: str) -> None:
+def _press(daemon: KlyrshiftDaemon, text: str) -> None:
     for char in text:
         name = _KEY_BY_CHAR[char]
         daemon._handle_event(FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), 1))
         daemon._handle_event(FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), 0))
 
 
-def _make_daemon(**kwargs: object) -> LingvixDaemon:
+def _make_daemon(**kwargs: object) -> KlyrshiftDaemon:
     options: dict[str, object] = {"stop_words": [], "analysis_timeout": 0.8}
     options.update(kwargs)
     config = Config(**options)
@@ -93,7 +93,7 @@ def _make_daemon(**kwargs: object) -> LingvixDaemon:
         min_word_length=config.min_word_length,
         confidence_threshold=config.confidence_threshold,
     )
-    return LingvixDaemon(
+    return KlyrshiftDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -101,13 +101,13 @@ def _make_daemon(**kwargs: object) -> LingvixDaemon:
     )
 
 
-def _injector(daemon: LingvixDaemon) -> FakeInjector:
+def _injector(daemon: KlyrshiftDaemon) -> FakeInjector:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector
 
 
-def _feed(daemon: LingvixDaemon, word: str, layout: str, boundary: str = " ") -> None:
+def _feed(daemon: KlyrshiftDaemon, word: str, layout: str, boundary: str = " ") -> None:
     """Seed a word (including Cyrillic) and flush it as if a boundary was hit."""
     switcher = daemon.switcher
     assert isinstance(switcher, FakeSwitcher)
@@ -210,7 +210,7 @@ def test_typo_no_spam_in_manual() -> None:
 def test_typo_only_for_unknown_words() -> None:
     """A real word is never rewritten; a typo is (mode permitting)."""
     daemon = _make_daemon(typo_mode="auto")
-    from lingvix.typo import TypoCorrector
+    from klyrshift.typo import TypoCorrector
 
     vocab = daemon.detector.ordered_vocabulary("ru")
     corrector = TypoCorrector(vocab, min_length=4)

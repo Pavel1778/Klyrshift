@@ -14,9 +14,9 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from lingvix.config import Config  # noqa: E402
-from lingvix.daemon import LingvixDaemon  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
+from klyrshift.config import Config  # noqa: E402
+from klyrshift.daemon import KlyrshiftDaemon  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
 
 EV_KEY = evdev.ecodes.EV_KEY
 
@@ -60,24 +60,24 @@ def make_event(name: str, value: int = 1) -> FakeEvent:
     return FakeEvent(EV_KEY, int(getattr(evdev.ecodes, name)), value)
 
 
-def tap(daemon: LingvixDaemon, name: str) -> None:
+def tap(daemon: KlyrshiftDaemon, name: str) -> None:
     daemon._handle_event(make_event(name, 1))
     daemon._handle_event(make_event(name, 0))
 
 
-def press(daemon: LingvixDaemon, text: str) -> None:
+def press(daemon: KlyrshiftDaemon, text: str) -> None:
     for char in text:
         tap(daemon, f"KEY_{char.upper()}")
 
 
-def make_daemon(**kwargs: object) -> LingvixDaemon:
+def make_daemon(**kwargs: object) -> KlyrshiftDaemon:
     options: dict[str, object] = {"stop_words": ["password"]}
     options.update(kwargs)
     config = Config(**options)
     detector = LanguageDetector(
         converter=None, stop_words=config.stop_words, min_word_length=config.min_word_length
     )
-    return LingvixDaemon(
+    return KlyrshiftDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("us"),
@@ -85,7 +85,7 @@ def make_daemon(**kwargs: object) -> LingvixDaemon:
     )
 
 
-def _injector(daemon: LingvixDaemon) -> FakeInjector:
+def _injector(daemon: KlyrshiftDaemon) -> FakeInjector:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector
@@ -206,7 +206,7 @@ def test_reload_config_refreshes_double_tap_binding(monkeypatch: pytest.MonkeyPa
     assert daemon._double_tap_hotkeys == {"shift": "fix"}
 
     new_config = Config(hotkey_fix_last_word="CTRL+CTRL")
-    monkeypatch.setattr("lingvix.config.load_config", lambda: new_config)
+    monkeypatch.setattr("klyrshift.config.load_config", lambda: new_config)
     daemon.reload_config()
     assert daemon._double_tap_hotkeys == {"ctrl": "fix"}
     assert daemon._hotkeys["fix"] is None
@@ -215,11 +215,11 @@ def test_reload_config_refreshes_double_tap_binding(monkeypatch: pytest.MonkeyPa
 # --- chords must not be mistaken for a double tap ---------------------------
 
 
-def hold(daemon: LingvixDaemon, name: str) -> None:
+def hold(daemon: KlyrshiftDaemon, name: str) -> None:
     daemon._handle_event(make_event(name, 1))
 
 
-def release(daemon: LingvixDaemon, name: str) -> None:
+def release(daemon: KlyrshiftDaemon, name: str) -> None:
     daemon._handle_event(make_event(name, 0))
 
 
@@ -334,7 +334,7 @@ def test_double_shift_with_empty_buffer_does_nothing(caplog: pytest.LogCaptureFi
     import logging
 
     daemon = make_daemon()
-    with caplog.at_level(logging.INFO, logger="lingvix.daemon"):
+    with caplog.at_level(logging.INFO, logger="klyrshift.daemon"):
         tap(daemon, "KEY_LEFTSHIFT")
         time.sleep(0.02)
         tap(daemon, "KEY_LEFTSHIFT")

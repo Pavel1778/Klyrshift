@@ -1,4 +1,4 @@
-"""Tests for :mod:`lingvix.converter`."""
+"""Tests for :mod:`klyrshift.converter`."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from lingvix.converter import LayoutConverter
+from klyrshift.converter import LayoutConverter
 
 # (us text, ru text) pairs typed on the same physical keys.
 US_TO_RU_CASES = [

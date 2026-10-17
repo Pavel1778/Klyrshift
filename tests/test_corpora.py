@@ -13,14 +13,14 @@ from importlib import resources
 
 import pytest
 
-from lingvix.converter import LayoutConverter
-from lingvix.detector import DEFAULT_DETECTOR_LANGUAGES, LanguageDetector
+from klyrshift.converter import LayoutConverter
+from klyrshift.detector import DEFAULT_DETECTOR_LANGUAGES, LanguageDetector
 
 SUPPORTED = ("en", "ru", "uk", "de", "fr")
 
 
 def _corpus(language: str) -> dict[str, object]:
-    text = (resources.files("lingvix") / "data" / f"ngrams_{language}.json").read_text(
+    text = (resources.files("klyrshift") / "data" / f"ngrams_{language}.json").read_text(
         encoding="utf-8"
     )
     data = json.loads(text)

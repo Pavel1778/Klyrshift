@@ -1,6 +1,6 @@
 """Doctor behaviour in a session-less environment (TTY, ssh, cron).
 
-A tester may run ``lingvix doctor`` from a context that has no graphical
+A tester may run ``klyrshift doctor`` from a context that has no graphical
 session: no ``XDG_SESSION_TYPE``, no ``DISPLAY``/``WAYLAND_DISPLAY``, no D-Bus.
 These tests pin the behaviour: doctor must not crash, must say the session type
 is unknown, and must not blow up on a missing ``systemctl``.
@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from lingvix import doctor
-from lingvix.config import Config
+from klyrshift import doctor
+from klyrshift.config import Config
 
 # Variables that describe a graphical session. Clearing them makes the process
 # look like it was started from a TTY, ssh or cron.
@@ -111,7 +111,7 @@ def test_doctor_from_empty_environment() -> None:
     src = str(Path(__file__).resolve().parent.parent / "src")
     env["PYTHONPATH"] = src
     result = subprocess.run(
-        [sys.executable, "-m", "lingvix", "doctor"],
+        [sys.executable, "-m", "klyrshift", "doctor"],
         check=False,
         capture_output=True,
         text=True,
@@ -120,5 +120,5 @@ def test_doctor_from_empty_environment() -> None:
     )
     assert result.returncode in (0, 1)
     assert "Traceback" not in result.stderr
-    assert "Lingvix doctor" in result.stdout
+    assert "Klyrshift doctor" in result.stdout
     assert "unknown" in result.stdout

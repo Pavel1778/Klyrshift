@@ -100,7 +100,7 @@ def test_no_mojibake_in_tracked_sources() -> None:
     assert not offenders, "Mojibake (double-encoded UTF-8) found in:\n" + "\n".join(offenders)
 
 
-@pytest.mark.parametrize("name", ["src/lingvix/daemon.py"])
+@pytest.mark.parametrize("name", ["src/klyrshift/daemon.py"])
 def test_notification_strings_are_recoverable(name: str) -> None:
     """The fixed notification labels must be the intended Cyrillic text.
 

@@ -2,8 +2,8 @@
 #
 # Build one .tar.gz per thematic dictionary category.
 #
-# ``lingvix dict install <category>`` fetches
-# ``releases/latest/download/lingvix-dict-<slug>.tar.gz`` and looks for the
+# ``klyrshift dict install <category>`` fetches
+# ``releases/latest/download/klyrshift-dict-<slug>.tar.gz`` and looks for the
 # member ``<lang>-<slug>-1k.txt`` inside it. The archive keeps the category
 # folder layout (``it/ru-it-1k.txt``), so the member name matches.
 #
@@ -20,7 +20,7 @@ for dir in dictionaries/*/; do
     slug="$(basename "${dir}")"
     # Only real categories carry a README; skip ``base`` and stray folders.
     [ -f "${dir}README.md" ] || continue
-    tar -czf "${OUT_DIR}/lingvix-dict-${slug}.tar.gz" -C dictionaries "${slug}"
+    tar -czf "${OUT_DIR}/klyrshift-dict-${slug}.tar.gz" -C dictionaries "${slug}"
 done
 
 ls -l "${OUT_DIR}"

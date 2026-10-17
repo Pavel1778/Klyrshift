@@ -16,10 +16,10 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from lingvix import daemon as daemon_module
-from lingvix.config import Config
-from lingvix.daemon import LingvixDaemon
-from lingvix.detector import LanguageDetector
+from klyrshift import daemon as daemon_module
+from klyrshift.config import Config
+from klyrshift.daemon import KlyrshiftDaemon
+from klyrshift.detector import LanguageDetector
 
 
 @dataclass
@@ -106,9 +106,9 @@ class FakeInjector:
         return "backend=fake"
 
 
-def _make_daemon(**kwargs: object) -> LingvixDaemon:
+def _make_daemon(**kwargs: object) -> KlyrshiftDaemon:
     config = Config(analysis_timeout=0.1, min_word_length=3, stop_words=["password"])
-    return LingvixDaemon(
+    return KlyrshiftDaemon(
         config,
         detector=LanguageDetector(converter=None, stop_words=config.stop_words, min_word_length=3),
         switcher=kwargs.pop("switcher", FakeSwitcher("us")),
@@ -262,7 +262,7 @@ def test_events_from_all_keyboards_are_read(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_buffer_is_bounded_by_max_buffer_size() -> None:
     config = Config(analysis_timeout=10.0, min_word_length=3, max_buffer_size=20)
-    daemon = LingvixDaemon(
+    daemon = KlyrshiftDaemon(
         config,
         detector=LanguageDetector(converter=None, stop_words=[], min_word_length=3),
         switcher=FakeSwitcher("us"),

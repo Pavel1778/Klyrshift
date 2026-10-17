@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Set up a development environment for Lingvix.
+# Set up a development environment for Klyrshift.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -9,19 +9,19 @@ cd "${REPO_DIR}"
 PYTHON="${PYTHON:-python3}"
 VENV="${VENV:-.venv}"
 
-echo "[lingvix] Creating virtual environment in ${VENV}"
+echo "[klyrshift] Creating virtual environment in ${VENV}"
 "${PYTHON}" -m venv "${VENV}"
 "${VENV}/bin/pip" install --upgrade pip
 "${VENV}/bin/pip" install -e ".[dev]"
 
-echo "[lingvix] Installing git hooks"
+echo "[klyrshift] Installing git hooks"
 if command -v pre-commit >/dev/null 2>&1 && [ -f .pre-commit-config.yaml ]; then
     "${VENV}/bin/pre-commit" install || true
 fi
 
 cat <<EOF
 
-[lingvix] Development environment ready.
+[klyrshift] Development environment ready.
 
 Activate it with:
     source ${VENV}/bin/activate

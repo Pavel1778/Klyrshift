@@ -1,19 +1,19 @@
 # AGENTS.md
 
-Repository-specific notes for agents working on Lingvix.
+Repository-specific notes for agents working on Klyrshift.
 
 ## Layout
 
-- `src/lingvix/` — the Python package (PEP 621, `pyproject.toml`).
+- `src/klyrshift/` — the Python package (PEP 621, `pyproject.toml`).
 - `data/` — system integration files (systemd unit, XDG autostart, udev rule, icon).
-- `src/lingvix/data/` — data files **shipped inside the package** (`layouts.json`,
+- `src/klyrshift/data/` — data files **shipped inside the package** (`layouts.json`,
   `ngrams_*.json`, `stop_words.txt`, and copies of the unit/desktop/icon).
 - `scripts/` — `build_deb.sh`, `smoke_test.sh`, `dev_setup.sh`,
   `build_demo_model.py` (generates the landing page's demo data).
 
-`lingvix.service`, `lingvix.desktop` and `lingvix.svg` exist in **both**
-`data/` and `src/lingvix/data/` and must stay byte-identical — a test enforces
-this. `data/` is read by `install.sh`; `src/lingvix/data/` is what an installed
+`klyrshift.service`, `klyrshift.desktop` and `klyrshift.svg` exist in **both**
+`data/` and `src/klyrshift/data/` and must stay byte-identical — a test enforces
+this. `data/` is read by `install.sh`; `src/klyrshift/data/` is what an installed
 package ships and what the CLI reads.
 
 ## Build and verify
@@ -39,13 +39,13 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 ## Invariants that have bitten before
 - **The live GitHub release predates the rename.** Its assets are named
   `linguafix-*` (`linguafix_<v>_all.deb`, `linguafix-dict-<slug>.tar.gz`),
-  while the build scripts and `repo.py` emit `lingvix-*`. A hard-coded
-  `lingvix-dict-*` request 404s against the current release, so
-  `thematic.download_category` tries both prefixes (`_ASSET_PREFIXES`).
-  The next release built from this tree will ship `lingvix-*`, and the
-  fallback keeps the old one working meanwhile. The landing page's download
-  button points at the release *page*, not a versioned asset URL, for the
-  same reason (`site/src/consts.ts`).
+  while the build scripts and `repo.py` emit `klyrshift-*`. A hard-coded
+  `klyrshift-dict-*` request 404s against the current release, so
+  `thematic.download_category` tries every prefix (`_ASSET_PREFIXES`:
+  `klyrshift-`, `lingvix-`, `linguafix-`). The next release built from this tree
+  will ship `klyrshift-*`, and the fallbacks keep the old one working meanwhile.
+  The landing page's download button points at the release *page*, not a
+  versioned asset URL, for the same reason (`site/src/consts.ts`).
 
 - **The version the tree carries is not necessarily the version that is
   published.** The site advertised `0.2.8.2` while the newest release was
@@ -80,8 +80,8 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 - Keep the apt `Depends:` in `scripts/build_deb.sh` in sync with the runtime
   imports. `tomli` is required on Python < 3.11; `tomli_w` on all versions.
 - `data/*.service` and `data/*.desktop` contain a `@BIN@` placeholder. It is
-  rendered by `install.sh` (venv launcher), `build_deb.sh` (`/usr/bin/lingvix`)
-  and the CLI (`shutil.which("lingvix")`). Never ship an unrendered file.
+  rendered by `install.sh` (venv launcher), `build_deb.sh` (`/usr/bin/klyrshift`)
+  and the CLI (`shutil.which("klyrshift")`). Never ship an unrendered file.
 - The daemon tracks the current word as **scancodes** (`_scancodes`), not only
   as characters. `TextInjector.replace_text` takes a *count*, not the old text;
   the daemon passes `len(self._scancodes)`. Do not reintroduce a string-based
@@ -123,11 +123,11 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   It also validates the *converted* form: if the wrong-layout rendering of the
   buffer is a taught word (``муксуд`` → ``vercel``), the correction fires even
   though the brand is absent from the frequency corpora. This is why an unknown
-  brand is silent until `lingvix dict add` teaches it. It is a vocabulary
+  brand is silent until `klyrshift dict add` teaches it. It is a vocabulary
   membership test, not a score bonus — a bonus is drowned out by the n-gram
   penalties.
-  The file (`~/.local/share/lingvix/dictionary.txt` by default) is edited
-  explicitly (`lingvix dict add/remove`, the GUI Dictionary tab, or by hand);
+  The file (`~/.local/share/klyrshift/dictionary.txt` by default) is edited
+  explicitly (`klyrshift dict add/remove`, the GUI Dictionary tab, or by hand);
   the daemon never writes typed text to it. A config reload always re-reads it.
 - The default fix hotkey is **`SHIFT+SHIFT`** (double tap of a modifier within
   `hotkey_double_tap_ms`, default 300 ms), not `PAUSE`. `daemon._parse_hotkey`
@@ -154,12 +154,12 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   apostrophe in a comment: it ends the block early. The smoke and zero-config
   scripts both hit this.
 - Running the installed CLI as root creates root-owned `__pycache__` under
-  `/usr/lib/lingvix`, which dpkg does not track; `postrm` cleans it with
+  `/usr/lib/klyrshift`, which dpkg does not track; `postrm` cleans it with
   `py3clean` + `rm -rf`.
 - **Autostart has two independent mechanisms** and both must be honoured:
-  the systemd user unit (`lingvix.service`, enabled *globally* in
+  the systemd user unit (`klyrshift.service`, enabled *globally* in
   `/etc/systemd/user` by the `.deb`) and the XDG entry
-  (`~/.config/autostart/lingvix.desktop`, written by `install.sh`). A defect
+  (`~/.config/autostart/klyrshift.desktop`, written by `install.sh`). A defect
   survived here twice: `disable_autostart()` removed only the unit, so the XDG
   entry kept starting the daemon and the GUI switch snapped back on; and
   `systemd_enabled()` trusted `systemctl is-enabled`, which reports a globally
@@ -167,7 +167,7 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   working autostart read as off. `daemon_control.disable_autostart` now removes
   the XDG entry **and** masks the unit (an unprivileged user cannot
   `disable --global`); `enable_autostart` removes the mask; `systemd_enabled`
-  also probes the `/etc/systemd/user/*/lingvix.service` wants symlinks directly
+  also probes the `/etc/systemd/user/*/klyrshift.service` wants symlinks directly
   (`globally_enabled`). `tests/test_daemon_control.py` pins all four paths.
   The source installer has its own switch: `install.sh --no-autostart` skips the
   XDG entry, undoes a previous `enable`, and still starts the daemon for the
@@ -175,7 +175,7 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   install wrote. `tests/test_installer_autostart.py` runs the real script with
   stub system binaries on `PATH` and asserts the recorded `systemctl` argv.
 - `site/src/data/demo-model.json` is **generated** from the shipped
-  `src/lingvix/data/ngrams_*.json` by `scripts/build_demo_model.py`; the landing
+  `src/klyrshift/data/ngrams_*.json` by `scripts/build_demo_model.py`; the landing
   page's demo (`site/src/components/Demo.astro`) ports the detector's
   plausibility test to TypeScript on top of it. Never hand-edit the JSON: rerun
   the script after a corpus rebuild. `tests/test_demo_model.py` fails when the
@@ -185,10 +185,10 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   self-hosted Inter/JetBrains Mono woff2 that Astro emits, then screenshots the
   card with headless `chromium`. It needs a prior `npm run build` in `site/`
   (the fonts are gitignored build output) and raises `SiteNotBuilt` otherwise.
-  The old image was hand-made, so the `LinguaFix` -> `Lingvix` rename never
+  The old image was hand-made, so the `LinguaFix` -> `Klyrshift` rename never
   reached it and every link preview showed the dead name; `tests/test_og_image.py`
   now pins the size, a non-blank render, and (via `tesseract`, skipped when
-  absent) that the card shows `Lingvix` and not `LinguaFix`.
+  absent) that the card shows `Klyrshift` and not `LinguaFix`.
 
 ## Editing files with non-ASCII text
 
@@ -227,7 +227,7 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   cache, state, config, journal and argv for a known secret and must stay green.
 - **No `%r`/`%s` of a user word in a log call.** `_typo_correction` used to log
   the inspected word and the rejected suggestion at DEBUG, so `log_level=DEBUG`
-  wrote the user's typing to `lingvix.log`. The existing audit missed it because
+  wrote the user's typing to `klyrshift.log`. The existing audit missed it because
   its secret is not a plain letter word and never reached those lines. Log a
   length (`len(word)`), never the characters; the guard test for this is
   `test_t9_decision_path_never_logs_the_word`.
@@ -240,7 +240,7 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   buffered, not dropped. Do not hold the lock across `replace_text`.
 - The buffer is bounded by `Config.max_buffer_size` (default 200) and flushed
   early on overflow, so a held key cannot grow it without bound.
-- `lingvix stop` escalates to `SIGKILL` after 2 s; `lingvix kill` forces it.
+- `klyrshift stop` escalates to `SIGKILL` after 2 s; `klyrshift kill` forces it.
 - When the last keyboard disappears the loop re-runs discovery in place (never
   caches a device path); `Restart=always` is the backstop.
 
@@ -265,7 +265,7 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   systemd 257+ (Debian 13) `73-seat-late.rules` turns `uaccess` into the ACL. It
   runs in filename order and only processes rules that guard the `remove` event,
   so a `99-*` rule without the guard is silently skipped and `/dev/input` stays
-  unreadable. The shipped rule is `data/71-lingvix.rules`.
+  unreadable. The shipped rule is `data/71-klyrshift.rules`.
 - `python3-evdev` ships in Debian and Ubuntu and is the only native runtime
   dependency; `install.sh` reuses it via `--system-site-packages` so no compiler
   is needed. `python-uinput` is **not** a dependency.

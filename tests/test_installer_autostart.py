@@ -66,11 +66,11 @@ def sandbox(tmp_path: Path) -> tuple[Path, Path]:
     for name in _STUBS:
         _write_stub(bin_dir / name, log)
 
-    venv_bin = home / ".local" / "share" / "lingvix" / "venv" / "bin"
+    venv_bin = home / ".local" / "share" / "klyrshift" / "venv" / "bin"
     venv_bin.mkdir(parents=True)
     _write_stub(venv_bin / "python", log)
     _write_stub(venv_bin / "pip", log)
-    _write_stub(venv_bin / "lingvix", log)
+    _write_stub(venv_bin / "klyrshift", log)
 
     return home, log
 
@@ -99,7 +99,7 @@ def _run_installer(sandbox: tuple[Path, Path], *args: str) -> subprocess.Complet
 
 
 def _autostart_entry(home: Path) -> Path:
-    return home / ".config" / "autostart" / "lingvix.desktop"
+    return home / ".config" / "autostart" / "klyrshift.desktop"
 
 
 def _systemctl_calls(log: Path) -> list[str]:
@@ -122,7 +122,7 @@ def test_default_install_writes_autostart_and_enables_the_unit(
 
     assert _autostart_entry(home).is_file()
     calls = _systemctl_calls(log)
-    assert any(c.startswith("enable") and "lingvix.service" in c for c in calls), calls
+    assert any(c.startswith("enable") and "klyrshift.service" in c for c in calls), calls
 
 
 def test_no_autostart_skips_the_entry_and_does_not_enable_the_unit(
@@ -136,9 +136,9 @@ def test_no_autostart_skips_the_entry_and_does_not_enable_the_unit(
     assert not _autostart_entry(home).exists()
     calls = _systemctl_calls(log)
     assert not any(c.startswith("enable") for c in calls), calls
-    assert any(c.startswith("disable") and "lingvix.service" in c for c in calls), calls
+    assert any(c.startswith("disable") and "klyrshift.service" in c for c in calls), calls
     # The session itself must still work: the daemon is started, just not enabled.
-    assert any(c.startswith("start") and "lingvix.service" in c for c in calls), calls
+    assert any(c.startswith("start") and "klyrshift.service" in c for c in calls), calls
 
 
 def test_no_autostart_removes_an_entry_left_by_an_earlier_install(

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from lingvix import gui, logging_setup
+from klyrshift import gui, logging_setup
 
 
 def test_gui_main_configures_logging(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -20,14 +20,14 @@ def test_gui_main_configures_logging(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(logging_setup, "setup_logging", lambda **kwargs: calls.append(kwargs))
     monkeypatch.setattr(gui, "gtk_available", lambda: True)
 
-    fake_app = types.ModuleType("lingvix.gui.app")
+    fake_app = types.ModuleType("klyrshift.gui.app")
 
     class _FakeApp:
         def run(self, argv: object) -> int:
             return 0
 
-    fake_app.LingvixApplication = _FakeApp
-    monkeypatch.setitem(sys.modules, "lingvix.gui.app", fake_app)
+    fake_app.KlyrshiftApplication = _FakeApp
+    monkeypatch.setitem(sys.modules, "klyrshift.gui.app", fake_app)
 
     assert gui.main([]) == 0
     assert calls, "setup_logging was not called"

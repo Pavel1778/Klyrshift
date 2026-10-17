@@ -89,13 +89,13 @@ def test_expected_assets_cover_every_dictionary(rc: object) -> None:
     languages = {a.split("-")[0] for a in facts.frequency_assets}
     assert languages >= {"ru", "en"}, f"frequency assets: {facts.frequency_assets}"
     assert facts.dict_archives, "no thematic archives were derived"
-    assert all(a.startswith("lingvix-dict-") for a in facts.dict_archives)
+    assert all(a.startswith("klyrshift-dict-") for a in facts.dict_archives)
 
 
 def test_release_workflow_attaches_every_expected_asset(rc: object) -> None:
     """A build script that emits an asset the workflow never uploads is a 404.
 
-    ``dict install`` fetches ``lingvix-dict-<slug>.tar.gz`` from the *release*,
+    ``dict install`` fetches ``klyrshift-dict-<slug>.tar.gz`` from the *release*,
     so the workflow's file list is part of the contract, not an implementation
     detail. This compares the names the scripts emit with the globs the workflow
     publishes, without running either.
@@ -112,7 +112,7 @@ def test_release_workflow_attaches_every_expected_asset(rc: object) -> None:
     # And the archives must be built by the same script that names them.
     assert "build_dict_archives.sh" in workflow
     for archive in facts.dict_archives:
-        slug = archive.removeprefix("lingvix-dict-").removesuffix(".tar.gz")
+        slug = archive.removeprefix("klyrshift-dict-").removesuffix(".tar.gz")
         assert (REPO_ROOT / "dictionaries" / slug / "README.md").is_file(), slug
 
 
@@ -153,7 +153,7 @@ def test_a_missing_asset_is_caught(rc: object) -> None:
 def test_an_unexpected_deb_is_caught(rc: object) -> None:
     facts = rc.collect_source_facts()
     problems = rc.check_published_release(
-        facts, facts.tag, [*facts.all_assets, "lingvix_0.2.8.1_all.deb"]
+        facts, facts.tag, [*facts.all_assets, "klyrshift_0.2.8.1_all.deb"]
     )
     assert any("unexpected .deb" in p for p in problems), problems
 

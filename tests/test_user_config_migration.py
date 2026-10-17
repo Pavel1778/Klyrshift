@@ -1,6 +1,6 @@
 """Migration of a real v0.2.7 ``config.toml`` (from the live-test report).
 
-This reproduces the exact file the user pasted from ``lingvix config show``
+This reproduces the exact file the user pasted from ``klyrshift config show``
 on v0.2.7 and asserts what v0.2.8 turns it into on first load. The rules are:
 
 * stale *defaults* are upgraded (``hotkey_undo_last_fix = "CTRL+CTRL"``,
@@ -13,9 +13,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lingvix.config import DEFAULT_DOUBLE_TAP_MS, Config, load_config
+import pytest
 
-# The user's v0.2.7 config, copied verbatim from ``lingvix config show``
+from klyrshift.config import (
+    DEFAULT_DOUBLE_TAP_MS,
+    Config,
+    config_path,
+    load_config,
+    migrate_legacy_config,
+    snippets_path,
+)
+
+# The user's v0.2.7 config, copied verbatim from ``klyrshift config show``
 # (the ``stop_words`` list is trimmed to a few entries — it is not migrated).
 USER_CONFIG_V027 = """\
 analysis_timeout = 0.7000000000000001
@@ -167,7 +176,7 @@ def test_typo_mode_round_trips_without_rederivation(tmp_path: Path) -> None:
 
 def test_migrated_config_round_trips(tmp_path: Path) -> None:
     """Saving the migrated config must persist the new values (config show)."""
-    from lingvix.config import save_config
+    from klyrshift.config import save_config
 
     path = tmp_path / "config.toml"
     config = _load_user_config(tmp_path)
@@ -217,7 +226,7 @@ def test_second_load_does_not_rewrite(tmp_path: Path) -> None:
 
 def test_preview_migrations_lists_changes_without_writing(tmp_path: Path) -> None:
     """``config migrate --dry-run`` needs the list; the file must stay put."""
-    from lingvix.config import preview_migrations
+    from klyrshift.config import preview_migrations
 
     path = tmp_path / "config.toml"
     path.write_text(USER_CONFIG_V027, encoding="utf-8")
@@ -245,3 +254,95 @@ def test_atomic_write_leaves_no_temp_file(tmp_path: Path) -> None:
     path.write_text(USER_CONFIG_V027, encoding="utf-8")
     load_config(path)
     assert list(tmp_path.glob(".*tmp*")) == []
+
+
+# --- config-directory migration across the renames --------------------------
+
+
+def _legacy_config(root: Path, name: str) -> Path:
+    """Create ``<root>/<name>/config.toml`` and return its path."""
+    directory = root / name
+    directory.mkdir(parents=True)
+    path = directory / "config.toml"
+    path.write_text(USER_CONFIG_V027, encoding="utf-8")
+    return path
+
+
+def test_legacy_config_is_copied_forward(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An upgrade must not silently drop the user's settings.
+
+    The config directory follows ``APP_NAME``, so after the rename the daemon read
+    ``~/.config/klyrshift/config.toml`` while the user's file sat in
+    ``~/.config/lingvix/``: the app started from defaults and the settings looked
+    lost. The first load copies the old file forward.
+    """
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    legacy = _legacy_config(tmp_path, "lingvix")
+    (legacy.parent / "snippets.toml").write_text('sig = "Regards"\n', encoding="utf-8")
+
+    assert migrate_legacy_config() == config_path()
+    assert config_path().read_text(encoding="utf-8") == USER_CONFIG_V027
+    assert snippets_path().read_text(encoding="utf-8") == 'sig = "Regards"\n'
+    # The old file is copied, not moved, so a downgrade still finds it.
+    assert legacy.is_file()
+
+
+def test_migration_prefers_the_nearest_legacy_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``lingvix`` is the newer of the two old names and wins over ``linguafix``."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    _legacy_config(tmp_path, "linguafix")
+    newest = _legacy_config(tmp_path, "lingvix")
+
+    assert migrate_legacy_config() == config_path()
+    assert config_path().read_text(encoding="utf-8") == newest.read_text(encoding="utf-8")
+
+
+def test_migration_never_overwrites_a_current_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An existing ``klyrshift`` config is authoritative; migration is a no-op."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    _legacy_config(tmp_path, "lingvix")
+    current = tmp_path / "klyrshift" / "config.toml"
+    current.parent.mkdir(parents=True)
+    current.write_text("min_word_length = 7\n", encoding="utf-8")
+
+    assert migrate_legacy_config() is None
+    assert current.read_text(encoding="utf-8") == "min_word_length = 7\n"
+
+
+def test_migration_is_a_no_op_without_a_legacy_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    assert migrate_legacy_config() is None
+    assert not config_path().exists()
+
+
+def test_load_config_migrates_a_legacy_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``load_config`` performs the migration on the default path."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    _legacy_config(tmp_path, "lingvix")
+
+    config = load_config()
+    assert config.mode == "manual"  # the user's explicit choice survives
+    assert config_path().is_file()
+
+
+def test_load_config_with_an_explicit_path_ignores_legacy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An explicit path is read as given; no legacy directory is consulted."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
+    _legacy_config(tmp_path / "xdg", "lingvix")
+    explicit = tmp_path / "elsewhere" / "config.toml"
+    explicit.parent.mkdir(parents=True)
+
+    config = load_config(explicit)
+    assert config.mode == "auto"  # defaults, not the legacy "manual"
+    assert explicit.is_file()
+    assert not config_path().exists()

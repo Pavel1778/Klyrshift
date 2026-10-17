@@ -1,4 +1,4 @@
-"""Tests for :mod:`lingvix.doctor`."""
+"""Tests for :mod:`klyrshift.doctor`."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from lingvix import doctor
-from lingvix.config import Config
+from klyrshift import doctor
+from klyrshift.config import Config
 
 
 def test_marker_mapping_covers_statuses() -> None:
@@ -56,12 +56,12 @@ def test_check_gnome_version_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_check_gui_libraries_present(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("lingvix.gui.gtk_available", lambda: True)
+    monkeypatch.setattr("klyrshift.gui.gtk_available", lambda: True)
     assert doctor.check_gui_libraries().status == doctor.OK
 
 
 def test_check_gui_libraries_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("lingvix.gui.gtk_available", lambda: False)
+    monkeypatch.setattr("klyrshift.gui.gtk_available", lambda: False)
     result = doctor.check_gui_libraries()
     assert result.status == doctor.WARN
     # The hint must name the exact packages, so a user who downloaded the .deb
@@ -88,12 +88,12 @@ def test_check_device_access_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(doctor, "_input_group_membership", lambda: False)
     result = doctor.check_device_access()
     assert result.status == doctor.FAIL
-    assert "71-lingvix.rules" in result.hint
+    assert "71-klyrshift.rules" in result.hint
     assert ".deb" in result.hint
 
 
 def test_uaccess_rule_present_true(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    rule = tmp_path / "71-lingvix.rules"
+    rule = tmp_path / "71-klyrshift.rules"
     rule.write_text('KERNEL=="event*", TAG+="uaccess"\n', encoding="utf-8")
     monkeypatch.setattr(doctor, "_UDEV_RULE_DIRS", (tmp_path,))
     assert doctor._uaccess_rule_present() is True
@@ -102,7 +102,7 @@ def test_uaccess_rule_present_true(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
 def test_uaccess_rule_present_false_for_group_rule(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    rule = tmp_path / "71-lingvix.rules"
+    rule = tmp_path / "71-klyrshift.rules"
     rule.write_text('KERNEL=="event*", GROUP="input", MODE="0660"\n', encoding="utf-8")
     monkeypatch.setattr(doctor, "_UDEV_RULE_DIRS", (tmp_path,))
     assert doctor._uaccess_rule_present() is False

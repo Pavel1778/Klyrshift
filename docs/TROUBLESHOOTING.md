@@ -1,6 +1,6 @@
 # Troubleshooting
 
-## Start here: `lingvix doctor`
+## Start here: `klyrshift doctor`
 
 Before anything else, run the self-diagnosis. It checks the `input` group,
 read access to `/dev/input/event*`, `/dev/uinput`, the external tools
@@ -9,7 +9,7 @@ session type and the resolved switcher/injector backends, and prints a table
 with a hint for every failed check.
 
 ```bash
-lingvix doctor
+klyrshift doctor
 ```
 
 The exit code is non-zero when a check fails, so it is safe to use in scripts.
@@ -18,11 +18,11 @@ The exit code is non-zero when a check fails, so it is safe to use in scripts.
 
 1. Check that it is running:
    ```bash
-   lingvix status
+   klyrshift status
    ```
 2. Look at the log:
    ```bash
-   tail -n 100 ~/.local/state/lingvix/lingvix.log
+   tail -n 100 ~/.local/state/klyrshift/klyrshift.log
    ```
 3. Confirm the word-boundary triggers are enabled. Space and Enter flush the
    word and correct it immediately; Tab and punctuation are opt-in:
@@ -39,7 +39,7 @@ The exit code is non-zero when a check fails, so it is safe to use in scripts.
    you normally do not need to touch it. Set it to `false` to pin the timeout to
    the `analysis_timeout` value exactly.
 4. Make sure the words you type are at least `min_word_length` characters long.
-5. Note that Lingvix deliberately does not rewrite URLs, e-mail addresses,
+5. Note that Klyrshift deliberately does not rewrite URLs, e-mail addresses,
    file paths, version numbers or hyphenated identifiers (a token with `.`, `@`,
    `/`, `\`, `:`, `_` or `-` inside it). `github.com` and `3.14` are left alone.
 
@@ -61,7 +61,7 @@ identifier_guard = true        # skip snake_case, camelCase, x86_64, ...
 - Tokens with structural markers (a dot, `@`, `/`, `_`, `-`, digits inside) are
   treated as identifiers and skipped.
 - The guards run after the user dictionary, so a word you taught
-  (`lingvix dict add vercel`) is still fixed even if the source looks plausible.
+  (`klyrshift dict add vercel`) is still fixed even if the source looks plausible.
 
 If a specific string still misfires, add it to `custom_skip_regex`:
 
@@ -104,7 +104,7 @@ always to make udev re-apply the rule, not to change group membership.
 1. Check that the rule is installed and uses `uaccess`:
 
    ```bash
-   cat /usr/lib/udev/rules.d/71-lingvix.rules      # or /etc/udev/rules.d/
+   cat /usr/lib/udev/rules.d/71-klyrshift.rules      # or /etc/udev/rules.d/
    # expected: KERNEL=="event*", TAG+="uaccess"
    #           KERNEL=="uinput", TAG+="uaccess", OPTIONS+="static_node=uinput"
    ```
@@ -127,10 +127,10 @@ always to make udev re-apply the rule, not to change group membership.
    ```
 
 4. If the rule is not there at all, reinstall the package:
-   `sudo apt install --reinstall lingvix`.
+   `sudo apt install --reinstall klyrshift`.
 
 On the developer path (`install.sh`) the rule lives in
-`/etc/udev/rules.d/71-lingvix.rules` and the same steps apply. `lingvix
+`/etc/udev/rules.d/71-klyrshift.rules` and the same steps apply. `klyrshift
 doctor` accepts either mechanism — a `uaccess` rule or membership of the
 `input` group — and only fails when neither is present.
 
@@ -146,15 +146,15 @@ doctor` accepts either mechanism — a `uaccess` rule or membership of the
 ```bash
 getfacl /dev/input/event3    # ожидается строка  user:$USER:rw-
 getfacl /dev/uinput          # ожидается строка  user:$USER:rw-
-ls -l /usr/lib/udev/rules.d/71-lingvix.rules
-grep uaccess /usr/lib/udev/rules.d/71-lingvix.rules
+ls -l /usr/lib/udev/rules.d/71-klyrshift.rules
+grep uaccess /usr/lib/udev/rules.d/71-klyrshift.rules
 ```
 
 Если строки `user:$USER:rw-` нет — это и есть причина, применяем решение ниже.
 
 Решение (от простого к сложному):
 
-1. Выйти из GNOME и войти заново, затем проверить `lingvix doctor`.
+1. Выйти из GNOME и войти заново, затем проверить `klyrshift doctor`.
 2. Если не помогло — перезагрузить правило udev и снова перелогиниться:
 
    ```bash
@@ -173,7 +173,7 @@ grep uaccess /usr/lib/udev/rules.d/71-lingvix.rules
 
 ### doctor запущен из TTY или ssh
 
-Поведение: `lingvix doctor` не падает, но строка «Тип сессии» становится
+Поведение: `klyrshift doctor` не падает, но строка «Тип сессии» становится
 предупреждением:
 
 ```
@@ -186,14 +186,14 @@ grep uaccess /usr/lib/udev/rules.d/71-lingvix.rules
 потому что без сессии нет ни `g3kb-switch`/`setxkbmap` в нужном окружении, ни
 доступа к устройствам. Это ожидаемо.
 
-Что делать: запускать `lingvix doctor` из терминала внутри GNOME (не по ssh и
+Что делать: запускать `klyrshift doctor` из терминала внутри GNOME (не по ssh и
 не из TTY), либо заранее задать тип сессии:
 
 ```bash
-XDG_SESSION_TYPE=wayland lingvix doctor    # или x11
+XDG_SESSION_TYPE=wayland klyrshift doctor    # или x11
 ```
 
-Для сбора диагностики с удалённой машины используйте `lingvix collect-logs` —
+Для сбора диагностики с удалённой машины используйте `klyrshift collect-logs` —
 он фиксирует окружение и не требует графической сессии.
 
 ## It switches the layout but does not replace the text
@@ -202,7 +202,7 @@ The injector backend is probably not able to synthesise input. Check which
 backend is active:
 
 ```bash
-lingvix status
+klyrshift status
 ```
 
 - If it says `backend=none`, install `wtype` (Wayland) or `xdotool` (X11), or
@@ -210,7 +210,7 @@ lingvix status
 - If it says `backend=wtype` but nothing happens, the focused application may
   ignore synthetic Wayland input. This affects some games and Java/Swing apps.
 
-Force a specific backend in `~/.config/lingvix/config.toml`:
+Force a specific backend in `~/.config/klyrshift/config.toml`:
 
 ```toml
 backend = "xdotool"
@@ -234,7 +234,7 @@ sudo apt install python3-gi gir1.2-appindicator3-0.1
 ```
 
 If GNOME does not show AppIndicator icons, install the "AppIndicator and
-KStatusNotifierItem Support" GNOME extension. If PyGObject is missing Lingvix
+KStatusNotifierItem Support" GNOME extension. If PyGObject is missing Klyrshift
 logs an INFO message and keeps running without a tray icon.
 
 ## The on/off switch flips back to OFF
@@ -250,8 +250,8 @@ switch correctly reports "not running" and flips back.
 Check it:
 
 ```bash
-systemctl --user status lingvix.service
-journalctl --user -u lingvix.service -n 20
+systemctl --user status klyrshift.service
+journalctl --user -u klyrshift.service -n 20
 ```
 
 If the log mentions "Failed to set nice level" or "Operation not permitted",
@@ -260,7 +260,7 @@ If the unit is fine but still fails, the switch now shows the real reason in the
 toast; you can also start the daemon directly to see it:
 
 ```bash
-lingvix start --foreground
+klyrshift start --foreground
 ```
 
 A daemon that exits with "No keyboard devices found" (wrong permissions, a
@@ -268,7 +268,7 @@ container without `/dev/input`) is reported as a start failure, not as running.
 
 ## The app icon is missing
 
-Symptom: Lingvix runs, but its launcher in the app grid shows a blank or
+Symptom: Klyrshift runs, but its launcher in the app grid shows a blank or
 generic icon.
 
 Cause: the icon is an SVG. GNOME renders it through gdk-pixbuf, which needs the
@@ -287,7 +287,7 @@ in automatically.
 ## Conflict with IBus / Fcitx
 
 IBus and Fcitx also intercept and transform keyboard input. Running them next to
-Lingvix can lead to double conversion or missed corrections. If you do not use
+Klyrshift can lead to double conversion or missed corrections. If you do not use
 them for an input method, disable them; otherwise prefer a single layout source.
 
 ```bash
@@ -299,14 +299,14 @@ fcitx5-remote -e
 
 ## The layout does not switch on Wayland
 
-Lingvix uses `g3kb-switch` on GNOME Wayland. Install it and verify:
+Klyrshift uses `g3kb-switch` on GNOME Wayland. Install it and verify:
 
 ```bash
 g3kb-switch -p     # prints the current layout index
 g3kb-switch -s 1   # switches to the second layout
 ```
 
-If `g3kb-switch` is missing, Lingvix can still replace text but cannot change
+If `g3kb-switch` is missing, Klyrshift can still replace text but cannot change
 the active layout.
 
 ## A stray first letter remains after a correction (`рhello`)
@@ -319,7 +319,7 @@ Cause: the deletion and the new text raced. The compositor (Chromium and
 Electron applications in particular) processes Backspace asynchronously, so the
 replacement was typed before the leading Backspace had been applied.
 
-Lingvix avoids this in three ways, all on by default:
+Klyrshift avoids this in three ways, all on by default:
 
 - The daemon counts *physical keys*, not characters, so the number of
   Backspaces always equals the number of keys pressed.
@@ -350,12 +350,12 @@ Jargon, names and abbreviations often look like a wrong-layout word. Instead of
 disabling the daemon, teach it the word:
 
 ```bash
-lingvix dict add котопёс        # adds to ~/.local/share/lingvix/dictionary.txt
+klyrshift dict add котопёс        # adds to ~/.local/share/klyrshift/dictionary.txt
 ```
 
-or edit `~/.local/share/lingvix/dictionary.txt`, one word per line. A taught
-word is never rewritten, in any layout. `lingvix dict list` shows the current
-words and `lingvix dict remove <word>` deletes one. The GUI has a **Dictionary**
+or edit `~/.local/share/klyrshift/dictionary.txt`, one word per line. A taught
+word is never rewritten, in any layout. `klyrshift dict list` shows the current
+words and `klyrshift dict remove <word>` deletes one. The GUI has a **Dictionary**
 tab with add/remove, search and file import/export; its "Apply to daemon" button
 re-reads the dictionary without a restart. Reload with a hotkey or restart so the
 daemon picks the file up.
@@ -371,7 +371,7 @@ Alternatively:
 ## A brand or name is not corrected (`муксуд` stays `муксуд`)
 
 Symptom: you typed a brand, name or technical term on the wrong layout (for
-example `муксуд` intending `vercel`) and Lingvix did nothing, even though it
+example `муксуд` intending `vercel`) and Klyrshift did nothing, even though it
 corrects ordinary words.
 
 Cause: the bundled frequency corpora contain common words only. A brand such as
@@ -383,11 +383,11 @@ corrections).
 Fix: teach the word. A taught word makes the conversion a *known-good* result:
 
 ```bash
-lingvix dict add vercel     # then typing муксуд  ->  vercel 
+klyrshift dict add vercel     # then typing муксуд  ->  vercel 
 ```
 
 A taught word is also never rewritten itself, so adding the brand does not make
-Lingvix "correct" it away. The GUI **Dictionary** tab does the same without a
+Klyrshift "correct" it away. The GUI **Dictionary** tab does the same without a
 terminal, and its "Apply to daemon" button reloads the daemon in place.
 
 If you want to see why a word was skipped, run the daemon in the foreground with
@@ -407,10 +407,10 @@ left alone on purpose: a wrong one-character guess is worse than no guess.
 Fix: teach the exact target, then the hotkey resolves it regardless of length:
 
 ```bash
-lingvix dict add an     # then фт + double Shift -> an
+klyrshift dict add an     # then фт + double Shift -> an
 ```
 
-For a single character, teach the target too (`lingvix dict add f` makes
+For a single character, teach the target too (`klyrshift dict add f` makes
 `а` + double Shift produce `f`).
 
 ## A typo is not corrected (`langauge` stays `langauge`)
@@ -431,13 +431,13 @@ Even when enabled, it deliberately stays quiet unless the fix is unambiguous:
 - a word at least 6 characters long may use `typo_max_distance_long` edits
   (default 2), but only when the best candidate is clearly more frequent than the
   runner-up;
-- a word you taught (`lingvix dict add ...`) or a token with a separator
+- a word you taught (`klyrshift dict add ...`) or a token with a separator
   (`id-with-dash`, `a.b`, `x@y`) is never touched;
 - a word whose layout is wrong is handled by the layout switcher first; T9 only
   runs when the layout is already correct.
 
 If a specific typo is missed, either add the intended word to the dictionary
-(`lingvix dict add language`) or raise `typo_max_distance` (or
+(`klyrshift dict add language`) or raise `typo_max_distance` (or
 `typo_max_distance_long` for long words) to `2`. Raising it increases the chance
 of a wrong correction, so prefer the dictionary when you can.
 
@@ -457,11 +457,11 @@ typo_mode = "manual"   # off | manual | auto | hybrid
 
 A user who wants automatic *layout* switching but hotkey-only *typo* fixing sets
 `typo_mode = "manual"` and leaves `mode = "auto"`. The two modes no longer
-interfere. On the **Т9** tab of `lingvix gui` each feature has its own mode
+interfere. On the **Т9** tab of `klyrshift gui` each feature has its own mode
 combo.
 
 If T9 still rewrites a specific correct word, add it to the dictionary
-(`lingvix dict add загадка`) — a word known in any loaded language is never
+(`klyrshift dict add загадка`) — a word known in any loaded language is never
 touched, so this both silences the false positive and teaches the word.
 
 ## Correction does not trigger for a newer language (uk/de/fr)
@@ -486,13 +486,13 @@ extended top-50k list — it widens the vocabulary without changing the n-gram
 scoring, so nothing that already worked stops working:
 
 ```bash
-lingvix dict download ru      # ru, en, uk, de, fr
-lingvix dict download uk
+klyrshift dict download ru      # ru, en, uk, de, fr
+klyrshift dict download uk
 ```
 
-The file lands in `~/.local/share/lingvix/dictionaries/<lang>.txt`. Restart
+The file lands in `~/.local/share/klyrshift/dictionaries/<lang>.txt`. Restart
 the daemon (or press the reload-config hotkey) to load it. You can also import a
-list you already have: `lingvix dict import-file ~/Downloads/uk-50k.txt --lang uk`.
+list you already have: `klyrshift dict import-file ~/Downloads/uk-50k.txt --lang uk`.
 
 ## I type on purpose in two languages and the daemon fights me
 
@@ -528,7 +528,7 @@ manual fix still works. The GUI home tab shows a line explaining the pause.
 ## The "История" tab is empty
 
 The history is refreshed on demand: while the tab is visible the GUI asks the
-daemon (SIGUSR2) to write `~/.cache/lingvix/history.json` and then reads it.
+daemon (SIGUSR2) to write `~/.cache/klyrshift/history.json` and then reads it.
 The poll is paused while the tab is hidden, so a background window does not
 signal the daemon every few seconds. An empty tab means no fix has been made
 yet, or the daemon is not running (the last snapshot is shown otherwise). The
@@ -544,7 +544,7 @@ This is a race between the synthetic Backspace batch and the replacement text:
 the application must apply the deletion before the new characters arrive, and a
 layout correction must actually move to another layout.
 
-What Lingvix does about it:
+What Klyrshift does about it:
 
 - `backspace_settle_ms` (default 120 ms) is the pause between the Backspace
   batch and the retyped text; raise it if your application is slow.
@@ -555,7 +555,7 @@ What Lingvix does about it:
 
 To diagnose, run the daemon in the foreground with `log_level = "DEBUG"` and
 watch the `Fixing buffer ... reason=...` lines, then report what you see with
-`lingvix collect-logs`.
+`klyrshift collect-logs`.
 
 ## A letter is left behind (`рhello` instead of `hello`)
 
@@ -563,7 +563,7 @@ Symptom: after a correction the first (or last) character of the old word is
 still on screen — `руддщ` becomes `рhello` instead of `hello`, or a stray letter
 survives at the end of a fix.
 
-There are two distinct causes and Lingvix addresses both.
+There are two distinct causes and Klyrshift addresses both.
 
 **1. The deletion count and the injection raced.** The Backspace batch and the
 replacement text are written as two separate flushes: the Backspaces go out with
@@ -576,7 +576,7 @@ applies the deletion late, raise `backspace_settle_ms` (default 120 ms) in
 
 **2. The buffer mixed two scripts inside one word.** If you switch layout
 mid-word you produce a token like `ghbdtnпривет`. Converting that token as a
-unit would damage the half that is already correct (`ghйпривет`). Lingvix
+unit would damage the half that is already correct (`ghйпривет`). Klyrshift
 therefore refuses to rewrite a token that mixes Latin and Cyrillic; the space (or
 Enter) that ends the token flushes each half separately. If you see a
 half-converted token it means the two scripts were typed as one word — add the
@@ -598,7 +598,7 @@ Symptoms: the old text stays, or the correction eats characters it should not.
 - If you use `xdotool`, `--clearmodifiers` is already passed; a stuck modifier
   from the surrounding session can still interfere. Press and release both
   Shift keys once, then retry.
-- In `vim`/`nano`, the correction happens in normal mode. Lingvix only
+- In `vim`/`nano`, the correction happens in normal mode. Klyrshift only
   rewrites what it believes is an input buffer; in a full-screen editor that
   assumption may not hold. Use `min_word_length` to reduce false triggers, or
   add the surrounding words to `stop_words`.
@@ -615,13 +615,13 @@ The `uinput` backend needs write access to `/dev/uinput`. Check and fix:
 ```bash
 ls -l /dev/uinput
 sudo modprobe uinput                      # load the module if missing
-ls -l /etc/udev/rules.d/71-lingvix.rules # udev rule installed?
+ls -l /etc/udev/rules.d/71-klyrshift.rules # udev rule installed?
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
 The udev rule sets `GROUP="input", MODE="0660"`. Make sure you are in the
 `input` group and that you have logged out completely since being added. When
-`uinput` is unavailable, Lingvix falls back to `wtype` or `xdotool`; set
+`uinput` is unavailable, Klyrshift falls back to `wtype` or `xdotool`; set
 `backend = "auto"` to allow that.
 
 ## uinput created the device but no text appears
@@ -638,7 +638,7 @@ backend = "wtype"
 ## IBus / Fcitx conflict in detail
 
 IBus and Fcitx sit between the kernel and the application, so a keystroke can be
-consumed twice: once by Lingvix (reading `/dev/input`) and once by the input
+consumed twice: once by Klyrshift (reading `/dev/input`) and once by the input
 method. Symptoms: characters appear twice, the layout flips twice, or nothing is
 corrected.
 
@@ -658,7 +658,7 @@ fcitx5-remote -e          # Fcitx5
 ```
 
 For a permanent change, unset `GTK_IM_MODULE`/`QT_IM_MODULE` in your session
-environment. Do not run Lingvix and an input method that performs the same
+environment. Do not run Klyrshift and an input method that performs the same
 correction at the same time.
 
 ## Several keyboards: text typed on the "other" one is not corrected
@@ -666,14 +666,14 @@ correction at the same time.
 The daemon listens to every keyboard it can find, not just the first one. If a
 keyboard is present but its events never reach the daemon, check:
 
-- The device is not filtered out. Devices whose name contains `lingvix` or
+- The device is not filtered out. Devices whose name contains `klyrshift` or
   `uinput` are skipped on purpose to avoid a feedback loop; a keyboard with such
   a name is ignored.
 - You have read access to that device's `/dev/input/event*` node (see the
   permission section above). A keyboard that appears after login may need the
   session to be refreshed (`loginctl terminate-session $XDG_SESSION_ID`) for the
   `uaccess` ACL to apply.
-- Run `lingvix doctor` and check the "Устройства /dev/input/event*" row.
+- Run `klyrshift doctor` and check the "Устройства /dev/input/event*" row.
 
 ## The daemon stopped after unplugging a USB keyboard
 
@@ -684,18 +684,18 @@ unit has `Restart=always`, so the service is restarted with a fresh device list
 (the path is rediscovered, never cached). To confirm:
 
 ```bash
-systemctl --user status lingvix.service
-journalctl --user -u lingvix.service -n 50 --no-pager
+systemctl --user status klyrshift.service
+journalctl --user -u klyrshift.service -n 50 --no-pager
 ```
 
-## `lingvix stop` does not stop the daemon
+## `klyrshift stop` does not stop the daemon
 
 `stop` sends `SIGTERM` and waits up to 2 seconds. If the process is wedged (for
 example blocked in a subprocess), `stop` escalates to `SIGKILL` automatically
 and prints a warning. To skip the graceful attempt entirely:
 
 ```bash
-lingvix kill
+klyrshift kill
 ```
 
 ## Corrections trigger while typing a password
@@ -706,12 +706,12 @@ password field from a text field. Mitigations:
 - Keep the default `stop_words` (`password`, `login`, `token`, `secret`, ...).
 - Add the words that appear around your passwords to `stop_words`.
 - Raise `min_word_length` so short passwords are ignored.
-- Disable Lingvix while entering credentials: `lingvix stop` and
-  `lingvix start` afterwards.
+- Disable Klyrshift while entering credentials: `klyrshift stop` and
+  `klyrshift start` afterwards.
 
-## Privacy: what Lingvix does and does not store
+## Privacy: what Klyrshift does and does not store
 
-Lingvix never writes the text you type to disk. The log records only metadata
+Klyrshift never writes the text you type to disk. The log records only metadata
 (buffer length, layout names). The tests in `tests/test_privacy_audit.py`
 enforce this: they run a session with a distinctive secret string and then
 search the log, cache, state directory, config file, systemd journal and every
@@ -723,7 +723,7 @@ Two consequences worth knowing:
   corrected text, so it never appears in the notification history.
 - If a fix fails, the exception traceback is redacted of the buffer before it is
   logged.
-- The correction history (`~/.cache/lingvix/history.json`) stores only the word
+- The correction history (`~/.cache/klyrshift/history.json`) stores only the word
   length, the layouts, a timestamp and an `undone` flag — never the typed text.
 
 ## Collecting diagnostics
@@ -731,10 +731,10 @@ Two consequences worth knowing:
 The fastest way is one command that gathers everything:
 
 ```bash
-lingvix collect-logs
+klyrshift collect-logs
 ```
 
-It writes `~/lingvix-logs-YYYYMMDD-HHMMSS.tar.gz` containing the `doctor`
+It writes `~/klyrshift-logs-YYYYMMDD-HHMMSS.tar.gz` containing the `doctor`
 output, the configuration, the log tail, the user journal, environment details,
 device permissions and package versions. Attach it to the GitHub issue. The
 daemon logs only metadata, so the archive never contains the text you typed.
@@ -742,8 +742,8 @@ daemon logs only metadata, so the archive never contains the text you typed.
 Manual equivalent:
 
 ```bash
-lingvix status
-systemctl --user status lingvix.service
-journalctl --user -u lingvix.service -n 100 --no-pager
-tail -n 100 ~/.local/state/lingvix/lingvix.log
+klyrshift status
+systemctl --user status klyrshift.service
+journalctl --user -u klyrshift.service -n 100 --no-pager
+tail -n 100 ~/.local/state/klyrshift/klyrshift.log
 ```

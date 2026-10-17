@@ -21,10 +21,10 @@ import pytest
 
 evdev = pytest.importorskip("evdev")
 
-from lingvix.config import Config  # noqa: E402
-from lingvix.daemon import LingvixDaemon  # noqa: E402
-from lingvix.detector import LanguageDetector  # noqa: E402
-from lingvix.injector import TextInjector  # noqa: E402
+from klyrshift.config import Config  # noqa: E402
+from klyrshift.daemon import KlyrshiftDaemon  # noqa: E402
+from klyrshift.detector import LanguageDetector  # noqa: E402
+from klyrshift.injector import TextInjector  # noqa: E402
 
 EV_KEY = int(evdev.ecodes.EV_KEY)
 BACKSPACE = int(evdev.ecodes.KEY_BACKSPACE)
@@ -38,7 +38,7 @@ class RecordingUInput:
 
     instances: ClassVar[list[RecordingUInput]] = []
 
-    def __init__(self, capabilities: object, name: str = "lingvix") -> None:
+    def __init__(self, capabilities: object, name: str = "klyrshift") -> None:
         self.capabilities = capabilities
         self.name = name
         self.written: list[tuple[int, int, int]] = []
@@ -97,14 +97,14 @@ class FakeInjector:
         return "backend=fake"
 
 
-def _press(daemon: LingvixDaemon, key_names: list[str]) -> None:
+def _press(daemon: KlyrshiftDaemon, key_names: list[str]) -> None:
     for name in key_names:
         code = int(getattr(evdev.ecodes, name))
         daemon._handle_event(type("E", (), {"type": EV_KEY, "code": code, "value": 1})())
         daemon._handle_event(type("E", (), {"type": EV_KEY, "code": code, "value": 0})())
 
 
-def _make_daemon(**kwargs: object) -> LingvixDaemon:
+def _make_daemon(**kwargs: object) -> KlyrshiftDaemon:
     options: dict[str, object] = {
         "analysis_timeout": 0.8,
         "stop_words": [],
@@ -113,7 +113,7 @@ def _make_daemon(**kwargs: object) -> LingvixDaemon:
     options.update(kwargs)
     config = Config(**options)
     detector = LanguageDetector(converter=None, stop_words=[], min_word_length=3)
-    return LingvixDaemon(
+    return KlyrshiftDaemon(
         config,
         detector=detector,
         switcher=FakeSwitcher("ru"),
@@ -121,7 +121,7 @@ def _make_daemon(**kwargs: object) -> LingvixDaemon:
     )
 
 
-def _injector(daemon: LingvixDaemon) -> FakeInjector:
+def _injector(daemon: KlyrshiftDaemon) -> FakeInjector:
     injector = daemon.injector
     assert isinstance(injector, FakeInjector)
     return injector
@@ -142,10 +142,10 @@ def test_space_boundary_emits_six_backspaces_and_hello(
     RecordingUInput.instances.clear()
     monkeypatch.setattr(TextInjector, "_uinput_available", lambda self: True)
     monkeypatch.setattr(evdev, "UInput", RecordingUInput)
-    monkeypatch.setattr("lingvix.injector.time.sleep", lambda _seconds: None)
-    monkeypatch.setattr("lingvix.daemon.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("klyrshift.injector.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("klyrshift.daemon.time.sleep", lambda _seconds: None)
 
-    daemon = LingvixDaemon(
+    daemon = KlyrshiftDaemon(
         Config(analysis_timeout=0.8, stop_words=[], trigger_settle_ms=50),
         detector=LanguageDetector(converter=None, stop_words=[], min_word_length=3),
         switcher=FakeSwitcher("ru"),
@@ -175,7 +175,7 @@ def test_space_boundary_emits_six_backspaces_and_hello(
 def test_trigger_settle_waits_before_deleting(monkeypatch: pytest.MonkeyPatch) -> None:
     """A boundary flush sleeps ``trigger_settle_ms`` before the deletion."""
     sleeps: list[float] = []
-    monkeypatch.setattr("lingvix.daemon.time.sleep", sleeps.append)
+    monkeypatch.setattr("klyrshift.daemon.time.sleep", sleeps.append)
 
     daemon = _make_daemon(trigger_settle_ms=77)
     _press(daemon, RU_WORD_KEYS)
@@ -188,7 +188,7 @@ def test_trigger_settle_waits_before_deleting(monkeypatch: pytest.MonkeyPatch) -
 def test_idle_flush_does_not_wait_trigger_settle(monkeypatch: pytest.MonkeyPatch) -> None:
     """The idle fallback must not pay the boundary pause."""
     sleeps: list[float] = []
-    monkeypatch.setattr("lingvix.daemon.time.sleep", sleeps.append)
+    monkeypatch.setattr("klyrshift.daemon.time.sleep", sleeps.append)
 
     daemon = _make_daemon(trigger_settle_ms=77)
     daemon.buffer = "руддщ"
@@ -201,7 +201,7 @@ def test_idle_flush_does_not_wait_trigger_settle(monkeypatch: pytest.MonkeyPatch
 
 def test_zero_trigger_settle_does_not_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
     sleeps: list[float] = []
-    monkeypatch.setattr("lingvix.daemon.time.sleep", sleeps.append)
+    monkeypatch.setattr("klyrshift.daemon.time.sleep", sleeps.append)
 
     daemon = _make_daemon(trigger_settle_ms=0)
     _press(daemon, RU_WORD_KEYS)
@@ -226,7 +226,7 @@ def test_space_is_not_part_of_the_buffer() -> None:
 
 def test_enter_boundary_flushes_too(monkeypatch: pytest.MonkeyPatch) -> None:
     sleeps: list[float] = []
-    monkeypatch.setattr("lingvix.daemon.time.sleep", sleeps.append)
+    monkeypatch.setattr("klyrshift.daemon.time.sleep", sleeps.append)
 
     daemon = _make_daemon()
     _press(daemon, RU_WORD_KEYS)

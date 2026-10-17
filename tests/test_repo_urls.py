@@ -1,11 +1,10 @@
 """The repository URLs must not drift between the code, the package and the site.
 
-The GitHub repository is still named ``LinguaFix`` (the ``Lingvix`` rename is
-done in the source only), so every download URL has to be built from
-:data:`lingvix.repo.REPO_SLUG`. A stray literal is not cosmetic: a link to a
-non-existent repository returns 404, and ``dict install`` fails for every
-category that is not a published release asset. These tests fail on the next
-drift instead of at download time.
+The GitHub repository is named ``Klyrshift``, so every download URL has to be
+built from :data:`klyrshift.repo.REPO_SLUG`. A stray literal is not cosmetic: a
+link to a non-existent repository returns 404, and ``dict install`` fails for
+every category that is not a published release asset. These tests fail on the
+next drift instead of at download time.
 """
 
 from __future__ import annotations
@@ -15,10 +14,10 @@ from pathlib import Path
 
 import pytest
 
-from lingvix import repo
+from klyrshift import repo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SRC = REPO_ROOT / "src" / "lingvix"
+SRC = REPO_ROOT / "src" / "klyrshift"
 SITE_CONSTS = REPO_ROOT / "site" / "src" / "consts.ts"
 ASTRO_CONFIG = REPO_ROOT / "site" / "astro.config.mjs"
 SITE_LIB = REPO_ROOT / "site" / "src" / "lib" / "site.ts"
@@ -36,12 +35,12 @@ def test_repo_urls_are_built_from_the_slug() -> None:
 @pytest.mark.parametrize(
     "module, attribute",
     [
-        ("lingvix.dictionary", "_RELEASE_ASSET_BASE"),
-        ("lingvix.dictionary", "_BUNDLED_RAW_BASE"),
-        ("lingvix.thematic", "_RELEASE_ASSET_BASE"),
-        ("lingvix.thematic", "_BRANCH_MIRROR_BASE"),
-        ("lingvix.update_check", "RELEASES_URL"),
-        ("lingvix.update_check", "RELEASES_PAGE"),
+        ("klyrshift.dictionary", "_RELEASE_ASSET_BASE"),
+        ("klyrshift.dictionary", "_BUNDLED_RAW_BASE"),
+        ("klyrshift.thematic", "_RELEASE_ASSET_BASE"),
+        ("klyrshift.thematic", "_BRANCH_MIRROR_BASE"),
+        ("klyrshift.update_check", "RELEASES_URL"),
+        ("klyrshift.update_check", "RELEASES_PAGE"),
     ],
 )
 def test_download_urls_point_at_the_real_repository(module: str, attribute: str) -> None:
@@ -79,9 +78,8 @@ def test_site_install_snippet_uses_the_derived_repository_name() -> None:
     """``cd`` into the cloned directory must not hard-code the repository name.
 
     The snippet cloned from ``REPO`` (derived from the slug) but then ran
-    ``cd LinguaFix``. Today both spell the same name, so it works; the moment
-    the repository is renamed, the clone lands in the new directory and the
-    ``cd`` breaks every source install. Derive it from the same constant.
+    ``cd LinguaFix``. That broke the moment the repository was renamed, because
+    the clone lands in the new directory. Derive it from the same constant.
     """
     text = (REPO_ROOT / "site" / "src" / "components" / "Install.astro").read_text(encoding="utf-8")
     assert "cd ${REPO_NAME}" in text
@@ -118,13 +116,13 @@ def test_site_version_matches_the_package() -> None:
 
 
 def test_site_canonical_origins_are_hosts_that_resolve() -> None:
-    """The canonical origin must not point at a host that does not exist.
+    """The canonical origin must not point at a host that serves nothing.
 
-    ``lingvix.layero.app`` and ``lingvix.vercel.app`` are 404 because the DNS
-    entries were never renamed along with the source. The origin is written into
-    ``<link rel="canonical">``, ``og:url``, the ``hreflang`` alternates and the
-    sitemap, so a 404 origin makes search engines drop the page instead of
-    indexing the live one.
+    ``klyrshift.layero.app`` and ``klyrshift.vercel.app`` resolve in DNS but return
+    404: the deployments were never renamed along with the source. The origin is
+    written into ``<link rel="canonical">``, ``og:url``, the ``hreflang``
+    alternates and the sitemap, so a 404 origin makes search engines drop the page
+    instead of indexing the live one.
     """
     expected = {"https://linguafix.layero.app", "https://linguafix.vercel.app"}
     for path in (ASTRO_CONFIG, SITE_LIB):
@@ -132,8 +130,8 @@ def test_site_canonical_origins_are_hosts_that_resolve() -> None:
         assert origins == expected, f"{path.name}: {origins}"
 
 
-def test_no_document_links_the_renamed_but_nonexistent_hosts() -> None:
-    """No tracked document may link a ``lingvix.*`` host: those names do not resolve.
+def test_no_document_links_the_renamed_but_unserved_hosts() -> None:
+    """No tracked document may link a ``klyrshift.*`` host: those serve a 404.
 
     The templates were the first place this surfaced, but ``README.md`` carried
     the same dead origin in its status badges, its dictionary link and its
@@ -147,7 +145,9 @@ def test_no_document_links_the_renamed_but_nonexistent_hosts() -> None:
     targets += [ASTRO_CONFIG]
     offenders: list[str] = []
     for path in targets:
-        for match in re.findall(r"https://lingvix\.[a-z0-9.-]+", path.read_text(encoding="utf-8")):
+        for match in re.findall(
+            r"https://klyrshift\.[a-z0-9.-]+", path.read_text(encoding="utf-8")
+        ):
             offenders.append(f"{path.relative_to(REPO_ROOT)}: {match}")
     assert not offenders, "links to nonexistent hosts: " + ", ".join(offenders)
 

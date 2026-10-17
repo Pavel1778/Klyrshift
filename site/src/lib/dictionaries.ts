@@ -16,7 +16,7 @@ export const DICTIONARY_ASSET_BASE = `${REPO}/releases/latest/download`;
 // the release publishes a ``<pkg>-dict-<slug>.tar.gz`` archive for only a
 // subset of categories, so a release link 404s for the rest. The mirror file
 // (``dictionaries/<slug>/<lang>-<slug>-1k.txt``) exists for every category and
-// is the same file ``lingvix dict install`` fetches, so a card link always
+// is the same file ``klyrshift dict install`` fetches, so a card link always
 // works and always matches the CLI.
 export const DICTIONARY_MIRROR_BASE =
   `https://raw.githubusercontent.com/${REPO_SLUG}/main/dictionaries`;

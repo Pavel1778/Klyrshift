@@ -18,8 +18,8 @@ from typing import Any, ClassVar
 
 import pytest
 
-from lingvix.converter import LayoutConverter
-from lingvix.injector import TextInjector
+from klyrshift.converter import LayoutConverter
+from klyrshift.injector import TextInjector
 
 # Real evdev key codes (the values are stable kernel ABI constants).
 _ECODES = {
@@ -55,7 +55,7 @@ class _RecordingUInput:
 
     instances: ClassVar[list[Any]] = []
 
-    def __init__(self, events: object, name: str = "lingvix") -> None:
+    def __init__(self, events: object, name: str = "klyrshift") -> None:
         self.events_arg = events
         self.name = name
         self.written: list[tuple[int, int, int]] = []

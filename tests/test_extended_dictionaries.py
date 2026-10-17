@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from lingvix import cli, repo
-from lingvix.config import Config
-from lingvix.detector import LanguageDetector
-from lingvix.dictionary import (
+from klyrshift import cli, repo
+from klyrshift.config import Config
+from klyrshift.detector import LanguageDetector
+from klyrshift.dictionary import (
     BUNDLED_DICTIONARY_LANGUAGES,
     bundled_dictionary_source,
     default_extended_dictionary_dir,
@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 def test_default_dir_is_under_xdg_data(isolated_home: Path) -> None:
     directory = default_extended_dictionary_dir()
-    assert directory == isolated_home / "xdg_data_home" / "lingvix" / "dictionaries"
+    assert directory == isolated_home / "xdg_data_home" / "klyrshift" / "dictionaries"
 
 
 def test_path_and_load_round_trip(tmp_path: Path) -> None:
@@ -167,7 +167,7 @@ def test_config_normalises_extended_dir() -> None:
 
 
 def _run_cli(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> int:
-    monkeypatch.setattr("sys.argv", ["lingvix", *argv])
+    monkeypatch.setattr("sys.argv", ["klyrshift", *argv])
     return cli.main()
 
 

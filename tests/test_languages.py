@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from lingvix.converter import LayoutConverter
-from lingvix.detector import LanguageDetector
+from klyrshift.converter import LayoutConverter
+from klyrshift.detector import LanguageDetector
 
 
 def test_converter_knows_new_layouts() -> None:

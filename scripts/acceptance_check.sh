@@ -31,13 +31,13 @@ bad()  { printf '  FAIL  %s\n' "$1"; fail=$((fail + 1)); FAILED+=("$1"); }
 meh()  { printf '  warn  %s\n' "$1"; warn=$((warn + 1)); }
 head_() { printf '\n== %s ==\n' "$1"; }
 
-echo "Lingvix acceptance check -- $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "Klyrshift acceptance check -- $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 head_ "0. the package is installed and is the only one"
-if dpkg -s lingvix >/dev/null 2>&1; then
-    ok "lingvix $(dpkg-query -W -f='${Version}' lingvix) installed"
+if dpkg -s klyrshift >/dev/null 2>&1; then
+    ok "klyrshift $(dpkg-query -W -f='${Version}' klyrshift) installed"
 else
-    bad "lingvix is not installed"
+    bad "klyrshift is not installed"
 fi
 if dpkg -l linguafix 2>/dev/null | grep -q '^ii'; then
     bad "the pre-rename 'linguafix' package is STILL installed (two daemons can run)"
@@ -108,15 +108,15 @@ else
 fi
 
 head_ "4. the daemon runs"
-if systemctl --user is-active --quiet lingvix.service 2>/dev/null; then
-    ok "lingvix.service is active"
+if systemctl --user is-active --quiet klyrshift.service 2>/dev/null; then
+    ok "klyrshift.service is active"
 else
-    meh "lingvix.service is not active -- run: systemctl --user start lingvix"
+    meh "klyrshift.service is not active -- run: systemctl --user start klyrshift"
 fi
-if lingvix status >/dev/null 2>&1; then
-    ok "lingvix status responds"
+if klyrshift status >/dev/null 2>&1; then
+    ok "klyrshift status responds"
 else
-    bad "lingvix status failed"
+    bad "klyrshift status failed"
 fi
 
 head_ "5. autostart toggles and holds"
@@ -124,9 +124,9 @@ head_ "5. autostart toggles and holds"
 # (``daemon_control.autostart_enabled``). Mirror the launcher's PYTHONPATH to
 # call it exactly as the installed package does.
 probe_autostart() {
-    if [ -d /usr/lib/lingvix/lingvix ]; then
-        PYTHONPATH="/usr/lib/lingvix${PYTHONPATH:+:$PYTHONPATH}" python3 - <<'PY' 2>/dev/null
-from lingvix.daemon_control import autostart_enabled
+    if [ -d /usr/lib/klyrshift/klyrshift ]; then
+        PYTHONPATH="/usr/lib/klyrshift${PYTHONPATH:+:$PYTHONPATH}" python3 - <<'PY' 2>/dev/null
+from klyrshift.daemon_control import autostart_enabled
 print("on" if autostart_enabled() else "off")
 PY
     else
@@ -134,14 +134,14 @@ PY
     fi
 }
 before="$(probe_autostart)"
-if lingvix uninstall-autostart >/dev/null 2>&1; then
+if klyrshift uninstall-autostart >/dev/null 2>&1; then
     off="$(probe_autostart)"
     if [ "$off" = "off" ]; then
         ok "autostart turns off and reads back as off"
     else
         bad "autostart was disabled but reads back as '$off'"
     fi
-    if lingvix install-autostart >/dev/null 2>&1; then
+    if klyrshift install-autostart >/dev/null 2>&1; then
         on="$(probe_autostart)"
         if [ "$on" = "on" ]; then
             ok "autostart turns back on (was '$before')"
@@ -149,20 +149,20 @@ if lingvix uninstall-autostart >/dev/null 2>&1; then
             bad "autostart was enabled but reads back as '$on'"
         fi
     else
-        bad "lingvix install-autostart failed"
+        bad "klyrshift install-autostart failed"
     fi
 else
-    bad "lingvix uninstall-autostart failed"
+    bad "klyrshift uninstall-autostart failed"
 fi
 
 head_ "6. detection and the protective guards (deterministic, no keyboard)"
 # Drive the installed package's detector directly: this needs no seat, so it is
 # a real check and not a substitute for one. It pins the behaviour the manual
 # test below then confirms end to end.
-if [ -d /usr/lib/lingvix ]; then
-    det="$(PYTHONPATH="/usr/lib/lingvix" python3 - <<'PY' 2>/dev/null
-from lingvix.converter import LayoutConverter
-from lingvix.detector import LanguageDetector
+if [ -d /usr/lib/klyrshift ]; then
+    det="$(PYTHONPATH="/usr/lib/klyrshift" python3 - <<'PY' 2>/dev/null
+from klyrshift.converter import LayoutConverter
+from klyrshift.detector import LanguageDetector
 d = LanguageDetector(converter=LayoutConverter(), min_word_length=3)
 cases = [
     ("us", "ghbdtn", "ru"),          # typed Russian on the US layout
@@ -171,7 +171,7 @@ cases = [
     ("us", "hello", None),           # already correct
     ("us", "https://example.com/path", None),   # URL
     ("us", "user@example.com", None),           # e-mail
-    ("us", "src/lingvix/config.py", None),      # path
+    ("us", "src/klyrshift/config.py", None),      # path
     ("us", "v0.2.8.2", None),                   # version
     ("us", "well-known", None),                 # hyphenated id
 ]
@@ -191,19 +191,19 @@ PY
         bad "detector behaviour differs from the documented contract (see above)"
     fi
 else
-    bad "the installed package is not importable at /usr/lib/lingvix"
+    bad "the installed package is not importable at /usr/lib/klyrshift"
 fi
 
 head_ "7. modes are switchable"
 for m in auto hybrid manual; do
-    if lingvix mode "$m" >/dev/null 2>&1; then
-        back="$(lingvix status 2>/dev/null | grep -i 'Режим' | tail -1)"
+    if klyrshift mode "$m" >/dev/null 2>&1; then
+        back="$(klyrshift status 2>/dev/null | grep -i 'Режим' | tail -1)"
         case "$back" in *"$m"*) ok "mode $m set and read back";; *) bad "mode $m set but status shows '$back'";; esac
     else
-        bad "lingvix mode $m failed"
+        bad "klyrshift mode $m failed"
     fi
 done
-lingvix mode auto >/dev/null 2>&1
+klyrshift mode auto >/dev/null 2>&1
 
 head_ "8. a real correction (needs a human, in a real session)"
 printf '  MANUAL: in a text field type   ghbdtn   then press Space.\n'
@@ -223,24 +223,25 @@ printf '  MANUAL: in each mode, type  ghbdtn  and press Space:\n'
 printf '            auto    -> corrected without asking\n'
 printf '            hybrid  -> a borderline word waits for the hotkey; a certain one is corrected\n'
 printf '            manual  -> nothing happens until you press the hotkey\n'
-printf '          Switch with:  lingvix mode auto|hybrid|manual\n'
+printf '          Switch with:  klyrshift mode auto|hybrid|manual\n'
 printf '  MANUAL: add a word to the exceptions list, then type it: it must be left alone.\n'
-printf '          Edit  ~/.config/lingvix/config.toml  (exceptions_apps) or the GUI list.\n'
-printf '  MANUAL: type  https://example.com/a_b  and  /usr/lib/lingvix/x.py  and\n'
+printf '          Edit  ~/.config/klyrshift/config.toml  (exceptions_apps) or the GUI list.\n'
+printf '  MANUAL: type  https://example.com/a_b  and  /usr/lib/klyrshift/x.py  and\n'
 printf '          press Space: neither may be rewritten (the guards checked above).\n'
-printf '  MANUAL: check the log has no typed text:  grep -c привет ~/.local/state/lingvix/lingvix.log  ->  0\n'
+printf '  MANUAL: check the log has no typed text:  grep -c привет ~/.local/state/klyrshift/klyrshift.log  ->  0\n'
 printf '  MANUAL: only ONE daemon may run:\n'
-printf '            pgrep -af "lingvix start" | wc -l    ->  1\n'
+printf '            pgrep -af "klyrshift start" | wc -l    ->  1\n'
 
 head_ "9. upgrade from the pre-rename package (destructive; use a VM)"
 printf '  This is automated on clean images by scripts/deb_selfsufficiency_test.sh,\n'
 printf '  but confirm it on the target machine:\n'
 printf '    sudo apt install ./linguafix_0.2.8_all.deb\n'
-printf '    sudo apt install ./lingvix_<version>_all.deb\n'
-printf '    dpkg -l | grep -E "linguafix|lingvix"   # only "ii  lingvix" may remain\n'
-printf '    ls /etc/systemd/user/default.target.wants/  # only lingvix.service\n'
-printf '    pgrep -af lingvix | wc -l               # one daemon, not two\n'
-printf '  The config is NOT migrated (~/.config/linguafix -> ~/.config/lingvix);\n'
+printf '    sudo apt install ./klyrshift_<version>_all.deb\n'
+printf '    dpkg -l | grep -E "linguafix|lingvix|klyrshift"   # only "ii  klyrshift" may remain\n'
+printf '    ls /etc/systemd/user/default.target.wants/  # only klyrshift.service\n'
+printf '    pgrep -af klyrshift | wc -l               # one daemon, not two\n'
+printf '  The config IS migrated on first load (~/.config/lingvix or\n'
+printf '  ~/.config/linguafix -> ~/.config/klyrshift, copied, not moved);\n'
 printf '  see docs/INSTALL.md "Upgrading from the old linguafix package".\n'
 
 printf '\n----------------------------------------\n'

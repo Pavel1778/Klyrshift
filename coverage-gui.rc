@@ -1,12 +1,12 @@
 # Coverage configuration for the GUI test job.
 #
-# The default pyproject.toml config omits `src/lingvix/gui/*` because the
+# The default pyproject.toml config omits `src/klyrshift/gui/*` because the
 # core CI job installs no GTK. The dedicated GUI job (see .github/workflows/
 # ci.yml) runs under xvfb with PyGObject available, so it includes the GUI
 # package here to measure the real coverage of the whole source tree.
 [run]
 branch = True
-source = ["lingvix"]
+source = ["klyrshift"]
 
 [report]
 show_missing = True

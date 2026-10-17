@@ -3,8 +3,8 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lingvix"
-version = "0.2.8.2"
+name = "klyrshift"
+version = "0.2.8.3"
 description = "Automatic keyboard layout switcher for Debian GNOME (X11 and Wayland)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -44,13 +44,13 @@ dev = [
 ]
 
 [project.scripts]
-lingvix = "lingvix.cli:main"
+klyrshift = "klyrshift.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/Pavel1778/LinguaFix"
-Repository = "https://github.com/Pavel1778/LinguaFix"
-Issues = "https://github.com/Pavel1778/LinguaFix/issues"
-Changelog = "https://github.com/Pavel1778/LinguaFix/releases"
+Homepage = "https://github.com/Pavel1778/Klyrshift"
+Repository = "https://github.com/Pavel1778/Klyrshift"
+Issues = "https://github.com/Pavel1778/Klyrshift/issues"
+Changelog = "https://github.com/Pavel1778/Klyrshift/releases"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -60,8 +60,8 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-lingvix = ["data/*.json", "data/*.txt", "data/*.svg", "data/*.desktop"]
-"lingvix.gui" = ["*.css"]
+klyrshift = ["data/*.json", "data/*.txt", "data/*.svg", "data/*.desktop"]
+"klyrshift.gui" = ["*.css"]
 
 [tool.black]
 line-length = 100
@@ -98,7 +98,7 @@ combine-as-imports = true
 python_version = "3.10"
 strict = true
 warn_unused_ignores = false
-files = ["src/lingvix", "tests"]
+files = ["src/klyrshift", "tests"]
 exclude = ["build", "dist"]
 
 [[tool.mypy.overrides]]
@@ -108,7 +108,7 @@ ignore_missing_imports = true
 # PyGObject ships no type stubs, so every GTK class is ``Any`` and mypy flags
 # subclassing it. The GUI is typed normally everywhere else.
 [[tool.mypy.overrides]]
-module = ["lingvix.gui.*"]
+module = ["klyrshift.gui.*"]
 disable_error_code = ["misc"]
 
 [[tool.mypy.overrides]]
@@ -126,13 +126,13 @@ pythonpath = ["src"]
 
 [tool.coverage.run]
 branch = true
-source = ["lingvix"]
+source = ["klyrshift"]
 # The GTK4/libadwaita GUI is an optional extra (PyGObject). The core CI job
 # installs no GTK, so its tests skip and its modules would count as 0%, hiding
 # the real coverage of the core package. The dedicated `gui` CI job runs under
 # xvfb with PyGObject installed and includes the GUI via coverage-gui.rc, so
 # the GUI is still measured — just in its own job.
-omit = ["src/lingvix/gui/*"]
+omit = ["src/klyrshift/gui/*"]
 
 [tool.coverage.report]
 show_missing = true

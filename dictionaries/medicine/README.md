@@ -9,12 +9,12 @@
 
 ## Источник и лицензия
 
-Составлено вручную (manual curation) для проекта Lingvix, лицензия — MIT.
+Составлено вручную (manual curation) для проекта Klyrshift, лицензия — MIT.
 Слова — общеупотребительные медицинские термины; списки не содержат данных
 пациентов и не являются медицинской рекомендацией.
 
 ## Установка
 
 ```bash
-lingvix dict install medicine --lang ru
+klyrshift dict install medicine --lang ru
 ```

@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for the Lingvix test-suite."""
+"""Shared pytest fixtures for the Klyrshift test-suite."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from lingvix.converter import LayoutConverter
-from lingvix.detector import LanguageDetector
+from klyrshift.converter import LayoutConverter
+from klyrshift.detector import LanguageDetector
 
 # Minimal stop-word list used across tests.
 STOP_WORDS = ["password", "login", "token", "secret", "sudo"]
@@ -77,7 +77,7 @@ def detector(converter: LayoutConverter) -> LanguageDetector:
 @pytest.fixture
 def tmp_config_path(tmp_path: Path) -> Path:
     """Return a temporary path for a config file."""
-    return tmp_path / "lingvix" / "config.toml"
+    return tmp_path / "klyrshift" / "config.toml"
 
 
 @pytest.fixture

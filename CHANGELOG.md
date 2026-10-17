@@ -5,22 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.8.3] - 2026-10-17
 
-The project is renamed and two long-standing autostart defects are fixed.
+The project is renamed to its final name, the GitHub repository follows, and the
+release tree, the changelog and the published release are reconciled.
 
 ### Changed
 
-- **The project is renamed LinguaFix → Lingvix.** The name collided with the
-  Windows/Microsoft `LinguaFix` utility, which made the project hard to find and
-  impossible to publish under that name. The new name is used everywhere: the
-  Python package (`src/lingvix/`, import `lingvix`), the CLI (`lingvix`), the
-  systemd unit (`lingvix.service`), the udev rule (`71-lingvix.rules`), the
-  desktop/autostart entries, the config and data directories
-  (`~/.config/lingvix`, `~/.local/share/lingvix`, `~/.local/state/lingvix`) and
-  the landing page. This is a breaking rename: an existing install must be
-  reinstalled, and the old config directory is not migrated automatically.
-- `README.md`, `AGENTS.md`, `docs/*` and the site reflect the new name.
+- **The project is renamed Lingvix → Klyrshift.** `LinguaFix` collided with the
+  Windows/Microsoft utility of the same name, and the intermediate `Lingvix` was
+  never published; `Klyrshift` is the final name. It is used everywhere: the
+  Python package (`src/klyrshift/`, import `klyrshift`), the CLI (`klyrshift`),
+  the systemd unit (`klyrshift.service`), the udev rule (`71-klyrshift.rules`),
+  the desktop/autostart entries, the config, state and cache directories
+  (`~/.config/klyrshift`, `~/.local/share/klyrshift`, `~/.local/state/klyrshift`,
+  `~/.cache/klyrshift`), the Debian package (`klyrshift`), the release assets
+  (`klyrshift_<version>_all.deb`, `klyrshift-dict-<slug>.tar.gz`) and the landing
+  page. The GitHub repository is renamed `Pavel1778/LinguaFix` →
+  `Pavel1778/Klyrshift`; GitHub redirects the old slug, so existing clones keep
+  working.
+- **An upgrade from an older install keeps the user's settings.** The config
+  directory follows the application name, so a rename silently starts from
+  defaults. On first load the new package copies `config.toml` (and
+  `snippets.toml`) from `~/.config/lingvix` or `~/.config/linguafix` into
+  `~/.config/klyrshift` — once, only when the new directory has no config yet, and
+  by copying rather than moving, so the old file stays where it is and a current
+  config is never overwritten.
+- `README.md`, `AGENTS.md`, `docs/*` and the site reflect the new name. Historical
+  identifiers are kept only where they are load-bearing: the `Conflicts`/`Replaces`
+  fields, the legacy config names above, and the asset-name fallbacks.
 
 ### Fixed
 
@@ -32,20 +45,23 @@ The project is renamed and two long-standing autostart defects are fixed.
   canonical the deployment would never ship. `site.ts` now honours the
   override too, and a test fails if either side stops reading it.
 - **An upgrade from `linguafix` left two daemons installed.** dpkg treats a
-  package rename as two unrelated packages: installing the new `.deb` over
+  package rename as unrelated packages: installing the new `.deb` over
   `linguafix` left the old package installed, and *both* kept a systemd user
   unit enabled at login, so two daemons fought over the keyboard. The control
-  file now declares `Conflicts: linguafix` and `Replaces: linguafix`, so apt
-  removes the old package first. Verified in `debian:13`: before the change both
-  `linguafix` and `lingvix` stayed installed with both units enabled; after it,
-  only `lingvix` remains and only `lingvix.service` is enabled.
+  file now declares `Conflicts: linguafix, lingvix` and
+  `Replaces: linguafix, lingvix`, so apt removes the old package first. Both
+  earlier names are listed because the package was renamed twice and a locally
+  built `.deb` may carry the intermediate one. Verified in `debian:13`: before
+  the change both `linguafix` and `klyrshift` stayed installed with both units
+  enabled; after it, only `klyrshift` remains and only `klyrshift.service` is
+  enabled.
 - **A fresh Debian install had no layout-switching backend.** `g3kb-switch` (the
   Wayland backend) is not in the Debian repositories (no candidate on Debian 12
   or 13), and the X11 fallback `setxkbmap` (from `x11-xkb-utils`) was not in any
-  dependency list. A plain `apt install ./lingvix.deb` therefore reported
+  dependency list. A plain `apt install ./klyrshift.deb` therefore reported
   `backend=none` and could not switch the layout at all. `x11-xkb-utils` is now
   a `Recommends` in the `.deb` and part of `install.sh`'s apt list;
-  `lingvix doctor` reports `backend=setxkbmap` on a fresh Debian 13.
+  `klyrshift doctor` reports `backend=setxkbmap` on a fresh Debian 13.
 - **The source-install snippet would break at the next rename.** The landing
   page cloned from `${REPO}` (derived from `REPO_SLUG`) but then ran a
   hard-coded `cd LinguaFix`. Both spell the same name today, so it works; the
@@ -65,7 +81,7 @@ The project is renamed and two long-standing autostart defects are fixed.
   binaries and fails if the flag is ignored.
 - **Autostart could not be turned off.** `disable_autostart()` removed only the
   systemd user unit, but `install.sh` also writes an XDG entry
-  (`~/.config/autostart/lingvix.desktop`). That entry kept launching the daemon,
+  (`~/.config/autostart/klyrshift.desktop`). That entry kept launching the daemon,
   so the GUI switch snapped back on at the next refresh. Disabling now removes
   the XDG entry *and* masks the unit; enabling removes the mask.
 - **Autostart always read as off.** `systemd_enabled()` trusted
@@ -74,22 +90,24 @@ The project is renamed and two long-standing autostart defects are fixed.
   reloads. A working autostart therefore showed as off in the GUI. The probe now
   also checks the global wants symlink directly.
 - **The landing page told search engines to index a 404.** `astro.config.mjs`
-  and `src/lib/site.ts` declared the canonical origin as `lingvix.layero.app`
-  and `lingvix.vercel.app`, but only the `linguafix.*` hosts were ever
-  configured, so both `lingvix.*` names return 404. Astro writes that origin
+  and `src/lib/site.ts` declared the canonical origin as `klyrshift.layero.app`
+  and `klyrshift.vercel.app`, but only the `linguafix.*` hosts were ever
+  configured, so both `klyrshift.*` names return 404. Astro writes that origin
   into `<link rel="canonical">`, `og:url`, the `hreflang` alternates, the
   sitemap and `robots.txt`, so the live page advertised a dead address and the
   footer linked it. `README.md` carried the same dead origin in its three
   status badges, its dictionary link and its "where to find us" list, so the
   repository advertised 404s as well. All of them now name the hosts that
-  resolve, and `tests/test_repo_urls.py` fails if a `lingvix.*` host reappears
+  resolve, and `tests/test_repo_urls.py` fails if a `klyrshift.*` host reappears
   in the site source, the README or `docs/`.
 - **`dict install` never used the release archive.** The live release predates
   the rename and attaches its thematic archives as
   `linguafix-dict-<slug>.tar.gz`, while the code requested
-  `lingvix-dict-<slug>.tar.gz`. Every install therefore 404'd on the first
+  `klyrshift-dict-<slug>.tar.gz`. Every install therefore 404'd on the first
   source and fell through to the branch mirror -- an extra round trip, and the
-  archive path never exercised. Both spellings are tried now, newest first.
+  archive path never exercised. All three spellings are tried now, newest first
+  (`klyrshift-`, then `lingvix-`, then `linguafix-`), so the command works against
+  the published release and against the next one.
 - **An unrecognised modifier in a hotkey silently became a bare key.** The
   matcher fires when the held modifier families equal the binding's, so
   `hotkey_fix_last_word = "CMD+Q"` dropped the unknown `CMD`, left an empty
@@ -701,8 +719,9 @@ Hotfix for three defects reported after the 0.2.8 live test.
 - The `uk`/`de`/`fr` corpora are opt-in and have not been calibrated against
   live input.
 
-[0.2.3]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.3
-[0.2.2]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.2
-[0.2.1]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.1
-[0.2.0]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.2.0
-[0.1.0]: https://github.com/Pavel1778/LinguaFix/releases/tag/v0.1.0
+[0.2.8.3]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.8.3
+[0.2.3]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.3
+[0.2.2]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.2
+[0.2.1]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.1
+[0.2.0]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.0
+[0.1.0]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.1.0

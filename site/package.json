@@ -1,9 +1,9 @@
 {
-  "name": "lingvix-site",
+  "name": "klyrshift-site",
   "version": "0.2.8.2",
   "private": true,
   "type": "module",
-  "description": "Landing page for Lingvix",
+  "description": "Landing page for Klyrshift",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

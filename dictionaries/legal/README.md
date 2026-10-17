@@ -9,12 +9,12 @@
 
 ## Источник и лицензия
 
-Составлено вручную (manual curation) для проекта Lingvix, лицензия — MIT.
+Составлено вручную (manual curation) для проекта Klyrshift, лицензия — MIT.
 Термины — общеупотребительные правовые понятия; списки не являются
 юридической консультацией.
 
 ## Установка
 
 ```bash
-lingvix dict install legal --lang ru
+klyrshift dict install legal --lang ru
 ```
