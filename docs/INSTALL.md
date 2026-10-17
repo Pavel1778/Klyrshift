@@ -40,7 +40,7 @@ reports a permission problem after a relogin, see
 > the session ends. Permanent membership of the `input` group would give every
 > member access to every keyboard, always.
 
-## GNOME version and g3kb-switch
+## GNOME version and layout switching
 
 On GNOME Wayland the active layout is changed through `g3kb-switch`, which
 talks to a GNOME Shell extension and is tied to the shell's D-Bus API. That API
@@ -49,9 +49,14 @@ has changed between GNOME releases, so the supported range is **GNOME 45+ (teste
 range. If `g3kb-switch` is missing or incompatible, Lingvix still replaces the
 text but cannot change the active layout.
 
-Check your version with:
+`g3kb-switch` is **not in the Debian repositories** (verified: no candidate in
+Debian 12 or 13), so it is only a `Recommends`, never a `Depends` — apt would
+otherwise refuse to install the package. The X11 backend `setxkbmap` ships in
+`x11-xkb-utils`, which *is* in Debian and *is* recommended, so a default Debian
+install keeps a working layout backend. Check what is available with:
 
 ```bash
+lingvix doctor     # reports the detected layout backend
 gnome-shell --version
 ```
 

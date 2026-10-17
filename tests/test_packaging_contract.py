@@ -128,6 +128,34 @@ def test_deb_carries_css_and_unit(tmp_path: Path) -> None:
 # --- release workflow -------------------------------------------------------
 
 
+def test_package_declares_the_rename_relationship() -> None:
+    """The renamed package must supersede ``linguafix``.
+
+    dpkg treats a rename as two unrelated packages: without a relationship,
+    ``apt install lingvix_*.deb`` on a machine that has ``linguafix`` leaves
+    both installed, and both keep a systemd user unit enabled at login, so two
+    daemons run at once. Verified in debian:13 -- with ``Conflicts``/``Replaces``
+    the old package is removed and only ``lingvix.service`` stays enabled.
+    """
+    script = BUILD_DEB.read_text(encoding="utf-8")
+    assert "Conflicts: linguafix" in script
+    assert "Replaces: linguafix" in script
+
+
+def test_package_recommends_a_layout_backend_that_exists_in_debian() -> None:
+    """A fresh Debian install must end up with a working layout backend.
+
+    ``g3kb-switch`` (the Wayland backend) is not in the Debian repositories --
+    ``apt-cache policy g3kb-switch`` has no candidate on Debian 12 or 13 -- so it
+    cannot be a ``Depends``. ``setxkbmap`` ships in ``x11-xkb-utils``, which is
+    in Debian. Verified in debian:13: without ``x11-xkb-utils`` a plain
+    ``apt install ./lingvix.deb`` reports ``backend=none``; with it,
+    ``backend=setxkbmap``.
+    """
+    script = BUILD_DEB.read_text(encoding="utf-8")
+    assert "x11-xkb-utils" in script
+
+
 def test_release_workflow_only_fires_on_release_tags() -> None:
     text = (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     # A stage tag such as ``v0.2.0-stage2`` must never publish a release, or it

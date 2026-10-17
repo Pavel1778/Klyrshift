@@ -90,7 +90,8 @@ Caramba Switcher for Windows.
 - X11 или Wayland
 - Python 3.10+
 - Пакеты: `python3-evdev`, `wtype` (Wayland) или `xdotool` (X11)
-- Для переключения раскладки в Wayland: `g3kb-switch`
+- Для переключения раскладки: `x11-xkb-utils` (X11, даёт `setxkbmap`; есть в
+  Debian) или `g3kb-switch` (Wayland; **в репозиториях Debian отсутствует**)
 - Для GUI (вкладка настроек): `python3-gi`, `gir1.2-gtk-4.0`, `gir1.2-adw-1`
 - Для трея (опционально): `python3-gi`, `gir1.2-appindicator3-0.1`
 

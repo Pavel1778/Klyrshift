@@ -24,6 +24,21 @@ The project is renamed and two long-standing autostart defects are fixed.
 
 ### Fixed
 
+- **An upgrade from `linguafix` left two daemons installed.** dpkg treats a
+  package rename as two unrelated packages: installing the new `.deb` over
+  `linguafix` left the old package installed, and *both* kept a systemd user
+  unit enabled at login, so two daemons fought over the keyboard. The control
+  file now declares `Conflicts: linguafix` and `Replaces: linguafix`, so apt
+  removes the old package first. Verified in `debian:13`: before the change both
+  `linguafix` and `lingvix` stayed installed with both units enabled; after it,
+  only `lingvix` remains and only `lingvix.service` is enabled.
+- **A fresh Debian install had no layout-switching backend.** `g3kb-switch` (the
+  Wayland backend) is not in the Debian repositories (no candidate on Debian 12
+  or 13), and the X11 fallback `setxkbmap` (from `x11-xkb-utils`) was not in any
+  dependency list. A plain `apt install ./lingvix.deb` therefore reported
+  `backend=none` and could not switch the layout at all. `x11-xkb-utils` is now
+  a `Recommends` in the `.deb` and part of `install.sh`'s apt list;
+  `lingvix doctor` reports `backend=setxkbmap` on a fresh Debian 13.
 - **The source-install snippet would break at the next rename.** The landing
   page cloned from `${REPO}` (derived from `REPO_SLUG`) but then ran a
   hard-coded `cd LinguaFix`. Both spell the same name today, so it works; the

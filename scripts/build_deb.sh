@@ -75,6 +75,13 @@ install -m 0644 "${REPO_DIR}/data/71-${PKG}.rules" \
     "${BUILD_DIR}/usr/lib/udev/rules.d/71-${PKG}.rules"
 
 # --- DEBIAN/control ---------------------------------------------------------
+# The package was renamed ``linguafix`` -> ``lingvix``, which dpkg sees as two
+# unrelated packages: without a relationship, installing the new .deb leaves the
+# old one installed, and *both* keep a systemd user unit enabled at login, so
+# two daemons fight over the keyboard. ``Conflicts`` makes apt remove the old
+# package first; ``Replaces`` is the counterpart Debian Policy asks for when one
+# package supersedes another. The installed-file paths do not overlap, so the
+# removal is a plain uninstall, not a file takeover.
 INSTALLED_SIZE="$(du -sk "${BUILD_DIR}" | cut -f1)"
 cat > "${BUILD_DIR}/DEBIAN/control" <<EOF
 Package: ${PKG}
@@ -83,7 +90,9 @@ Section: utils
 Priority: optional
 Architecture: ${ARCH}
 Depends: python3 (>= 3.10), python3-tomli | python3 (>= 3.11), python3-tomli-w, python3-evdev, libnotify-bin, wtype, librsvg2-common, hicolor-icon-theme
-Recommends: g3kb-switch, xdotool, python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1, gir1.2-appindicator3-0.1, python3-pyatspi, gir1.2-atspi-2.0, wl-clipboard, xclip
+Recommends: g3kb-switch, xdotool, x11-xkb-utils, python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1, gir1.2-appindicator3-0.1, python3-pyatspi, gir1.2-atspi-2.0, wl-clipboard, xclip
+Conflicts: linguafix
+Replaces: linguafix
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Pavel1778 <noreply@github.com>
 Homepage: https://github.com/Pavel1778/LinguaFix
