@@ -50,6 +50,7 @@ _THEMATIC_ROOT = REPO_DIR / "dictionaries"
 
 _VERSION_RE = re.compile(r'^version = "([^"]+)"', re.MULTILINE)
 _CONSTS_VERSION_RE = re.compile(r'export const VERSION = "([^"]+)";')
+_SITE_PKG_VERSION_RE = re.compile(r'^\s*"version": "([^"]+)"', re.MULTILINE)
 _PYPROJECT_NAME_RE = re.compile(r'^name = "([^"]+)"', re.MULTILINE)
 _DEB_PKG_RE = re.compile(r'^PKG="([^"]+)"', re.MULTILINE)
 
@@ -66,6 +67,7 @@ class SourceFacts:
     frequency_assets: tuple[str, ...]
     dict_archives: tuple[str, ...]
     site_version: str
+    site_package_version: str
     jsonld_version: str
     jsonld_is_literal: bool
 
@@ -106,6 +108,11 @@ def collect_source_facts(repo_dir: Path = REPO_DIR) -> SourceFacts:
     if site_version_match is None:
         raise SystemExit("site/src/consts.ts does not declare VERSION")
 
+    site_pkg = _read(repo_dir / "site" / "package.json")
+    site_pkg_match = _SITE_PKG_VERSION_RE.search(site_pkg)
+    if site_pkg_match is None:
+        raise SystemExit("site/package.json does not declare a version")
+
     base = _read(repo_dir / "site" / "src" / "layouts" / "Base.astro")
     literal_match = re.search(r'softwareVersion: "([^"]+)"', base)
     jsonld_is_literal = literal_match is not None
@@ -131,6 +138,7 @@ def collect_source_facts(repo_dir: Path = REPO_DIR) -> SourceFacts:
         frequency_assets=frequency,
         dict_archives=archives,
         site_version=site_version_match.group(1),
+        site_package_version=site_pkg_match.group(1),
         jsonld_version=jsonld_version,
         jsonld_is_literal=jsonld_is_literal,
     )
@@ -145,6 +153,10 @@ def check_source_consistency(facts: SourceFacts) -> list[str]:
     if facts.site_version != facts.version:
         problems.append(
             f"site/src/consts.ts VERSION={facts.site_version!r} != pyproject {facts.version!r}"
+        )
+    if facts.site_package_version != facts.version:
+        problems.append(
+            f"site/package.json version={facts.site_package_version!r} != pyproject {facts.version!r}"
         )
     if facts.jsonld_is_literal:
         problems.append(

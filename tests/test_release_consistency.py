@@ -65,6 +65,17 @@ def test_source_versions_agree(rc: object) -> None:
     assert rc.check_source_consistency(facts) == []
 
 
+def test_site_package_version_matches_the_tree(rc: object) -> None:
+    """The landing page's package.json must carry the release version too.
+
+    It lagged at ``0.2.8.2`` while ``consts.ts`` said ``0.2.8.3``: nothing read
+    it, so nothing failed, and the npm metadata described a build that no longer
+    existed.
+    """
+    facts = rc.collect_source_facts()
+    assert facts.site_package_version == facts.version
+
+
 def test_jsonld_version_is_not_a_literal(rc: object) -> None:
     """The JSON-LD version must be derived, not typed.
 
