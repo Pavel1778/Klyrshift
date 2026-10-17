@@ -40,6 +40,42 @@ reports a permission problem after a relogin, see
 > the session ends. Permanent membership of the `input` group would give every
 > member access to every keyboard, always.
 
+## Upgrading from the old `linguafix` package
+
+The project was renamed `LinguaFix` → `Lingvix`, and the Debian package with
+it (`linguafix` → `lingvix`). Install the new package the same way:
+
+```bash
+sudo apt install ./lingvix_0.2.8.2_all.deb
+```
+
+apt sees `Conflicts: linguafix` and `Replaces: linguafix` in the new package and
+removes the old one first, so the two do not coexist. Do not end up with both:
+each package ships a systemd user unit, and two enabled units means two daemons
+reading the keyboard at once.
+
+Verify that only the new package remains:
+
+```bash
+dpkg -l | grep -E 'linguafix|lingvix'          # only 'ii  lingvix' expected
+systemctl --user is-enabled lingvix.service    # -> enabled
+```
+
+The configuration directory is **not** migrated. The old package used
+`~/.config/linguafix` and the new one uses `~/.config/lingvix`; the new package
+starts from its defaults. If you had customised settings, copy them across
+before removing the old directory:
+
+```bash
+mkdir -p ~/.config/lingvix
+cp ~/.config/linguafix/config.toml ~/.config/lingvix/config.toml
+```
+
+A `dpkg -i` install (rather than `apt install ./…`) also removes the old
+package, but leaves an empty `linguafix` record in dpkg's database and reports
+`1 not upgraded`. That is cosmetic — no files, no unit and no daemon remain.
+Clear it with `sudo apt-get -f install`, or by `sudo dpkg --purge linguafix`.
+
 ## GNOME version and layout switching
 
 On GNOME Wayland the active layout is changed through `g3kb-switch`, which

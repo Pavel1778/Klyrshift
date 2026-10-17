@@ -92,8 +92,33 @@ The project is renamed and two long-standing autostart defects are fixed.
   slip past it. A lone modifier (`"CTRL"`) and a chord ending in one
   (`"CTRL+SHIFT"`) are rejected too, since neither has a key to fire on;
   `CTRL+CTRL` remains the valid legacy double tap.
+- **The rename relationship was documented nowhere.** A user upgrading from
+  `linguafix` had no instructions: `docs/INSTALL.md` now has an "Upgrading from
+  the old `linguafix` package" section. It also records what a raw `dpkg -i`
+  does differently from `apt install ./…`: the old package is removed, but
+  dpkg keeps an empty `linguafix` record in its database (state `ic`) and
+  reports `1 not upgraded`. That is cosmetic — verified on Debian 12 and 13
+  that no file, unit or daemon survives — and `apt-get -f install` clears
+  it. `Breaks:` was measured against `Conflicts:` and rejected: `Breaks` leaves
+  the old unit on disk and still enabled, so both daemons would run.
 
 ### Added
+
+- **`scripts/acceptance_check.sh` now checks detection and the modes without a
+  keyboard.** It drives the *installed* package's detector directly and pins
+  nine cases: a word typed in the wrong layout converts in both directions, an
+  already-correct word is left alone, and a URL, an e-mail, a file path, a
+  version string and a hyphenated identifier are protected. It then sets each
+  mode (`auto`, `hybrid`, `manual`) through the CLI and reads it back. These are
+  real checks, not substitutes for the manual session steps, which now also
+  cover both session types (Wayland and X11), the per-mode behaviour, the
+  exceptions list, and that exactly one daemon runs.
+- **The mojibake guard missed double-encoded punctuation.** It only looked for
+  the byte signatures of double-encoded *Cyrillic*, so a file whose arrows or
+  em-dashes had been re-saved through a single-byte pipeline passed the test
+  while shipping garbage to the user. It now also round-trips each line back
+  through the codecs such a save uses and fails on any line that decodes
+  cleanly, with a unit test that pins the arrow and em-dash cases.
 
 - **Hybrid mode now differs from auto.** Previously `hybrid` behaved exactly
   like `auto`, so the mode existed in name only. The detector gained

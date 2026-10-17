@@ -155,7 +155,57 @@ else
     bad "lingvix uninstall-autostart failed"
 fi
 
-head_ "6. a real correction (needs a human)"
+head_ "6. detection and the protective guards (deterministic, no keyboard)"
+# Drive the installed package's detector directly: this needs no seat, so it is
+# a real check and not a substitute for one. It pins the behaviour the manual
+# test below then confirms end to end.
+if [ -d /usr/lib/lingvix ]; then
+    det="$(PYTHONPATH="/usr/lib/lingvix" python3 - <<'PY' 2>/dev/null
+from lingvix.converter import LayoutConverter
+from lingvix.detector import LanguageDetector
+d = LanguageDetector(converter=LayoutConverter(), min_word_length=3)
+cases = [
+    ("us", "ghbdtn", "ru"),          # typed Russian on the US layout
+    ("ru", "ghbdtn", "us"),          # and the reverse
+    ("ru", "\u043f\u0440\u0438\u0432\u0435\u0442", None),  # already correct
+    ("us", "hello", None),           # already correct
+    ("us", "https://example.com/path", None),   # URL
+    ("us", "user@example.com", None),           # e-mail
+    ("us", "src/lingvix/config.py", None),      # path
+    ("us", "v0.2.8.2", None),                   # version
+    ("us", "well-known", None),                 # hyphenated id
+]
+bad = 0
+for cur, text, want in cases:
+    got = d.target_layout(text, cur)
+    if got != want:
+        print(f"MISMATCH {cur} {text!r}: got {got!r}, want {want!r}")
+        bad += 1
+print(f"detector: {len(cases) - bad}/{len(cases)} cases as expected")
+PY
+)"
+    printf '%s\n' "$det" | sed 's/^/  /'
+    if echo "$det" | grep -q "^detector: 9/9"; then
+        ok "detector converts real words and protects URLs, paths, versions and ids"
+    else
+        bad "detector behaviour differs from the documented contract (see above)"
+    fi
+else
+    bad "the installed package is not importable at /usr/lib/lingvix"
+fi
+
+head_ "7. modes are switchable"
+for m in auto hybrid manual; do
+    if lingvix mode "$m" >/dev/null 2>&1; then
+        back="$(lingvix status 2>/dev/null | grep -i 'Режим' | tail -1)"
+        case "$back" in *"$m"*) ok "mode $m set and read back";; *) bad "mode $m set but status shows '$back'";; esac
+    else
+        bad "lingvix mode $m failed"
+    fi
+done
+lingvix mode auto >/dev/null 2>&1
+
+head_ "8. a real correction (needs a human, in a real session)"
 printf '  MANUAL: in a text field type   ghbdtn   then press Space.\n'
 printf '          Expect the text to become   привет   (and the layout to switch\n'
 printf '          to ru if g3kb-switch is installed). Then type  привет  and press\n'
@@ -163,14 +213,35 @@ printf '          Space: it must stay  привет  (no false positive).\n'
 printf '  MANUAL: press the fix hotkey (SHIFT+SHIFT) on  ghbdtn  with no Space:\n'
 printf '          it must be corrected too.\n'
 printf '  MANUAL: press SHIFT+BACKSPACE: the last fix must be undone.\n'
+printf '  MANUAL: repeat the three lines above in the other session type:\n'
+printf '            Wayland:  log out, choose "GNOME on Wayland" at the login screen\n'
+printf '            X11:      choose "GNOME on Xorg"\n'
+printf '          Both must correct the text. On Wayland the layout changes only\n'
+printf '          with g3kb-switch; with setxkbmap the text changes and the layout\n'
+printf '          does not.\n'
+printf '  MANUAL: in each mode, type  ghbdtn  and press Space:\n'
+printf '            auto    -> corrected without asking\n'
+printf '            hybrid  -> a borderline word waits for the hotkey; a certain one is corrected\n'
+printf '            manual  -> nothing happens until you press the hotkey\n'
+printf '          Switch with:  lingvix mode auto|hybrid|manual\n'
+printf '  MANUAL: add a word to the exceptions list, then type it: it must be left alone.\n'
+printf '          Edit  ~/.config/lingvix/config.toml  (exceptions_apps) or the GUI list.\n'
+printf '  MANUAL: type  https://example.com/a_b  and  /usr/lib/lingvix/x.py  and\n'
+printf '          press Space: neither may be rewritten (the guards checked above).\n'
 printf '  MANUAL: check the log has no typed text:  grep -c привет ~/.local/state/lingvix/lingvix.log  ->  0\n'
+printf '  MANUAL: only ONE daemon may run:\n'
+printf '            pgrep -af "lingvix start" | wc -l    ->  1\n'
 
-head_ "7. upgrade from the pre-rename package (only if you have the old .deb)"
-printf '  MANUAL (destructive; use a VM):\n'
+head_ "9. upgrade from the pre-rename package (destructive; use a VM)"
+printf '  This is automated on clean images by scripts/deb_selfsufficiency_test.sh,\n'
+printf '  but confirm it on the target machine:\n'
 printf '    sudo apt install ./linguafix_0.2.8_all.deb\n'
 printf '    sudo apt install ./lingvix_<version>_all.deb\n'
-printf '    dpkg -l | grep -E "linguafix|lingvix"   # only lingvix may remain (ii)\n'
+printf '    dpkg -l | grep -E "linguafix|lingvix"   # only "ii  lingvix" may remain\n'
 printf '    ls /etc/systemd/user/default.target.wants/  # only lingvix.service\n'
+printf '    pgrep -af lingvix | wc -l               # one daemon, not two\n'
+printf '  The config is NOT migrated (~/.config/linguafix -> ~/.config/lingvix);\n'
+printf '  see docs/INSTALL.md "Upgrading from the old linguafix package".\n'
 
 printf '\n----------------------------------------\n'
 printf 'ok=%d  warn=%d  fail=%d\n' "$pass" "$warn" "$fail"
