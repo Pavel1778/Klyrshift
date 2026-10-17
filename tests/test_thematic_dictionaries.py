@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from lingvix import cli
+from lingvix import __version__, cli
 from lingvix.config import Config
 from lingvix.detector import LanguageDetector
 from lingvix.thematic import (
@@ -322,7 +322,7 @@ def test_thematic_lists_are_not_bundled_in_the_deb() -> None:
 
 def test_base_lists_are_in_the_built_deb() -> None:
     """When a .deb exists, every base list must be inside it."""
-    deb = REPO_ROOT / "dist" / "lingvix_0.2.8_all.deb"
+    deb = REPO_ROOT / "dist" / f"lingvix_{__version__}_all.deb"
     if not deb.is_file():
         pytest.skip("no built .deb to inspect")
     listing = subprocess.run(

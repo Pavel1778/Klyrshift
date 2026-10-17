@@ -64,9 +64,24 @@ python scripts/build_demo_model.py
 
 ### Layero (зеркало для РФ)
 
-Проект Layero **подключён к репозиторию**: платформа сама собирает и публикует
-сайт на каждом push в `main`. Репозиторий самодостаточен для сборки — на это
-работает файл **`site/layero.json`**:
+Живой сайт — <https://linguafix.layero.app> (nginx). Публикация **не**
+происходит автоматически на push: проверено 17.10.2026, зеркало отдавало сборку
+от 09.10.2026 (v0.2.8.1) спустя десятки коммитов в `main`. Чтобы обновить его,
+нужен вход в аккаунт Layero и ручная выкатка:
+
+```bash
+npx layero@latest login          # интерактивно, либо задайте LAYERO_TOKEN
+npx layero@latest deploy --root site
+```
+
+Проверить план сборки без выгрузки и без логина:
+
+```bash
+npx layero@latest deploy --dry-run
+```
+
+Репозиторий самодостаточен для сборки — на это работает файл
+**`site/layero.json`**:
 
 ```json
 {
@@ -74,18 +89,6 @@ python scripts/build_demo_model.py
   "buildCommand": "npm run build",
   "outputDirectory": "dist"
 }
-```
-
-Проверить план сборки без выгрузки (логин не нужен):
-
-```bash
-npx layero@latest deploy --dry-run
-```
-
-**Вручную** (не обязательно, только для локальной проверки):
-
-```bash
-npx layero@latest deploy --root site
 ```
 
 `layero.json` не обязателен, если Layero сам определяет Astro, но для явности
