@@ -24,6 +24,15 @@ The project is renamed and two long-standing autostart defects are fixed.
 
 ### Fixed
 
+- **The source installer had no way to opt out of autostart.** `install.sh`
+  always wrote the XDG autostart entry and always ran
+  `systemctl --user enable --now`, so a user who did not want the daemon
+  starting at every login had to install first and disable afterwards. It now
+  takes `--no-autostart`, which skips the entry, undoes a previous `enable`, and
+  still starts the daemon for the current session. Re-running with the flag also
+  removes an entry a previous install left behind, so the opt-out holds.
+  `tests/test_installer_autostart.py` runs the real script against stub system
+  binaries and fails if the flag is ignored.
 - **Autostart could not be turned off.** `disable_autostart()` removed only the
   systemd user unit, but `install.sh` also writes an XDG entry
   (`~/.config/autostart/lingvix.desktop`). That entry kept launching the daemon,

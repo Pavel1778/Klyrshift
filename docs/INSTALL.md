@@ -73,6 +73,18 @@ non-interactive run (useful in scripts):
 bash install.sh --yes
 ```
 
+To install without starting the daemon at login, pass `--no-autostart`. The
+daemon still runs for the current session; it is simply not enabled at login.
+Re-running the installer with this flag also removes an autostart entry a
+previous install wrote, so the opt-out always holds:
+
+```bash
+bash install.sh --no-autostart
+```
+
+Either way the autostart can be toggled later from the GUI switch, or with
+`lingvix install-autostart` / `lingvix uninstall-autostart`.
+
 ## What the installer does
 
 1. Checks that the host looks like Debian/Ubuntu (warns, but continues, if not).
@@ -89,10 +101,11 @@ bash install.sh --yes
 7. Loads the `uinput` module.
 8. Installs the systemd user service `~/.config/systemd/user/lingvix.service`.
 9. Installs the XDG autostart entry
-   `~/.config/autostart/lingvix.desktop`.
+   `~/.config/autostart/lingvix.desktop` (skipped with `--no-autostart`).
 10. Copies the icon to
     `~/.local/share/icons/hicolor/scalable/apps/lingvix.svg`.
-11. Enables and starts the service.
+11. Enables and starts the service (with `--no-autostart`, starts it without
+    enabling it at login).
 12. Sends a desktop notification.
 
 ## After installing (developer path)

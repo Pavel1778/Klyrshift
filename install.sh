@@ -19,11 +19,19 @@ UDEV_RULE="/etc/udev/rules.d/71-${APP_NAME}.rules"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 ASSUME_YES=0
+NO_AUTOSTART=0
 for arg in "$@"; do
     case "${arg}" in
         -y|--yes) ASSUME_YES=1 ;;
+        --no-autostart) NO_AUTOSTART=1 ;;
         -h|--help)
-            echo "Usage: bash install.sh [--yes]"
+            cat <<'USAGE'
+Usage: bash install.sh [--yes] [--no-autostart]
+
+  --yes           Non-interactive; answer yes to every prompt.
+  --no-autostart  Install without starting the daemon at login. The GUI switch
+                  and `lingvix install-autostart` can enable it later.
+USAGE
             exit 0
             ;;
     esac
@@ -202,12 +210,19 @@ fi
 # ---------------------------------------------------------------------------
 # 10. XDG autostart
 # ---------------------------------------------------------------------------
-mkdir -p "${AUTOSTART_DIR}"
-if [ -f "${REPO_DIR}/data/${APP_NAME}-autostart.desktop" ]; then
-    sed "s|@BIN@|${BIN}|g" "${REPO_DIR}/data/${APP_NAME}-autostart.desktop" \
-        > "${AUTOSTART_DIR}/${APP_NAME}.desktop"
-    chmod 0644 "${AUTOSTART_DIR}/${APP_NAME}.desktop"
-    log "Установлен автозапуск: ${AUTOSTART_DIR}/${APP_NAME}.desktop"
+if [ "${NO_AUTOSTART}" -eq 1 ]; then
+    # Honour the opt-out even when a previous install left the entry behind:
+    # installing again with --no-autostart must remove it, not keep it.
+    rm -f "${AUTOSTART_DIR}/${APP_NAME}.desktop"
+    log "Автозапуск не установлен (--no-autostart)"
+else
+    mkdir -p "${AUTOSTART_DIR}"
+    if [ -f "${REPO_DIR}/data/${APP_NAME}-autostart.desktop" ]; then
+        sed "s|@BIN@|${BIN}|g" "${REPO_DIR}/data/${APP_NAME}-autostart.desktop" \
+            > "${AUTOSTART_DIR}/${APP_NAME}.desktop"
+        chmod 0644 "${AUTOSTART_DIR}/${APP_NAME}.desktop"
+        log "Установлен автозапуск: ${AUTOSTART_DIR}/${APP_NAME}.desktop"
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -224,8 +239,17 @@ fi
 # ---------------------------------------------------------------------------
 if have systemctl; then
     systemctl --user daemon-reload || true
-    systemctl --user enable --now "${APP_NAME}.service" || \
-        warn "Не удалось включить сервис (возможно, нет активной user-сессии)."
+    if [ "${NO_AUTOSTART}" -eq 1 ]; then
+        # Do not enable: --no-autostart means no login start. The daemon is
+        # still started now so the install ends with a working session; a
+        # previous `enable` is undone so the opt-out actually holds.
+        systemctl --user disable "${APP_NAME}.service" >/dev/null 2>&1 || true
+        systemctl --user start "${APP_NAME}.service" || \
+            warn "Не удалось запустить сервис (возможно, нет активной user-сессии)."
+    else
+        systemctl --user enable --now "${APP_NAME}.service" || \
+            warn "Не удалось включить сервис (возможно, нет активной user-сессии)."
+    fi
 fi
 
 # ---------------------------------------------------------------------------
