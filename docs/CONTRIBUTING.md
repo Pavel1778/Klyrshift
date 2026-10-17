@@ -102,6 +102,9 @@ Two files exist in both `data/` and `src/lingvix/data/`: `lingvix.service`,
 this. `data/` is the source for `install.sh`; `src/lingvix/data/` is what the
 installed package ships.
 
+Cutting a release (the full checklist, including the real-keyboard test
+that CI cannot run) is in [RELEASING.md](RELEASING.md).
+
 ## Pull requests
 
 - Keep the change focused; describe the motivation in the PR body.

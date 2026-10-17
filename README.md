@@ -520,6 +520,7 @@ make build-deb                # собрать .deb в dist/
 
 Архитектура и принятые решения: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 Ручной план тестирования на реальной системе: [docs/TESTING.md](docs/TESTING.md).
+Чек-лист выпуска (проверки пакета, словарей и живой клавиатуры): [docs/RELEASING.md](docs/RELEASING.md).
 
 ## ⚠️ Известные ограничения / Known limitations
 

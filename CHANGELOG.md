@@ -120,6 +120,30 @@ The project is renamed and two long-standing autostart defects are fixed.
   real checks, not substitutes for the manual session steps, which now also
   cover both session types (Wayland and X11), the per-mode behaviour, the
   exceptions list, and that exactly one daemon runs.
+- **The JSON-LD version could drift from the page's own version.**
+  `Base.astro` wrote `softwareVersion: "0.2.8.2"` as a literal while
+  `consts.ts` held `VERSION`, so a bump updated the hero and left the structured
+  data behind — two versions on one page, invisible to every other test. The
+  layout now imports `VERSION`, and `scripts/release_consistency.py` fails if the
+  literal returns.
+- **`scripts/release_consistency.py`, a release-consistency check.**
+  `tests/test_version_consistency.py` compared the source files only with each
+  other, so it could not see that the site advertised `0.2.8.2` while the newest
+  *published* release was `v0.2.8`. The new script splits the two questions:
+  `--source` compares the tree with itself and with the asset names the build
+  scripts emit (offline, run by the unit suite), while `--tag` / `--latest`
+  compare it with the release that actually exists (network, run by the release
+  workflow). The workflow now gates the publish on the tag, the tree version and
+  the staged asset list agreeing, and checks the published download URLs
+  afterwards. `tests/test_release_consistency.py` pins both halves, exercising
+  the published-release drift with a recorded payload so the normal test run
+  never touches the network.
+- **`docs/RELEASING.md`.** The release steps were spread across
+  `CONTRIBUTING.md`, `TESTING.md` and the workflow. They are now one checklist:
+  the version sources, the Debian 12/13 package checks, the upgrade from the old
+  `linguafix` package, the asset list, the documentation and canonical checks,
+  the real-keyboard test CI cannot run, and the two blockers outside this
+  repository.
 - **The mojibake guard missed double-encoded punctuation.** It only looked for
   the byte signatures of double-encoded *Cyrillic*, so a file whose arrows or
   em-dashes had been re-saved through a single-byte pipeline passed the test
