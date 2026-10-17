@@ -143,12 +143,26 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   `disable --global`); `enable_autostart` removes the mask; `systemd_enabled`
   also probes the `/etc/systemd/user/*/lingvix.service` wants symlinks directly
   (`globally_enabled`). `tests/test_daemon_control.py` pins all four paths.
+  The source installer has its own switch: `install.sh --no-autostart` skips the
+  XDG entry, undoes a previous `enable`, and still starts the daemon for the
+  current session; re-running with it deletes an entry an earlier default
+  install wrote. `tests/test_installer_autostart.py` runs the real script with
+  stub system binaries on `PATH` and asserts the recorded `systemctl` argv.
 - `site/src/data/demo-model.json` is **generated** from the shipped
   `src/lingvix/data/ngrams_*.json` by `scripts/build_demo_model.py`; the landing
   page's demo (`site/src/components/Demo.astro`) ports the detector's
   plausibility test to TypeScript on top of it. Never hand-edit the JSON: rerun
   the script after a corpus rebuild. `tests/test_demo_model.py` fails when the
   committed model drifts from the corpora.
+- `site/public/og-image.png` (the 1200x630 link preview) is **generated** by
+  `scripts/make_og_image.py`, which inlines `site/public/logo.svg` and the
+  self-hosted Inter/JetBrains Mono woff2 that Astro emits, then screenshots the
+  card with headless `chromium`. It needs a prior `npm run build` in `site/`
+  (the fonts are gitignored build output) and raises `SiteNotBuilt` otherwise.
+  The old image was hand-made, so the `LinguaFix` -> `Lingvix` rename never
+  reached it and every link preview showed the dead name; `tests/test_og_image.py`
+  now pins the size, a non-blank render, and (via `tesseract`, skipped when
+  absent) that the card shows `Lingvix` and not `LinguaFix`.
 
 ## Editing files with non-ASCII text
 

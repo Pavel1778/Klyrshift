@@ -1,17 +1,26 @@
 # Скриншоты / Screenshots
 
-Файлы в этой папке — **плейсхолдеры** (SVG). Они держат места в README, пока
-нет реальных снимков, и не ломают CI.
+Это **реальные снимки** GUI, а не плейсхолдеры. Их делает
+`scripts/make_screenshots.py`: скрипт строит настоящее окно `LingvixWindow`,
+даёт GTK разложить виджеты и рендерит дерево в PNG через `Gtk.WidgetPaintable`
+и `Gsk.CairoRenderer`. То есть на картинках тот же интерфейс, который видит
+пользователь, отрисованный самим GTK.
 
-## Как заменить на реальные
+## Как пересобрать
 
-1. Запустите GUI: `lingvix gui`.
-2. Сделайте снимок нужного экрана (GNOME: `PrtSc` или `gnome-screenshot -w`).
-3. Обрежьте до ~900×600 и сохраните как `.png` рядом с соответствующим SVG.
-4. Замените ссылку в `README.md` (`docs/screenshots/*.svg` → `.png`).
+Нужны GTK4/libadwaita и дисплей (в headless-окружении — `xvfb-run`):
+
+```bash
+sudo apt-get install -y xvfb python3-gi gir1.2-gtk-4.0 gir1.2-adw-1
+PYTHONPATH=/usr/lib/python3/dist-packages xvfb-run -a \
+    python3 scripts/make_screenshots.py docs/screenshots
+```
+
+Скрипт перезаписывает три файла ниже и завершается с ошибкой, если какой-то
+экран не удалось отрисовать.
 
 | Файл | Экран |
 |---|---|
-| `main-window` | Главное окно: большая кнопка вкл/выкл, режим auto/manual/hybrid |
-| `advanced-settings` | Advanced: триггеры, T9, раскладка по приложениям, исключения |
-| `dictionary` | Словарь: добавление и удаление слов |
+| `main-window.png` | Главное окно: большая кнопка вкл/выкл, режим auto/manual/hybrid |
+| `advanced-settings.png` | Advanced: триггеры, T9, раскладка по приложениям, исключения |
+| `dictionary.png` | Словарь: добавление и удаление слов |

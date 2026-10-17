@@ -40,17 +40,17 @@ Caramba Switcher for Windows.
   Получаете:   привет   ← Lingvix исправил и переключил раскладку
 ```
 
-![demo placeholder](docs/demo-placeholder.svg)
+![demo: ghbdtn → привет](docs/demo-placeholder.svg)
 
 ## 📸 Скриншоты / Screenshots
 
 | Главное окно / Main window | Настройки / Advanced | Словарь / Dictionary |
 |---|---|---|
-| ![main window](docs/screenshots/main-window.svg) | ![advanced settings](docs/screenshots/advanced-settings.svg) | ![dictionary](docs/screenshots/dictionary.svg) |
+| ![main window](docs/screenshots/main-window.png) | ![advanced settings](docs/screenshots/advanced-settings.png) | ![dictionary](docs/screenshots/dictionary.png) |
 
-> Скриншоты — плейсхолдеры. Замените файлы в `docs/screenshots/` реальными
-> снимками (формат `.png`, тот же размер кадра), не меняя имена — README
-> подхватит их автоматически.
+> Снимки сделаны из настоящего GUI: `scripts/make_screenshots.py` строит
+> реальное окно `LingvixWindow` и рендерит его виджеты в PNG. Пересобрать:
+> `PYTHONPATH=/usr/lib/python3/dist-packages xvfb-run -a python3 scripts/make_screenshots.py`.
 
 ## ✨ Возможности / Features
 

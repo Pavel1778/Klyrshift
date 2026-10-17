@@ -27,7 +27,7 @@ site/
 ├── vercel.json           # конфиг для Vercel
 ├── layero.json           # конфиг для Layero
 ├── deploy.sh             # сборка + деплой
-├── public/               # favicon, logo, og-image, robots.txt, скриншоты
+├── public/               # favicon, logo, og-image, robots.txt
 └── src/
     ├── consts.ts         # URL-ы (repo, releases, .deb) и версия
     ├── data/             # demo-model.json — генерируется, не правится руками
@@ -103,7 +103,16 @@ npx layero@latest deploy --dry-run
 
 ## Что менять
 
-- **Скриншоты** — `public/screenshots/*.svg` это плейсхолдеры. Замените их
-  реальными снимками GUI (`.png`), сохранив имена, либо обновите пути в
-  `Hero.astro`.
-- **OG-изображение** — `public/og-image.png` (1200×630).
+- **Скриншоты** — в Hero стоит inline-мок `WindowMock.astro` (реальный SVG, не
+  картинка), а реальные снимки GUI лежат в корневом `docs/screenshots/`
+  (`main-window.png`, `advanced-settings.png`, `dictionary.png`). Пересобрать:
+  `python scripts/make_screenshots.py` (нужен дисплей, в CI — под `xvfb-run`).
+  Старые неиспользуемые `public/screenshots/*.svg` удалены.
+- **OG-изображение** — `public/og-image.png` (1200×630), соцпревью для ссылок.
+  Генерируется: `python scripts/make_og_image.py` (нужен собранный сайт для
+  шрифтов и `chromium`). Тест `tests/test_og_image.py` падает, если картинка
+  пустая, не того размера или показывает старое имя.
+- **Версия** — `src/consts.ts` (`VERSION`), должна совпадать с
+  `pyproject.toml`.
+- **Демо-модель** — `src/data/demo-model.json`, генерируется
+  `python scripts/build_demo_model.py` (см. «Живое демо»).
