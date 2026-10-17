@@ -69,6 +69,12 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   `test_release_consistency.py::test_jsonld_version_is_not_a_literal` fails if
   the literal returns.
 
+- **A version lives in five files, and the fifth had no reader.** `site/package.json`
+  sat at `0.2.8.2` while `consts.ts` said `0.2.8.3`: no test read it, so the drift
+  was silent and the npm metadata described a build that no longer existed. It is
+  now compared with `pyproject.toml` too (its lockfile carries the same string and
+  is bumped with it).
+
 - **The publish step checks the *staged* assets, not a comment.** The release
   workflow lists `dist/*.deb`, `dist/dictionaries/*-50k.txt` and
   `dist/dict-archives/*.tar.gz` into `/tmp/staged-assets.txt` and passes it to
