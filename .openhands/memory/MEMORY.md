@@ -82,7 +82,7 @@
 
 ## Environment quirks
 - `evdev` has no `__version__`. Target: Debian 13 trixie + GNOME 48 + Wayland (declared GNOME 45+).
-- No `/dev/uinput` or real keyboard in dev; tests monkeypatch `evdev.UInput` (recording fake) and `TextInjector._uinput_available`.
+- No `/dev/uinput` or real keyboard in dev; tests monkeypatch `evdev.UInput` (recording fake) and `TextInjector._uinput_available`. **The Docker daemon can be started here** (`sudo dockerd`), so the `.deb` is verifiable for real in `debian:12`/`debian:13` — but uinput is still unavailable (even `--privileged` cannot `mknod /dev/uinput`: "Operation not permitted"), so the kernel/input path remains fake-tested only.
 - Tray (AppIndicator3) absent in dev; not a blocker.
 
 ## Repo / process
@@ -90,6 +90,8 @@
 - **Layero does NOT reliably auto-deploy on a `main` push** (0.2.7 was still live after the 0.2.8 push). `npx layero deploy` needs auth (`auth_required` without `LAYERO_TOKEN`). Vercel (EN) auto-deploys. Check both after a release.
 - `release.yml` builds on a `v*.*.*` tag, runs smoke + zero-config on `debian:12`, and publishes a GitHub Release with the `.deb`, `*-50k.txt` and the thematic archives. **`main` holds the WHOLE project**: daemon + fix batches + landing page (`site/`) + logo/screenshots. `site/package-lock.json` is tracked; `site/.astro/`, `site/dist/`, `site/node_modules/` are gitignored.
 - **A version bump must touch the site too** or the deployed download link 404s: `site/src/consts.ts` (`VERSION`) and `site/src/layouts/Base.astro` (`softwareVersion`), plus `site/package.json`/`package-lock.json`. `tests/test_version_consistency.py` only checks `pyproject.toml`/`__init__.py`/CHANGELOG, so this is easy to miss. `scripts/build_deb.sh` reads the version from `pyproject.toml` itself.
+- **A package rename needs `Conflicts`/`Replaces` in `scripts/build_deb.sh`, or the upgrade installs two daemons.** dpkg treats `linguafix` and `lingvix` as unrelated packages, so installing the new `.deb` over the old one kept both, each with its own systemd user unit enabled at login. The control file now has `Conflicts: linguafix` + `Replaces: linguafix`. Verified in `debian:13`. `tests/test_packaging_contract.py` pins both fields.
+- **`g3kb-switch` is not in the Debian repos** (no apt candidate on 12 or 13), so it can only ever be a `Recommends`, never a `Depends`. The X11 backend `setxkbmap` lives in `x11-xkb-utils`, which *is* in Debian and is now recommended + in `install.sh`'s apt list; without it a plain `apt install ./lingvix.deb` reports `backend=none`. Verified in `debian:13`; pinned by `test_package_recommends_a_layout_backend_that_exists_in_debian`.
 - **Work on a short-lived branch, merge to `main`, then delete it.** v0.2.2 went through `feat/v0.2.2-fixes` (PR #16, merge `e0bf334`). Only `main` exists now.
 - **`scripts/*_test.sh` quoting trap**: the inner container script is the argument to `bash -c` wrapped in **single quotes**; any single quote inside closes it silently. Use double quotes for grep patterns inside. Both smoke and zero-config pass on `debian:12`.
 - PR #1 (draft) was merged `--no-ff` (merge `b3c903f`). Issues #2/#3/#4 closed; #5 kept OPEN, milestone v0.2.0. Use `create_pr` only when asked.
