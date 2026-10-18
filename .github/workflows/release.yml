@@ -92,7 +92,7 @@ jobs:
             --source --tag "${GITHUB_REF_NAME}" --assets-file /tmp/staged-assets.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/*.deb
