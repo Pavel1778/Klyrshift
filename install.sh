@@ -91,7 +91,7 @@ log "Использую интерпретатор: ${PYTHON} ($(${PYTHON} --ver
 # ---------------------------------------------------------------------------
 # 3. System dependencies
 # ---------------------------------------------------------------------------
-APT_PACKAGES="python3-venv python3-pip python3-evdev python3-gi gir1.2-appindicator3-0.1 wtype xdotool x11-xkb-utils libnotify-bin kmod"
+APT_PACKAGES="python3-venv python3-pip python3-evdev python3-gi python3-gi-cairo gir1.2-appindicator3-0.1 wtype xdotool x11-xkb-utils libnotify-bin kmod"
 if have apt-get; then
     if confirm "Установить системные зависимости через apt (нужен sudo)?"; then
         sudo apt-get update

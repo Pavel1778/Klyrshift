@@ -137,7 +137,7 @@ Either way the autostart can be toggled later from the GUI switch, or with
 1. Checks that the host looks like Debian/Ubuntu (warns, but continues, if not).
 2. Verifies Python 3.10+.
 3. Installs system packages with `apt`:
-   `python3-evdev python3-gi gir1.2-appindicator3-0.1 wtype
+   `python3-evdev python3-gi python3-gi-cairo gir1.2-appindicator3-0.1 wtype
    xdotool libnotify-bin`.
 4. Optionally helps you install `g3kb-switch` for GNOME Wayland layout
    switching.

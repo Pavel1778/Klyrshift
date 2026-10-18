@@ -778,9 +778,10 @@ def test_about_window_builds() -> None:
 
 
 def test_gui_module_availability() -> None:
-    from klyrshift.gui import gtk_available
+    from klyrshift.gui import cairo_available, gtk_available
 
     assert gtk_available() is True
+    assert cairo_available() is True
 
 
 def test_gui_main_runs_and_quits(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -792,6 +793,23 @@ def test_gui_main_runs_and_quits(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(app_module, "KlyrshiftApplication", _App)
     assert main([]) == 0
+
+
+def test_gui_main_refuses_to_start_without_cairo(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A missing Cairo override must name the fix instead of opening a blank window.
+
+    Without ``_gi_cairo`` the window opens but every ``set_draw_func`` callback
+    raises, so the tour never dims and the toggle shows no glyph; the user gets no
+    hint at all. ``main`` must stop with the exact ``apt`` command.
+    """
+    from klyrshift import gui as gui_module
+
+    monkeypatch.setattr(gui_module, "gtk_available", lambda: True)
+    monkeypatch.setattr(gui_module, "cairo_available", lambda: False)
+    assert gui_module.main([]) == 1
+    assert "python3-gi-cairo" in capsys.readouterr().out
 
 
 # --- history page -----------------------------------------------------------
@@ -902,6 +920,33 @@ def test_home_page_quiet_hours_indicator(gui_state: Any, monkeypatch: pytest.Mon
     page._apply_status(page._collect_status())
     assert page._pause.get_visible() is True
     assert "тихие часы" in page._pause.get_label()
+
+
+def test_home_page_pause_indicator_only_for_excepted_app(
+    gui_state: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The banner names an app only when that app is on the never-touch list.
+
+    A focused app that is *not* excepted still gets corrected by the daemon, so
+    reporting it as "paused" would be a false alarm the user cannot act on.
+    """
+    from klyrshift.gui.home_page import HomePage
+
+    class _Toasts:
+        def add_toast(self, _t: object) -> None:
+            pass
+
+    monkeypatch.setattr(gui_state, "in_quiet_hours", lambda: False)
+    monkeypatch.setattr(app_focus, "get_active_app", lambda: "some-editor")
+    page = HomePage(gui_state, _Toasts())
+    page._apply_status(page._collect_status())
+    assert page._pause.get_visible() is False
+    assert page._pause.get_label() == ""
+
+    monkeypatch.setattr(gui_state, "is_app_excepted", lambda app: app == "some-editor")
+    page._apply_status(page._collect_status())
+    assert page._pause.get_visible() is True
+    assert "some-editor" in page._pause.get_label()
 
 
 def test_gui_state_in_quiet_hours() -> None:

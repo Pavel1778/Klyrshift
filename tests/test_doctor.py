@@ -57,6 +57,7 @@ def test_check_gnome_version_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_check_gui_libraries_present(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("klyrshift.gui.gtk_available", lambda: True)
+    monkeypatch.setattr("klyrshift.gui.cairo_available", lambda: True)
     assert doctor.check_gui_libraries().status == doctor.OK
 
 
@@ -67,6 +68,19 @@ def test_check_gui_libraries_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     # The hint must name the exact packages, so a user who downloaded the .deb
     # knows what to install instead of guessing.
     assert "gir1.2-adw-1" in (result.hint or "")
+
+
+def test_check_gui_libraries_missing_cairo(monkeypatch: pytest.MonkeyPatch) -> None:
+    """GTK present but the Cairo override absent: name ``python3-gi-cairo``.
+
+    ``python3-gi`` alone lets the window open, so a user would otherwise only
+    notice that the tour never dims and the toggle shows no glyph.
+    """
+    monkeypatch.setattr("klyrshift.gui.gtk_available", lambda: True)
+    monkeypatch.setattr("klyrshift.gui.cairo_available", lambda: False)
+    result = doctor.check_gui_libraries()
+    assert result.status == doctor.WARN
+    assert result.hint == "sudo apt install python3-gi-cairo"
 
 
 def test_check_device_access_uaccess(monkeypatch: pytest.MonkeyPatch) -> None:

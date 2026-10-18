@@ -94,10 +94,10 @@ Caramba Switcher for Windows.
 - Пакеты: `python3-evdev`, `wtype` (Wayland) или `xdotool` (X11)
 - Для переключения раскладки: `x11-xkb-utils` (X11, даёт `setxkbmap`; есть в
   Debian) или `g3kb-switch` (Wayland; **в репозиториях Debian отсутствует**)
-- Для GUI (вкладка настроек): `python3-gi`, `gir1.2-gtk-4.0`, `gir1.2-adw-1`
+- Для GUI (вкладка настроек): `python3-gi`, `python3-gi-cairo`, `gir1.2-gtk-4.0`, `gir1.2-adw-1`
 - Для трея (опционально): `python3-gi`, `gir1.2-appindicator3-0.1`
 
-> GUI-стек (`python3-gi gir1.2-gtk-4.0 gir1.2-adw-1`) в `.deb` объявлен как
+> GUI-стек (`python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1`) в `.deb` объявлен как
 > `Recommends`, а не `Depends`: на сервере без графики он не нужен. `apt`
 > ставит `Recommends` по умолчанию, поэтому обычная установка даёт рабочий
 > GUI; если вы ставили с `--no-install-recommends`, доставьте их вручную.
@@ -474,6 +474,7 @@ Wine); свои приложения можно добавить в GUI (вкл�
 | Кнопка «включить» показывает битый значок | Обновите тему иконок или переустановите пакет: Klyrshift рисует символ питания сам, если темы нет |
 | Не работает в терминале | Попробуйте `backend = "uinput"` |
 | `klyrshift gui` пишет «нужны GTK4 и libadwaita» | `sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1` (в `.deb` это `Recommends`; `doctor` покажет точную команду) |
+| В туре не затемняется фон, кнопка включения без значка | `sudo apt install python3-gi-cairo` (без него `set_draw_func` не может получить `cairo.Context`) |
 | Нет иконки в трее | Установите `python3-gi gir1.2-appindicator3-0.1` |
 | Сообщаете о баге | Приложите `klyrshift collect-logs` — в архиве нет набранного текста |
 | Конфликт с IBus/Fcitx | Отключите их, если не используете |

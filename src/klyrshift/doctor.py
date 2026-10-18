@@ -249,10 +249,17 @@ def check_gui_libraries() -> CheckResult:
     would otherwise only see the bare "install GTK4" message; this check names
     the exact packages up front.
     """
-    from .gui import gtk_available
+    from .gui import cairo_available, gtk_available
 
+    if gtk_available() and cairo_available():
+        return CheckResult("Графический интерфейс", OK, "GTK4, libadwaita и cairo доступны")
     if gtk_available():
-        return CheckResult("Графический интерфейс", OK, "GTK4 и libadwaita доступны")
+        return CheckResult(
+            "Графический интерфейс",
+            WARN,
+            "нет cairo для PyGObject (тур и значок кнопки не отрисуются)",
+            "sudo apt install python3-gi-cairo",
+        )
     return CheckResult(
         "Графический интерфейс",
         WARN,

@@ -22,6 +22,14 @@ MISSING_STACK_MESSAGE = (
     "Демон и CLI работают без них."
 )
 
+MISSING_CAIRO_MESSAGE = (
+    "Для графического интерфейса нужен модуль cairo для PyGObject.\n"
+    "Без него не рисуются затемнение тура и значок кнопки включения.\n"
+    "Установите его командой:\n"
+    "  sudo apt install python3-gi-cairo\n"
+    "Демон и CLI работают без него."
+)
+
 
 def gtk_available() -> bool:
     """Return ``True`` when GTK4 and libadwaita can be imported."""
@@ -31,6 +39,23 @@ def gtk_available() -> bool:
         gi.require_version("Gtk", "4.0")
         gi.require_version("Adw", "1")
         from gi.repository import Adw, Gtk  # noqa: F401
+    except (ImportError, ValueError):
+        return False
+    return True
+
+
+def cairo_available() -> bool:
+    """Return ``True`` when PyGObject can convert to ``cairo.Context``.
+
+    The tour's scrim and the fallback power glyph paint with Cairo through
+    ``Gtk.DrawingArea.set_draw_func``. That conversion lives in the ``_gi_cairo``
+    override module, shipped by ``python3-gi-cairo``; without it every draw raises
+    ``TypeError: Couldn't find foreign struct converter for 'cairo.Context'`` and
+    the widgets stay blank. ``from gi.repository import cairo`` still succeeds
+    without the override, so only importing ``_gi_cairo`` detects the gap.
+    """
+    try:
+        from gi import _gi_cairo  # noqa: F401
     except (ImportError, ValueError):
         return False
     return True
@@ -47,6 +72,9 @@ def main(argv: list[str] | None = None) -> int:
     """
     if not gtk_available():
         print(MISSING_STACK_MESSAGE)
+        return 1
+    if not cairo_available():
+        print(MISSING_CAIRO_MESSAGE)
         return 1
 
     # The GUI is its own process: give it a logger (a dedicated gui.log) so a

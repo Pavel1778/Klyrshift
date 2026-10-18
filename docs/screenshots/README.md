@@ -11,7 +11,7 @@
 Нужны GTK4/libadwaita и дисплей (в headless-окружении — `xvfb-run`):
 
 ```bash
-sudo apt-get install -y xvfb python3-gi gir1.2-gtk-4.0 gir1.2-adw-1
+sudo apt-get install -y xvfb python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1
 PYTHONPATH=/usr/lib/python3/dist-packages xvfb-run -a \
     python3 scripts/make_screenshots.py docs/screenshots
 ```

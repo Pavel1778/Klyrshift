@@ -213,7 +213,9 @@ class HomePage(Gtk.Box):
                 mode=MODE_LABELS.get(self._state.config.mode, self._state.config.mode),
                 seconds_since_fix=self._state.seconds_since_last_fix(),
             )
-            self._pause.set_label(self._pause_reason(bool(data.get("quiet")), data.get("app")))
+            self._pause.set_label(
+                self._pause_reason(bool(data.get("quiet")), data.get("app"), self._state)
+            )
             self._pause.set_visible(bool(self._pause.get_label()))
             self._mode.set_mode(self._state.config.mode)
             # Update the autostart switch without re-triggering the handler.
@@ -225,16 +227,19 @@ class HomePage(Gtk.Box):
             self.refresh()
 
     @staticmethod
-    def _pause_reason(quiet: bool, app: object) -> str:
+    def _pause_reason(quiet: bool, app: object, state: GuiState) -> str:
         """Return why automatic correction is paused, or an empty string.
 
         Quiet hours win over an app exception: it is the reason the user is more
-        likely to be surprised by.
+        likely to be surprised by. An app is only named when it is actually on the
+        never-touch list; the daemon keeps correcting in every other app, so
+        reporting those as paused would be a false alarm.
         """
         if quiet:
             return "Автопереключение приостановлено: тихие часы"
-        if isinstance(app, str) and app:
-            return f"Автопереключение приостановлено (приложение «{app}»)"
+        name = app if isinstance(app, str) else None
+        if name and state.is_app_excepted(name):
+            return f"Автопереключение приостановлено (приложение «{name}»)"
         return ""
 
     @property

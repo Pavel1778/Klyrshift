@@ -12,7 +12,10 @@ Usage (needs a display; use ``xvfb-run`` without one):
 
 from __future__ import annotations
 
+import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -68,9 +71,29 @@ def main() -> int:
     out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else REPO_ROOT / "docs" / "screenshots"
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Keep the render hermetic: a first-run tour offer would otherwise cover the
+    # home page, so the shot would depend on the machine's onboarding state
+    # instead of on the code. ``HOME`` is a fixed placeholder (so the dictionary
+    # path shown on the page reads like a real user's) while every directory the
+    # run writes to is redirected into a throwaway tree.
+    temp_root = Path(tempfile.gettempdir()) / "klyrshift-shots"
+    shutil.rmtree(temp_root, ignore_errors=True)
+    temp_root.mkdir(parents=True)
+    os.environ["HOME"] = "/home/user"
+    os.environ["XDG_STATE_HOME"] = str(temp_root / "state")
+    os.environ["XDG_CONFIG_HOME"] = str(temp_root / "config")
+    os.environ.pop("XDG_DATA_HOME", None)
+
     from klyrshift.config import Config
     from klyrshift.gui.state import GuiState
     from klyrshift.gui.window import KlyrshiftWindow
+    from klyrshift.onboarding import TOUR_VERSION, OnboardingState, save_onboarding_state
+
+    # Mark the tour as already seen so the first-run offer cannot cover the home
+    # page; the screenshots must show the window itself, not the onboarding card.
+    save_onboarding_state(
+        OnboardingState(completed_version=TOUR_VERSION, skipped_version=TOUR_VERSION)
+    )
 
     shots: list[str] = []
 

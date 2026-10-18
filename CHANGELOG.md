@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **The home page claimed auto-switching was paused whenever any app had focus.**
+  The pause banner's reason treated *any* running application as a reason to
+  pause, so an ordinary auto-mode session that had nothing on the exception list
+  still read «приостановлено (приложение «…»)» as soon as any window was
+  focused — for example the GUI's own window, or a terminal. The reason is now
+  built from the never-touch list the daemon actually honours: it names the
+  application only when that app is on it, and otherwise stays quiet.
+- **The GUI silently needed `python3-gi-cairo`, which no dependency list named.**
+  The guided tour's scrim and the fallback power glyph paint through
+  `Gtk.DrawingArea`'s `set_draw_func`, and PyGObject can only hand that callback a
+  `cairo.Context` when the `_gi_cairo` override module is present. `python3-gi`
+  does not pull it in, so a stock `python3-gi` install left both widgets blank,
+  logging `Couldn't find foreign struct converter for 'cairo.Context'` for every
+  frame. `klyrshift gui` now refuses to start with a message that names the fix
+  instead of opening a window that draws nothing, `doctor` reports the missing
+  module, and the `.deb`, `install.sh` and CI package lists install it.
+- **The screenshot generator depended on the machine's onboarding state.** A
+  first-run tour offer covered the home page, so the rendered images changed with
+  whatever the developer had already seen, and the committed images carried a
+  stale `lingvix` path. `scripts/make_screenshots.py` now renders against a fixed
+  throwaway `HOME`, so the output is identical from run to run, and the three
+  committed screenshots are regenerated with the current branding.
+
 ## [0.2.8.3] - 2026-10-17
 
 The project is renamed to its final name, the GitHub repository follows, and the

@@ -92,7 +92,7 @@ Section: utils
 Priority: optional
 Architecture: ${ARCH}
 Depends: python3 (>= 3.10), python3-tomli | python3 (>= 3.11), python3-tomli-w, python3-evdev, libnotify-bin, wtype, librsvg2-common, hicolor-icon-theme
-Recommends: g3kb-switch, xdotool, x11-xkb-utils, python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1, gir1.2-appindicator3-0.1, python3-pyatspi, gir1.2-atspi-2.0, wl-clipboard, xclip
+Recommends: g3kb-switch, xdotool, x11-xkb-utils, python3-gi, python3-gi-cairo, gir1.2-gtk-4.0, gir1.2-adw-1, gir1.2-appindicator3-0.1, python3-pyatspi, gir1.2-atspi-2.0, wl-clipboard, xclip
 Conflicts: linguafix, lingvix
 Replaces: linguafix, lingvix
 Installed-Size: ${INSTALLED_SIZE}
