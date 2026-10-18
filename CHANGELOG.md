@@ -24,24 +24,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **The Layero deploy failed before Astro ran.** Astro 7 refuses to build below
-  Node `22.22.0` (`site/package.json` `engines.node`), and Layero's build for the
-  22 major is the older `22.18.0`, so the build aborted with
-  `Node.js v22.18.0 is not supported by Astro!`. Pinning the patch does not help:
-  Layero keeps one build per major and updates the patch inside it itself (its own
-  log line reads `[config] node=22.18.0 (.nvmrc)` for `.nvmrc` = `22`), so the 22
-  line stays below Astro's floor no matter what patch is requested. The pin is
-  therefore a major whose *whole* range clears the floor: `site/layero.json` sets
+  Node `22.22.0` (`site/package.json` `engines.node`), and the build aborted with
+  `Node.js v22.18.0 is not supported by Astro!`. The deploy log names the source it
+  used: `[config] node=22.18.0 (engines.node)`. `layero.json` had no `nodeVersion`
+  then and no `.nvmrc` existed, so Layero read the *major* `22` out of the
+  `>=22.22.0` range and built on its own 22-line image, `22.18.0` — below the very
+  floor `engines.node` stated — because Layero keeps one build per major and
+  updates the patch inside it itself (the docs: name the major, we update the exact
+  build within it). Pinning the patch does not help. The pin is therefore a major
+  whose *whole* range clears the floor: `site/layero.json` sets
   `nodeVersion: "24"` (`24.0.0 >= 22.22.0`, whereas `22.0.0 < 22.22.0`), and
   `site/.nvmrc` and the CI `site` job name the same major. `layero.json` outranks
-  the project setting, `.nvmrc` and `engines.node`.
+  the project setting, `.nvmrc`, `.node-version` and `engines.node`, so the file's
+  `nodeVersion` decides.
   `tests/test_layero_config.py` enforces the rule — a pin whose major can resolve
   below the `engines.node` floor fails the test — so the deploy cannot silently
   drop back under Astro's minimum. The CI `site` job builds on
   24 too, and `site/deploy.sh` refuses to run a local build below the
   `engines.node` floor with a readable message instead of Astro's abort. One
-  caveat the docs disagree on: Layero's `layero.json` page says the file always
-  wins, while its runtime-versions page puts the panel's project setting above the
-  file, so the panel's "Версия Node.js" must stay on "Авто"/`24`.
+  caveat the docs disagree on: Layero's `layero.json` page and its `layero-v2`
+  schema both say the file wins, while its runtime-versions page lists the panel's
+  project setting first and never mentions the file, so the panel's
+  "Версия Node.js" must stay on "Авто"/`24`.
 
 - **A `Ctrl`/`Alt` chord leaked its key into the buffer.** Typing a word, then
   pressing `Ctrl+C` (or any command chord), left the chord's own key in the
