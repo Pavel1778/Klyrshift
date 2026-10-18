@@ -19,6 +19,7 @@ def test_gui_main_configures_logging(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[dict[str, object]] = []
     monkeypatch.setattr(logging_setup, "setup_logging", lambda **kwargs: calls.append(kwargs))
     monkeypatch.setattr(gui, "gtk_available", lambda: True)
+    monkeypatch.setattr(gui, "cairo_available", lambda: True)
 
     fake_app = types.ModuleType("klyrshift.gui.app")
 
