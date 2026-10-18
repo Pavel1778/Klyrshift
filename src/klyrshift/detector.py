@@ -164,6 +164,10 @@ class LanguageDetector:
             c.strip().lower() for c in (thematic_categories or []) if c.strip()
         ]
         self._user_words = {word.lower() for word in (user_words or []) if word.strip()}
+        # Words the always-on learning promoted this session. They are treated as
+        # vocabulary the user already knows, so they are never rewritten; unlike
+        # the user dictionary they are never persisted (see ``learning.py``).
+        self._learned_words: set[str] = set()
         self._stop_words = {word.lower() for word in (stop_words or [])}
         self._vocabularies: dict[str, set[str]] = {}
         self._vocabulary_order: dict[str, list[str]] = {}
@@ -212,6 +216,8 @@ class LanguageDetector:
             extended = self._load_extended_words(language)
             if extended:
                 vocabulary |= extended
+            if self._learned_words:
+                vocabulary |= self._learned_words
             self._vocabularies[language] = vocabulary
             self._vocabulary_order[language] = [str(w).lower() for w in raw_words]
             self._bigrams[language] = bigrams
@@ -311,6 +317,22 @@ class LanguageDetector:
         if directory == self._extended_dictionary_dir:
             return
         self._extended_dictionary_dir = directory
+        self._vocabularies = {}
+        self._bigrams = {}
+        self._load_corpora()
+
+    def set_learned_words(self, words: list[str]) -> None:
+        """Replace the session's learned vocabulary (never persisted).
+
+        Learning only *wins* over an unknown word: a promoted word is added to
+        the vocabularies so the detector treats it as already correct. N-gram
+        scoring is unchanged, and a promoted word never becomes a conversion
+        target on its own.
+        """
+        learned = {word.lower() for word in words if word.strip()}
+        if learned == self._learned_words:
+            return
+        self._learned_words = learned
         self._vocabularies = {}
         self._bigrams = {}
         self._load_corpora()

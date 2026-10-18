@@ -260,6 +260,42 @@ def cmd_undo(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_learn(args: argparse.Namespace) -> int:
+    """Show or change the always-on learning settings.
+
+    The learned words themselves live in the daemon's memory only (nothing the
+    user types is ever written to disk), so this reports the persisted
+    *counters* and the current setting, never a word.
+    """
+    from .learning import LearningStore
+
+    config = load_config()
+    if args.on:
+        config.learning_enabled = True
+    if args.off:
+        config.learning_enabled = False
+    if args.on or args.off:
+        config.validate()
+        save_config(config)
+        from .daemon_control import is_running, reload_config
+
+        if is_running():
+            reload_config()
+    if args.reset:
+        LearningStore().reset()
+        print("Счётчики обучения сброшены.")
+    stats = LearningStore().load()
+    print(f"Обучение: {'включено' if config.learning_enabled else 'выключено'}")
+    print(f"Порог закрепления слова: {config.learning_promote_threshold}")
+    print("Наблюдаемые слова хранятся только в памяти демона и никогда не пишутся на диск.")
+    print(f"Слов увидено: {stats.observed}")
+    print(f"Оставлено без изменений: {stats.kept}")
+    print(f"Исправлено: {stats.corrected}")
+    print(f"Отклонено (Ctrl+Z / отмена): {stats.rejected}")
+    print(f"Закреплено слов: {stats.promoted}")
+    return 0
+
+
 def cmd_dict(args: argparse.Namespace) -> int:
     """Manage the user dictionary and the extended (frequency) dictionaries."""
     from .dictionary import (
@@ -801,6 +837,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     undo = subparsers.add_parser("undo", help="отменить последнее исправление")
     undo.set_defaults(func=cmd_undo)
+
+    learn = subparsers.add_parser("learn", help="обучение: статистика и вкл/выкл")
+    learn.add_argument("--on", action="store_true", help="включить обучение")
+    learn.add_argument("--off", action="store_true", help="выключить обучение")
+    learn.add_argument("--reset", action="store_true", help="сбросить счётчики обучения")
+    learn.set_defaults(func=cmd_learn)
 
     hotkeys = subparsers.add_parser("hotkeys", help="показать действующие хоткеи")
     hotkeys.set_defaults(func=cmd_hotkeys)

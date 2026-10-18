@@ -581,6 +581,20 @@ def test_advanced_page_expander_group_reflects_config(
     assert gui_state.config.selection_fix_hotkey == "CTRL+SHIFT+L"
 
 
+def test_advanced_page_learning_group_reflects_config(
+    gui_state: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The learning group is on by default and toggles write through."""
+    monkeypatch.setattr(gui_state, "save", lambda: None)
+    from klyrshift.gui.advanced_page import AdvancedPage
+
+    page = AdvancedPage(gui_state)
+    assert gui_state.config.learning_enabled is True
+    assert page._learning_switch.get_active() is True
+    page._learning_switch.set_active(False)
+    assert gui_state.config.learning_enabled is False
+
+
 def test_app_layout_map_add_remove(gui_state: Any) -> None:
     from klyrshift.gui.widgets.app_layout_map import AppLayoutMap
 

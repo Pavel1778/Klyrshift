@@ -104,6 +104,15 @@ DEFAULT_EXCEPTION_APPS: Final[tuple[str, ...]] = (
 # Number of recent corrections kept for the GUI "История" tab. Metadata only,
 # never the typed text, and never written to disk.
 DEFAULT_HISTORY_SIZE: Final[int] = 20
+# Always-on learning: the daemon watches which words the user keeps, which it
+# corrects and which fixes the user undoes, then adapts -- a rejected fix is
+# never repeated and a word kept often enough stops being "corrected". The
+# learned vocabulary lives in memory only; no typed word is ever written to disk
+# (see ``learning.py`` and ``tests/test_privacy_audit.py``).
+DEFAULT_LEARNING_ENABLED: Final[bool] = True
+# Times a word must be kept before it joins the detector's vocabulary.
+DEFAULT_LEARNING_PROMOTE_THRESHOLD: Final[int] = 3
+DEFAULT_LEARNING_MAX_WORDS: Final[int] = 2000
 # Plausibility guard: when the text typed in the *current* layout already looks
 # like real words, it is left alone even if another layout scores higher. The
 # floor is an average bigram log-probability; below it a word looks like noise
@@ -621,6 +630,14 @@ class Config:
     # The only feature that uses the network; off by default.
     update_check_enabled: bool = False
 
+    # --- learning ----------------------------------------------------------
+    # Always on: the daemon adapts to what the user keeps and undoes. The
+    # learned vocabulary is never persisted (only aggregate counters are), so
+    # this stays compatible with the "no typed text on disk" invariant.
+    learning_enabled: bool = DEFAULT_LEARNING_ENABLED
+    learning_promote_threshold: int = DEFAULT_LEARNING_PROMOTE_THRESHOLD
+    learning_max_words: int = DEFAULT_LEARNING_MAX_WORDS
+
     def __post_init__(self) -> None:
         self.validate()
 
@@ -878,6 +895,15 @@ class Config:
             if str(app).strip() and str(layout).strip()
         }
         self.app_layout_switch = bool(self.app_layout_switch)
+
+        # --- learning ------------------------------------------------------
+        self.learning_enabled = bool(self.learning_enabled)
+        self.learning_promote_threshold = int(self.learning_promote_threshold)
+        if not 1 <= self.learning_promote_threshold <= 20:
+            raise ValueError("learning_promote_threshold must be between 1 and 20")
+        self.learning_max_words = int(self.learning_max_words)
+        if not 50 <= self.learning_max_words <= 20000:
+            raise ValueError("learning_max_words must be between 50 and 20000")
 
         self.stop_words = [str(word).lower() for word in self.stop_words]
 

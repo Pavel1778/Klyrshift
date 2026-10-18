@@ -270,6 +270,42 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   `encoding="utf-8"`. Re-applying an edit through `file_editor` after a
   `git checkout` is what produced the corruption in the first place.
 
+## Learning and undo (always on)
+
+- **Learning never writes a word to disk.** `learning.py` keeps the learned
+  vocabulary, the rejected words and the keep-counts in memory only; the
+  persisted `state_dir()/learning.json` holds counters alone
+  (`observed`/`kept`/`corrected`/`rejected`/`promoted`). A profile that stored
+  the words would be a plaintext record of the user's typing, and a salted hash
+  would still be a dictionary-attackable vocabulary record, so neither is
+  written. The consequence is deliberate: the vocabulary that changes behaviour
+  lasts one session, and only the counters are durable.
+  `tests/test_learning.py::test_profile_never_contains_a_typed_word` and
+  `tests/test_privacy_audit.py::test_learning_profile_never_holds_a_typed_word`
+  pin it. Do not "improve" this by persisting the words.
+- **A rejected word is suppressed, an explicit hotkey still wins.** `Ctrl+Z`
+  (bare Ctrl, not `Ctrl+Shift+Z`, which is redo) and the undo hotkey both call
+  `LearningEngine.observe_rejected`; the central guard in `_process_buffer_inner`
+  then refuses an automatic fix for that word, while `force=True` (double Shift,
+  the manual hotkey) bypasses it. The guard sits next to the stop-word check, so
+  it covers the layout, T9 and punctuation passes at once.
+- **A key pressed while Ctrl/Alt/Super is held is dropped, not buffered.**
+  `_handle_event_inner` returns early for `self._held_modifiers - {"shift"}`.
+  Without it a command chord leaked its own key (`Ctrl+C` left `c`), which the
+  next Space analysed as a one-letter word. Shift is exempt because it is part
+  of normal typing. This is also what lets the daemon observe `Ctrl+Z` without
+  polluting the buffer; the application still performs the undo itself, because
+  the daemon does not grab the keyboard.
+- **Learning only *adds* vocabulary.** `detector.set_learned_words` merges the
+  promoted words into every loaded vocabulary, so a promoted word is never
+  rewritten; it never becomes a conversion target and n-gram scoring is
+  unchanged. Promotion needs `learning_promote_threshold` keeps (default 3) so a
+  single deliberate mistype cannot silently become "correct".
+- **The daemon flushes the counters on its own cadence.** `_persist_learning_if_due`
+  runs from the event loop at most once a minute (`LEARNING_PERSIST_INTERVAL`),
+  and `run()` flushes on shutdown; no GUI signal is involved (same reason the
+  history snapshot stopped using SIGUSR2).
+
 ## Security / privacy invariants (audited)
 
 - The typed text must never reach disk or a subprocess argv. `_process_buffer`
