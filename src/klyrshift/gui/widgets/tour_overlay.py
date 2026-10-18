@@ -71,6 +71,8 @@ class TourOverlay(Gtk.Overlay):
             call ``compute_bounds`` itself.
         on_finished: Called with the last step index when the user reaches the end.
         on_skipped: Called with the current step index when the user skips.
+        on_step_shown: Called with the index of each step as it is displayed, so
+            the caller can persist the position of an interrupted tour.
         on_closed: Called after the overlay is hidden, whatever the reason.
     """
 
@@ -83,6 +85,7 @@ class TourOverlay(Gtk.Overlay):
         ) = None,
         on_finished: Callable[[int], None] | None = None,
         on_skipped: Callable[[int], None] | None = None,
+        on_step_shown: Callable[[int], None] | None = None,
         on_closed: Callable[[], None] | None = None,
         show_step: Callable[[TourStep], None] | None = None,
         steps: tuple[TourStep, ...] = TOUR_STEPS,
@@ -92,6 +95,7 @@ class TourOverlay(Gtk.Overlay):
         self._measure = measure_target or self._measure_with_bounds
         self._on_finished = on_finished
         self._on_skipped = on_skipped
+        self._on_step_shown = on_step_shown
         self._on_closed = on_closed
         self._show_step = show_step
         self._steps = steps
@@ -181,8 +185,12 @@ class TourOverlay(Gtk.Overlay):
         return card
 
     # --- lifecycle ------------------------------------------------------------
-    def open(self) -> bool:
-        """Show the tour at the first displayable step.
+    def open(self, start_step: int = 0) -> bool:
+        """Show the tour at the first displayable step from ``start_step``.
+
+        Args:
+            start_step: Index to resume from. An interrupted tour passes the step
+                it was on; anything out of range falls back to the first step.
 
         Returns:
             ``True`` when the tour is showing, ``False`` when no step could be
@@ -193,11 +201,22 @@ class TourOverlay(Gtk.Overlay):
             self._previous_focus = root.get_focus()
         self.set_visible(True)
         self.grab_focus()
-        self._index = -1
+        self._index = self._clamp_start_step(start_step)
         if not self._advance(1):
             self.close()
             return False
         return True
+
+    def _clamp_start_step(self, start_step: int) -> int:
+        """Return the index just before ``start_step``, or the first step.
+
+        The caller resumes *at* ``start_step``; ``_advance(1)`` then moves onto it
+        while still skipping any step that cannot be displayed. A value outside the
+        step list means "start from the beginning".
+        """
+        if 0 <= start_step < len(self._steps):
+            return start_step - 1
+        return -1
 
     def close(self) -> None:
         """Hide the tour, restore focus and notify the window."""
@@ -264,6 +283,8 @@ class TourOverlay(Gtk.Overlay):
         step = self._steps[self._index]
         if self._show_step is not None:
             self._show_step(step)
+        if self._on_step_shown is not None:
+            self._on_step_shown(self._index)
         self._progress.set_label(f"Шаг {self._index + 1} из {len(self._steps)}")
         self._title.set_label(step.title)
         self._short.set_label(step.short)

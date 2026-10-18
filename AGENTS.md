@@ -295,7 +295,14 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   Detect it with `from gi import _gi_cairo` (`klyrshift.gui.cairo_available`), not
   by importing `gi.repository.cairo`. The package is listed in the `.deb`
   `Recommends`, `install.sh`, the CI apt list and the docs; keep them in step.
-- **The container's `LD_LIBRARY_PATH` breaks `/usr/local` Python.** It puts
+- **The tour's saved position is the step *index*, not the step key.** The
+  overlay reports each displayed index through `on_step_shown`; the window
+  writes it to `OnboardingState.last_step` and `start_tour` resumes there. Only
+  an *interrupted* tour (the window closed mid-run) resumes: finishing or
+  skipping clears the index to `0`, so a deliberate replay starts at the top.
+  `_clamp_start_step` returns `start_step - 1` because `open()` then calls
+  `_advance(1)` onto the target, which still skips an undisplayable step.
+  - **The container's `LD_LIBRARY_PATH` breaks `/usr/local` Python.** It puts
   `/usr/lib/x86_64-linux-gnu` on the loader path, which resolves libffi to the
   distro copy and makes `import ctypes` segfault (so `import evdev`, `black` and
   pytest all die with SIGSEGV). `/usr/bin/python3` is unaffected. When the venv

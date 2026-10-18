@@ -201,3 +201,51 @@ def test_help_dialog_shows_the_topic() -> None:
     topic = HELP_TOPICS["mode"]
     dialog = show_help_dialog(topic)
     assert dialog.get_title() == topic.title
+
+
+def test_tour_persists_the_step_being_shown(window: Any) -> None:
+    """Each displayed step is written to the onboarding state."""
+    from klyrshift.onboarding import load_onboarding_state
+
+    window.start_tour()
+    assert load_onboarding_state().last_step == 0
+    window.tour.next_step()
+    assert load_onboarding_state().last_step == 1
+
+
+def test_an_interrupted_tour_resumes_at_the_saved_step(window: Any) -> None:
+    """A tour that was never finished or skipped picks up where it stopped."""
+    window.start_tour()
+    window.tour.next_step()
+    window.tour.next_step()
+    expected = window.tour.current_step.key
+    window.tour.close()
+
+    assert window.start_tour() is True
+    assert window.tour.current_step.key == expected
+
+
+def test_finishing_the_tour_clears_the_saved_step(window: Any) -> None:
+    """A completed tour starts over next time instead of resuming."""
+    from klyrshift.onboarding import load_onboarding_state
+
+    window.start_tour()
+    for _ in range(len(window.tour._steps)):
+        window.tour.next_step()
+    assert load_onboarding_state().last_step == 0
+
+    assert window.start_tour() is True
+    assert window.tour.index == 0
+
+
+def test_skipping_the_tour_clears_the_saved_step(window: Any) -> None:
+    """A skipped tour also forgets the position, so a replay starts at the top."""
+    from klyrshift.onboarding import load_onboarding_state
+
+    window.start_tour()
+    window.tour.next_step()
+    window.tour.skip()
+    assert load_onboarding_state().last_step == 0
+
+    assert window.start_tour() is True
+    assert window.tour.index == 0

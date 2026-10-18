@@ -195,6 +195,7 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
             measure_target=self._measure_in_overlay,
             on_finished=self._on_tour_finished,
             on_skipped=self._on_tour_skipped,
+            on_step_shown=self._on_tour_step_shown,
             show_step=self._show_tour_step,
         )
         # The tour is an overlay child of the window's content, so its scrim and
@@ -232,15 +233,33 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         save_onboarding_state(self._onboarding)
 
     def start_tour(self) -> bool:
-        """Start (or restart) the guided tour; return whether it is showing."""
-        return self._tour.open()
+        """Start the tour, resuming an interrupted run; return whether it shows.
+
+        A tour that was interrupted by closing the window (rather than finished or
+        skipped) resumes at the step it stopped on. A finished or skipped tour
+        starts over, and the stored position is cleared once it ends.
+        """
+        return self._tour.open(self._resume_step())
+
+    def _resume_step(self) -> int:
+        """Return the step an interrupted tour should resume from."""
+        if should_offer_tour(self._onboarding):
+            return self._onboarding.last_step
+        return 0
+
+    def _on_tour_step_shown(self, index: int) -> None:
+        """Remember the step on screen so an interrupted tour can resume."""
+        self._onboarding.last_step = index
+        save_onboarding_state(self._onboarding)
 
     def _on_tour_finished(self, _index: int) -> None:
         self._onboarding.completed_version = TOUR_VERSION
+        self._onboarding.last_step = 0
         save_onboarding_state(self._onboarding)
 
     def _on_tour_skipped(self, _index: int) -> None:
         self._onboarding.skipped_version = TOUR_VERSION
+        self._onboarding.last_step = 0
         save_onboarding_state(self._onboarding)
 
     def _resolve_tour_target(self, name: str) -> Gtk.Widget | None:
