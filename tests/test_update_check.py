@@ -69,6 +69,26 @@ def test_fetch_latest_bad_payload(isolated_env: Path, monkeypatch: pytest.Monkey
         update_check.fetch_latest()
 
 
+@pytest.mark.parametrize(
+    "url",
+    ["file:///etc/passwd", "ftp://example.invalid/x", "http://api.github.com/x"],
+)
+def test_fetch_latest_refuses_non_https(
+    isolated_env: Path, monkeypatch: pytest.MonkeyPatch, url: str
+) -> None:
+    """``urlopen`` follows ``file:`` URLs; the guard must reject them first."""
+    calls: list[str] = []
+
+    def spy(request: object, *_a: object, **_k: object) -> object:
+        calls.append(str(request))
+        raise AssertionError("urlopen must not be reached for a non-https URL")
+
+    monkeypatch.setattr(update_check.urllib.request, "urlopen", spy)
+    with pytest.raises(OSError, match="non-https"):
+        update_check.fetch_latest(url=url)
+    assert calls == []
+
+
 def test_update_request_sends_no_typed_text(
     isolated_env: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

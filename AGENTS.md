@@ -37,9 +37,18 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 - The README screenshots are real renders; regenerate them with
   `scripts/make_screenshots.py` after any GUI change. The script is hermetic --
   it pins a placeholder `HOME` and redirects every write into a throwaway tree --
-  so a re-run is byte-stable apart from sub-2/255 antialiasing jitter. Do not
-  render against the developer's real `HOME`: a first-run tour offer covers the
-  home page and the shot then depends on the machine's onboarding state.
+  and a re-run is byte-stable, not merely close. Two animations had to be frozen
+  for that to hold: `Adw.ViewStack`'s page cross-fade and the focused entry's
+  blinking caret. Both are wall-clock driven, so a render that lands mid-frame
+  differs by a handful of antialiasing levels and the committed PNGs drift on
+  every regeneration. The script disables the stack transition, waits a fixed
+  settle window, and turns `gtk-cursor-blink` off; keep all three if you touch
+  it, and note that `transition-running` alone is *not* enough -- the switcher
+  underline keeps ticking after the flag clears. `tests/test_screenshots.py`
+  guards the flags, and its `KLYRSHIFT_RENDER_TEST=1` case renders twice and
+  asserts the bytes match. Do not render against the developer's real `HOME`: a
+  first-run tour offer covers the home page and the shot then depends on the
+  machine's onboarding state.
 - `tests/test_backend_integration.py` is the exception to the "fakes only" rule:
   it writes real stub executables (`g3kb-switch`, `setxkbmap`, `wtype`,
   `xdotool`) onto a throwaway `PATH` and drives the real `LayoutSwitcher` /
