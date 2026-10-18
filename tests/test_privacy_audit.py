@@ -114,6 +114,9 @@ _ALLOWED_CONFIG_KEYS = {
     "app_layouts",
     "app_layout_switch",
     "update_check_enabled",
+    "learning_enabled",
+    "learning_promote_threshold",
+    "learning_max_words",
 }
 
 
@@ -409,6 +412,48 @@ def test_t9_decision_path_never_logs_the_word(
         if _search(path, ("секретное", "слово")):
             leaked.append(str(path))
     assert leaked == [], f"the T9 path logged the typed word into: {leaked}"
+
+
+def test_learning_profile_never_holds_a_typed_word(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The always-on learning must not write any typed word to disk.
+
+    The engine keeps its vocabulary in memory; the persisted profile is counters
+    only. This drives the real daemon with a plain-letter secret (the shape the
+    engine would otherwise learn), persists, and asserts the file is clean.
+    """
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+
+    config = Config(analysis_timeout=0.1, min_word_length=1, stop_words=[])
+    daemon = KlyrshiftDaemon(
+        config,
+        detector=LanguageDetector(
+            converter=None,
+            stop_words=[],
+            min_word_length=1,
+            plausibility_check=False,
+            structural_boundaries=False,
+            identifier_guard=False,
+        ),
+        switcher=_Switcher("us"),
+        injector=_RecordingInjector(),
+    )
+    # A plain letter word the engine would promote; the secret markers also
+    # appear as a separate kept word.
+    daemon.learning.observe_kept("sekretnoeslovo")
+    daemon.learning.observe_kept("sekretnoeslovo")
+    daemon.learning.observe_kept("sekretnoeslovo")
+    daemon.learning.observe_corrected("секретноеслово")
+    daemon.learning.persist(force=True)
+
+    profile = state_dir() / "learning.json"
+    assert profile.exists()
+    raw = profile.read_text(encoding="utf-8")
+    for marker in ("sekretnoeslovo", "секретное", "слово"):
+        assert marker not in raw, f"{marker!r} leaked into the learning profile"
 
 
 def test_daemon_survives_injector_exception(

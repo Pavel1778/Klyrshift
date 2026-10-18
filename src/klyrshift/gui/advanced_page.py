@@ -42,6 +42,7 @@ class AdvancedPage(BoundPreferencesPage):
         self._build_dictionary_group()
         self._build_typo_group()
         self._build_expander_group()
+        self._build_learning_group()
         self._build_hotkeys_group()
         self._build_notifications_group()
         self._build_backup_group()
@@ -302,6 +303,28 @@ class AdvancedPage(BoundPreferencesPage):
         )
         self.add_switch(group, "Включить сокращения", "text_expander_enabled")
         self.add_entry(group, "Файл сокращений", "text_expander_snippets_path")
+        self.add(group)
+
+    # --- learning ---------------------------------------------------------
+    def _build_learning_group(self) -> None:
+        group = self.attach_help(
+            Adw.PreferencesGroup(
+                title="Обучение",
+                description="Приложение наблюдает за тем, что вы оставляете, "
+                "исправляете и отменяете (Ctrl+Z), и подстраивается. Сами слова "
+                "держатся только в памяти и никогда не пишутся на диск.",
+            ),
+            "learning",
+        )
+        self._learning_switch = self.add_switch(group, "Включить обучение", "learning_enabled")
+        self.add_spin(
+            group,
+            "Сколько раз оставить слово, чтобы запомнить",
+            "learning_promote_threshold",
+            lower=1,
+            upper=20,
+            step=1,
+        )
         self.add(group)
 
     # --- hotkeys ----------------------------------------------------------

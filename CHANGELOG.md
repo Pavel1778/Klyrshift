@@ -7,7 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Always-on learning.** Klyrshift now watches how it is used and adapts. A
+  word whose correction the user rejects (`Ctrl+Z`, or the undo hotkey) is not
+  corrected again for the rest of the session, so a fix the user undoes never
+  "changes back". A word the user keeps unchanged often enough
+  (`learning_promote_threshold`, default 3) joins the detector's vocabulary for
+  the session and stops being "corrected" -- brands, names and jargon are
+  picked up without a manual `klyrshift dict add`. The learned words live in
+  the daemon's memory only; the persisted profile holds counters, never a
+  word, so the "no typed text on disk" invariant still holds. `klyrshift
+  learn` shows the counters, `--off` disables learning, `--reset` clears
+  them, and the GUI's Продвинутые page has a matching group.
+
 ### Fixed
+
+- **A `Ctrl`/`Alt` chord leaked its key into the buffer.** Typing a word, then
+  pressing `Ctrl+C` (or any command chord), left the chord's own key in the
+  buffer -- the `c` of `Ctrl+C` -- so the next Space analysed a stray
+  one-letter fragment. A key pressed while `Ctrl`/`Alt`/`Super` is held is now
+  dropped instead of buffered. This is also what makes `Ctrl+Z` observable as
+  "the user undid the last fix" without the chord polluting the buffer.
 
 - **The landing page still canonised the pre-rename hosts.** The hosts were
   renamed with the project, so `klyrshift.layero.app` and `klyrshift.vercel.app`

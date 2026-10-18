@@ -33,6 +33,7 @@ def test_build_parser_has_all_commands() -> None:
         "status",
         "mode",
         "undo",
+        "learn",
         "hotkeys",
         "dict",
         "config",
@@ -47,6 +48,24 @@ def test_build_parser_has_all_commands() -> None:
         "restart",
     ):
         assert command in actions
+
+
+def test_learn_command(isolated_env: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """``klyrshift learn`` reports the setting and the counters, never a word."""
+    assert cli.main(["learn"]) == 0
+    out = capsys.readouterr().out
+    assert "Обучение: включено" in out
+    assert "Слов увидено: 0" in out
+
+    assert cli.main(["learn", "--off"]) == 0
+    out = capsys.readouterr().out
+    assert "Обучение: выключено" in out
+    from klyrshift.config import load_config
+
+    assert load_config().learning_enabled is False
+
+    assert cli.main(["learn", "--reset"]) == 0
+    assert "Счётчики обучения сброшены" in capsys.readouterr().out
 
 
 def test_hotkeys_command(isolated_env: Path, capsys: pytest.CaptureFixture[str]) -> None:

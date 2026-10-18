@@ -54,6 +54,7 @@ from .converter import LayoutConverter
 from .detector import LanguageDetector
 from .dictionary import load_user_dictionary
 from .injector import TextInjector
+from .learning import LearningEngine, LearningStore
 from .punctuation import PunctuationCorrector
 from .selection_fix import SelectionFix
 from .switcher import LayoutSwitcher
@@ -83,6 +84,9 @@ _MIN_INTERVALS_FOR_ADAPT: Final[int] = 5
 NOTIFY_TIMEOUT: Final[float] = 3.0
 # Pause between keyboard re-discovery attempts after the last device vanished.
 DEVICE_RESCAN_DELAY: Final[float] = 2.0
+# The learning counters are flushed to disk at most this often, so a busy
+# session does not write a file on every keystroke.
+LEARNING_PERSIST_INTERVAL: Final[float] = 60.0
 
 # evdev key name -> (unshifted US character, shifted US character).
 _US_KEY_NAMES: Final[dict[str, tuple[str, str]]] = {
@@ -322,6 +326,21 @@ class KlyrshiftDaemon:
         self._skip_regex = _compile_skip_regex(config.custom_skip_regex)
         self._excepted_apps = {app.lower() for app in config.exceptions_apps}
         self._last_word: str = ""
+        # The word the user just undid (Ctrl+Z, or the undo hotkey). It is never
+        # corrected again this session, so the user's own text stands.
+        self._last_undone_word: str = ""
+        # The text a correction was applied to (the pre-fix on-screen word), so
+        # Ctrl+Z can suppress exactly the word the user restored.
+        self._last_fixed_from: str = ""
+        # Always-on learning: watch which words are kept, corrected and undone,
+        # then adapt. Words live in memory only (see ``learning.py``).
+        self.learning = LearningEngine(
+            enabled=config.learning_enabled,
+            promote_threshold=config.learning_promote_threshold,
+            max_words=config.learning_max_words,
+            store=LearningStore(),
+        )
+        self._next_learning_persist: float = 0.0
         # The last non-empty word that was flushed (by a boundary or the idle
         # fallback), regardless of whether a correction was applied. The manual
         # reverse-conversion hotkey and a late double Shift use it when the live
@@ -645,6 +664,19 @@ class KlyrshiftDaemon:
         # the chord was not a fix, so any suspended word is abandoned.
         if self._suspended_buffer is not None:
             self._drop_suspended_buffer()
+
+        # Ctrl+Z: the user is undoing the last fix. Record the word as rejected
+        # so it is not corrected again (the application performs the undo; the
+        # daemon only observes it). The chord key is swallowed either way.
+        if self._maybe_handle_undo_chord(name):
+            return
+
+        # Any other key pressed while Ctrl/Alt/Super is held is a command chord
+        # (Ctrl+C, Alt+Tab, Super+L), not typing. Its key must not reach the
+        # buffer, or a stale fragment ("c" from Ctrl+C) would be analysed on the
+        # next Space and "corrected".
+        if self._held_modifiers - {"shift"}:
+            return
 
         if value == 2:  # auto-repeat: only backspace repeats meaningfully
             if name == "KEY_BACKSPACE":
@@ -1298,6 +1330,9 @@ class KlyrshiftDaemon:
         if not self.injector.replace_text(backspace_count, original, target):
             logger.warning("Undo failed to replace text")
             return False
+        # The user restored their own text: never re-fix this word this session.
+        self._last_undone_word = original
+        self.learning.observe_rejected(original)
         logger.info("Undid the last fix")
         if self.config.notify_on_fix:
             self._notify()
@@ -1353,6 +1388,7 @@ class KlyrshiftDaemon:
         if not self.injector.replace_text(backspace_count, converted, target):
             logger.warning("Manual layout toggle failed to replace text")
             return False
+        self._last_fixed_from = word
         self._record_undo(word, current, backspace_count, source=current, target=target)
         # The on-screen word is now the converted one; keep the memory in step
         # so pressing the hotkey again flips it back.
@@ -1416,6 +1452,7 @@ class KlyrshiftDaemon:
         if not self.injector.replace_text(backspace_count, fixed, current):
             logger.warning("Manual %s fix failed to replace text", label)
             return False
+        self._last_fixed_from = word
         self._record_undo(word, current, backspace_count, source=current, target=current)
         with self._lock:
             if from_buffer:
@@ -1426,6 +1463,65 @@ class KlyrshiftDaemon:
             self._last_flushed_word = fixed
             self._last_flushed_corrected = True
         return True
+
+    def _maybe_handle_undo_chord(self, name: str) -> bool:
+        """Handle a bare ``Ctrl+Z`` as the user undoing the last fix.
+
+        The daemon never grabs the keyboard, so the application sees ``Ctrl+Z``
+        too and performs its own undo — which reverts *this* daemon's rewrite and
+        restores the text the user had typed. The daemon only observes the chord
+        and records the word as rejected, so the very next flush does not fix it
+        again (the "the word keeps changing back" report). ``Ctrl+Shift+Z`` is
+        the usual redo and is not treated as a rejection.
+
+        Returns:
+            ``True`` when the event was a bare ``Ctrl+Z`` and must not fall
+            through to the ordinary key handling.
+        """
+        if name != "KEY_Z" or "ctrl" not in self._held_modifiers:
+            return False
+        if self._held_modifiers - {"ctrl"}:
+            return False
+        word = self._last_undone_word or self._last_fixed_from
+        self._last_undone_word = word
+        self.learning.observe_rejected(word)
+        logger.info("Ctrl+Z observed; the last correction is not repeated")
+        return True
+
+    def _note_kept(self, word: str) -> None:
+        """Record that a flushed word was left unchanged (the keep signal)."""
+        if self.learning.observe_kept(word):
+            self._refresh_learned_vocabulary()
+
+    def _refresh_learned_vocabulary(self) -> None:
+        """Add the promoted words to the detector's vocabulary."""
+        words = self.learning.learned_words()
+        if not words:
+            return
+        self.detector.set_learned_words(words)
+        logger.info("Learning: %d word(s) learned so far", len(words))
+
+    def _persist_learning_if_due(self) -> None:
+        """Flush the learning counters at most once per interval."""
+        now = time.monotonic()
+        if now < self._next_learning_persist:
+            return
+        self._next_learning_persist = now + LEARNING_PERSIST_INTERVAL
+        self.learning.persist()
+
+    def learning_snapshot(self) -> dict[str, object]:
+        """Return a metadata-only learning summary (never a typed word)."""
+        stats = self.learning.stats
+        return {
+            "enabled": self.learning.enabled,
+            "observed": stats.observed,
+            "kept": stats.kept,
+            "corrected": stats.corrected,
+            "rejected": stats.rejected,
+            "promoted": stats.promoted,
+            "suppressed": self.learning.suppressed_count(),
+            "promote_threshold": self.learning.promote_threshold,
+        }
 
     def _key_to_char(self, code: int) -> str | None:
         """Translate a keycode into the character for the active layout."""
@@ -1590,6 +1686,16 @@ class KlyrshiftDaemon:
             logger.debug("Buffer of length %d is a stop word; skipping", len(buffer))
             return
 
+        # A word the user undid (Ctrl+Z, or the undo hotkey) is never corrected
+        # again this session: repeating a fix the user just rejected is exactly
+        # the "the app keeps changing my word back" complaint. An explicit
+        # hotkey (``force``) still wins, because the user asked for it.
+        if not force and self.learning.is_suppressed(buffer):
+            logger.debug(
+                "Learning: word of length %d was rejected by the user; not fixing", len(buffer)
+            )
+            return
+
         # Never rewrite what is typed into a password field. AT-SPI reports the
         # focused element's role; a positive "password" verdict skips the fix.
         # An unavailable/undetermined role returns None and correction proceeds
@@ -1661,6 +1767,7 @@ class KlyrshiftDaemon:
                 # staying in the current layout and never touching letters.
                 punctuated = self._punctuation_correction(buffer, current, force=force)
                 if punctuated is None:
+                    self._note_kept(buffer)
                     return
                 converted = punctuated
                 target = current
@@ -1669,6 +1776,7 @@ class KlyrshiftDaemon:
             reason = "layout"
             converted = self.converter.convert(buffer, current, target)
         if converted == buffer:
+            self._note_kept(buffer)
             return
 
         if self.config.ignore_emails_urls and _INTERNAL_SEPARATOR_RE.search(buffer):
@@ -1742,6 +1850,11 @@ class KlyrshiftDaemon:
             boundary_char if backspace_total != backspace_count else "",
         )
         if self.injector.replace_text(backspace_total, replacement, target):
+            self.learning.observe_corrected(buffer)
+            # Remember the pre-fix text so a bare Ctrl+Z can suppress exactly the
+            # word the user restored (only set on a real fix, so an unrelated
+            # Ctrl+Z does not suppress a word the daemon never touched).
+            self._last_fixed_from = buffer
             # Record the *pre-fix* on-screen text so a later undo restores it
             # exactly, including the boundary that was consumed and retyped.
             self._record_undo(
@@ -1826,6 +1939,10 @@ class KlyrshiftDaemon:
         }
         self._double_tap_hotkeys = self._build_double_tap_hotkeys(new_config)
         self._last_modifier_tap.clear()
+        self.learning.enabled = new_config.learning_enabled
+        self.learning.promote_threshold = max(1, new_config.learning_promote_threshold)
+        self.learning.max_words = max(1, new_config.learning_max_words)
+        self._refresh_learned_vocabulary()
         self.app_layout_manager.update(
             new_config.app_layouts,
             enabled=new_config.app_layout_switch,
@@ -1905,6 +2022,7 @@ class KlyrshiftDaemon:
                 with contextlib.suppress(OSError):
                     device.close()
             self._stop_tray()
+            self.learning.persist(force=True)
             self.release_lock()
         logger.info("Klyrshift stopped")
         return 0
@@ -1998,6 +2116,7 @@ class KlyrshiftDaemon:
                         device.close()
 
             self._flush_if_idle()
+            self._persist_learning_if_due()
             self._maybe_check_update()
 
     def _maybe_check_update(self) -> None:
