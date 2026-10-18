@@ -115,29 +115,30 @@ def test_site_version_matches_the_package() -> None:
     assert f'export const VERSION = "{version.group(1)}";' in site
 
 
-def test_site_canonical_origins_are_hosts_that_resolve() -> None:
-    """The canonical origin must not point at a host that serves nothing.
+def test_site_canonical_origins_are_the_live_hosts() -> None:
+    """The canonical origin must point at the host that actually serves the site.
 
-    ``klyrshift.layero.app`` and ``klyrshift.vercel.app`` resolve in DNS but return
-    404: the deployments were never renamed along with the source. The origin is
-    written into ``<link rel="canonical">``, ``og:url``, the ``hreflang``
-    alternates and the sitemap, so a 404 origin makes search engines drop the page
-    instead of indexing the live one.
+    ``klyrshift.layero.app`` and ``klyrshift.vercel.app`` are the live hosts; the
+    pre-rename ``linguafix.*`` names now return 404. The origin is written into
+    ``<link rel="canonical">``, ``og:url``, the ``hreflang`` alternates and the
+    sitemap, so a 404 origin makes search engines drop the page instead of
+    indexing the live one.
     """
-    expected = {"https://linguafix.layero.app", "https://linguafix.vercel.app"}
+    expected = {"https://klyrshift.layero.app", "https://klyrshift.vercel.app"}
     for path in (ASTRO_CONFIG, SITE_LIB):
         origins = set(re.findall(r"https://[a-z0-9.-]+", path.read_text(encoding="utf-8")))
         assert origins == expected, f"{path.name}: {origins}"
 
 
-def test_no_document_links_the_renamed_but_unserved_hosts() -> None:
-    """No tracked document may link a ``klyrshift.*`` host: those serve a 404.
+def test_no_document_links_the_dead_renamed_hosts() -> None:
+    """No tracked document may link a pre-rename ``linguafix.*`` host: those 404.
 
-    The templates were the first place this surfaced, but ``README.md`` carried
-    the same dead origin in its status badges, its dictionary link and its
-    "where to find us" list. Scanning the live documentation and the site source
-    -- not the changelog or the session logs, which record the old name as
-    history -- catches the next one wherever it appears.
+    The origin was moved from ``linguafix.*`` to ``klyrshift.*`` once the hosts
+    were renamed, but a stale literal is easy to leave behind in the status
+    badges, the dictionary link or the "where to find us" list. Scanning the live
+    documentation and the site source -- not the changelog or the session logs,
+    which record the old name as history -- catches the next one wherever it
+    appears.
     """
     targets = [REPO_ROOT / "README.md", *sorted((REPO_ROOT / "docs").glob("*.md"))]
     targets += sorted((REPO_ROOT / "site" / "src").rglob("*.astro"))
@@ -146,7 +147,7 @@ def test_no_document_links_the_renamed_but_unserved_hosts() -> None:
     offenders: list[str] = []
     for path in targets:
         for match in re.findall(
-            r"https://klyrshift\.[a-z0-9.-]+", path.read_text(encoding="utf-8")
+            r"https://linguafix\.[a-z0-9.-]+", path.read_text(encoding="utf-8")
         ):
             offenders.append(f"{path.relative_to(REPO_ROOT)}: {match}")
     assert not offenders, "links to nonexistent hosts: " + ", ".join(offenders)

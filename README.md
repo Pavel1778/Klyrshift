@@ -6,9 +6,9 @@
 Klyrshift — автоматический переключатель раскладки клавиатуры для Linux. Исправляет текст, набранный не в той раскладке (`ghbdtn` → `привет`), автоматически и мгновенно. Работает в Wayland и X11, GNOME 45+, KDE, Sway, через `evdev` + `uinput`. Аналог Caramba Switcher и Punto Switcher. Бесплатно, MIT, без телеметрии.
 
 [![CI](https://github.com/Pavel1778/Klyrshift/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavel1778/Klyrshift/actions/workflows/ci.yml)
-[![License: MIT](https://linguafix.layero.app/badges/license.svg)](LICENSE)
-[![Python 3.10+](https://linguafix.layero.app/badges/python.svg)](https://www.python.org/downloads/)
-[![Debian / Ubuntu](https://linguafix.layero.app/badges/platform.svg)](#-требования--requirements)
+[![License: MIT](https://klyrshift.layero.app/badges/license.svg)](LICENSE)
+[![Python 3.10+](https://klyrshift.layero.app/badges/python.svg)](https://www.python.org/downloads/)
+[![Debian / Ubuntu](https://klyrshift.layero.app/badges/platform.svg)](#-требования--requirements)
 
 ---
 
@@ -339,7 +339,7 @@ klyrshift dict remove-category it         # отключить
 `klyrshift-dict-<категория>.tar.gz`; при установке он сначала тянется из релиза,
 затем из зеркала репозитория, затем из локальной копии — так `install` работает
 и офлайн. Каталог с разделами — на странице
-[`/dictionaries`](https://linguafix.layero.app/dictionaries).
+[`/dictionaries`](https://klyrshift.layero.app/dictionaries).
 
 ### Ручной разворот раскладки
 
@@ -573,8 +573,8 @@ MIT — см. [LICENSE](LICENSE).
 
 ## 🌐 Сайт
 
-- **Основной сайт (RU):** https://linguafix.layero.app
-- **Зеркало (EN):** https://linguafix.vercel.app
+- **Основной сайт (RU):** https://klyrshift.layero.app
+- **Зеркало (EN):** https://klyrshift.vercel.app
 
 Оба сайта индексируются в поисковиках с per-host canonical и hreflang
 (`ru` / `en` / `x-default`), поэтому они не конкурируют как дубликаты.
