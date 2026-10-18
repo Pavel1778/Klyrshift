@@ -22,7 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the project setting, `.nvmrc` and `engines.node`.
   `tests/test_layero_config.py` enforces the rule — a pin whose major can resolve
   below the `engines.node` floor fails the test — so the deploy cannot silently
-  drop back under Astro's minimum.
+  drop back under Astro's minimum. The CI `site` job builds on
+  24 too, and `site/deploy.sh` refuses to run a local build below the
+  `engines.node` floor with a readable message instead of Astro's abort. One
+  caveat the docs disagree on: Layero's `layero.json` page says the file always
+  wins, while its runtime-versions page puts the panel's project setting above the
+  file, so the panel's "Версия Node.js" must stay on "Авто"/`24`.
 
 - **The landing page still canonised the pre-rename hosts.** The hosts were
   renamed with the project, so `klyrshift.layero.app` and `klyrshift.vercel.app`

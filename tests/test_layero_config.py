@@ -18,7 +18,9 @@ a line the platform would build below Astro's floor.
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -26,6 +28,7 @@ SITE = REPO_ROOT / "site"
 LAYERO_JSON = SITE / "layero.json"
 NODE_VERSION_FILE = SITE / ".nvmrc"
 SITE_PACKAGE_JSON = SITE / "package.json"
+DEPLOY_SH = SITE / "deploy.sh"
 
 # The majors Layero's build image offers (docs.layero.ru/deploys/runtime-versions).
 # Pinning anything else does not fail the build -- Layero warns and falls back to
@@ -115,3 +118,50 @@ def test_layero_json_declares_the_astro_build() -> None:
     assert config["framework"] == "astro"
     assert config["buildCommand"] == "npm run build"
     assert config["outputDirectory"] == "dist"
+
+
+def test_deploy_sh_requires_the_engines_floor() -> None:
+    """The local build must demand the same minimum the deploy must clear."""
+    script = DEPLOY_SH.read_text(encoding="utf-8")
+    required = re.search(r'^required_min="([^"]+)"$', script, re.MULTILINE)
+    assert required is not None, "deploy.sh must declare required_min"
+    assert _version_tuple(required.group(1)) == _engines_floor(), (
+        f"deploy.sh requires {required.group(1)} but engines.node floors at "
+        f"{'.'.join(map(str, _engines_floor()))}"
+    )
+
+
+def _run_deploy_sh_with_node_version(
+    tmp_path: Path, version: str
+) -> subprocess.CompletedProcess[str]:
+    """Run deploy.sh with a stub ``node`` reporting ``version`` on ``PATH``."""
+    node = tmp_path / "node"
+    node.write_text(f'#!/bin/sh\nif [ "$1" = "-p" ]; then echo "{version}"; fi\n')
+    node.chmod(0o755)
+    # A stub npm keeps the accepted-path test from running a real install/build.
+    npm = tmp_path / "npm"
+    npm.write_text('#!/bin/sh\necho "npm $@"\n')
+    npm.chmod(0o755)
+    env = dict(os.environ, PATH=f"{tmp_path}:{os.environ.get('PATH', '')}")
+    return subprocess.run(
+        ["bash", str(DEPLOY_SH)], capture_output=True, text=True, env=env, check=False
+    )
+
+
+def test_deploy_sh_rejects_an_older_node(tmp_path: Path) -> None:
+    """A Node below the floor fails in deploy.sh, before ``npm ci`` runs.
+
+    The stub reports the exact version the failed Layero deploy used, so the
+    developer sees the readable message rather than Astro's abort.
+    """
+    result = _run_deploy_sh_with_node_version(tmp_path, "22.18.0")
+    assert result.returncode == 1
+    assert "22.22.0 is required" in result.stderr
+    assert "npm" not in result.stdout
+
+
+def test_deploy_sh_accepts_a_node_at_the_floor(tmp_path: Path) -> None:
+    """A Node exactly at the floor is accepted and the build proceeds."""
+    result = _run_deploy_sh_with_node_version(tmp_path, "22.22.0")
+    assert "is required" not in result.stderr
+    assert "npm ci" in result.stdout
