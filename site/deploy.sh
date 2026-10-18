@@ -10,6 +10,22 @@
 set -e
 cd "$(dirname "$0")"
 
+# Astro 7 needs Node >= 22.22.0 (site/package.json engines.node). Fail here with
+# a readable message instead of letting Astro abort with "Node.js vX is not
+# supported by Astro!". Layero's 22 line is older than this floor, which is why
+# the deploy pins major 24 (see layero.json and .nvmrc) -- but any Node at or
+# above the floor builds the site locally.
+required_min="22.22.0"
+if ! command -v node >/dev/null 2>&1; then
+  echo "Node >= $required_min is required (see .nvmrc); none found." >&2
+  exit 1
+fi
+node_version="$(node -p 'process.versions.node')"
+if [ "$(printf '%s\n%s\n' "$required_min" "$node_version" | sort -V | head -1)" != "$required_min" ]; then
+  echo "Node >= $required_min is required, found v$node_version (see .nvmrc)." >&2
+  exit 1
+fi
+
 npm ci
 npm run build
 

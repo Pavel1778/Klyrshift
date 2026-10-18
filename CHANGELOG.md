@@ -23,6 +23,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Layero deploy failed before Astro ran.** Astro 7 refuses to build below
+  Node `22.22.0` (`site/package.json` `engines.node`), and Layero's build for the
+  22 major is the older `22.18.0`, so the build aborted with
+  `Node.js v22.18.0 is not supported by Astro!`. Pinning the patch does not help:
+  Layero keeps one build per major and updates the patch inside it itself (its own
+  log line reads `[config] node=22.18.0 (.nvmrc)` for `.nvmrc` = `22`), so the 22
+  line stays below Astro's floor no matter what patch is requested. The pin is
+  therefore a major whose *whole* range clears the floor: `site/layero.json` sets
+  `nodeVersion: "24"` (`24.0.0 >= 22.22.0`, whereas `22.0.0 < 22.22.0`), and
+  `site/.nvmrc` and the CI `site` job name the same major. `layero.json` outranks
+  the project setting, `.nvmrc` and `engines.node`.
+  `tests/test_layero_config.py` enforces the rule — a pin whose major can resolve
+  below the `engines.node` floor fails the test — so the deploy cannot silently
+  drop back under Astro's minimum. The CI `site` job builds on
+  24 too, and `site/deploy.sh` refuses to run a local build below the
+  `engines.node` floor with a readable message instead of Astro's abort. One
+  caveat the docs disagree on: Layero's `layero.json` page says the file always
+  wins, while its runtime-versions page puts the panel's project setting above the
+  file, so the panel's "Версия Node.js" must stay on "Авто"/`24`.
+
 - **A `Ctrl`/`Alt` chord leaked its key into the buffer.** Typing a word, then
   pressing `Ctrl+C` (or any command chord), left the chord's own key in the
   buffer -- the `c` of `Ctrl+C` -- so the next Space analysed a stray
