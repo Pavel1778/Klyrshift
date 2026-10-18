@@ -24,7 +24,8 @@ npm run preview
 site/
 ├── astro.config.mjs      # site URL, интеграции (tailwind через @tailwindcss/vite, sitemap)
 ├── vercel.json           # конфиг для Vercel
-├── layero.json           # конфиг для Layero
+├── layero.json           # конфиг для Layero (framework, сборка, nodeVersion)
+├── .nvmrc                # версия Node для локальной разработки (22.22.0)
 ├── deploy.sh             # сборка + деплой
 ├── public/               # favicon, logo, og-image, robots.txt
 └── src/
@@ -83,14 +84,19 @@ npx layero@latest deploy --dry-run
 
 ```json
 {
+  "$schema": "https://layero.ru/schema/layero-v2.json",
   "framework": "astro",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "nodeVersion": "22.22.0"
 }
 ```
 
-`layero.json` не обязателен, если Layero сам определяет Astro, но для явности
-он оставлен в `site/`.
+`nodeVersion` обязателен: Layero по умолчанию собирает на Node **22.18.0**, а
+Astro 7 требует `>=22.22.0` (см. `engines.node`), поэтому сборка падала ещё до
+компиляции. Поле перекрывает `.nvmrc` и `engines.node`, и версия `22.22.0`
+должна совпадать во всех трёх местах — в `layero.json`, в `site/.nvmrc` и в
+`engines.node`; иначе у проекта появятся два источника правды.
 
 ## Обновление версии
 

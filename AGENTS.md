@@ -222,7 +222,12 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
     and v4 decouples `text-*` from `leading-*`, so an explicit `leading-tight`
     now overrides `text-5xl`'s line-height where v3 let the breakpoint win — pin
     the intended line-height explicitly. Astro 7 needs Node >=22.22 (see
-    `site/package.json` `engines` and the CI `site` job).
+    `site/package.json` `engines` and the CI `site` job). Layero's own default
+    for the 22 major is older (`22.18.0`), so the deploy pins it in
+    `site/layero.json` (`nodeVersion: "22.22.0"`); that field outranks project
+    settings, `.nvmrc` and `engines.node`, which is why the pin must be kept in
+    lockstep with `site/.nvmrc` and `engines.node`
+    (`tests/test_layero_config.py`).
   - `site/public/og-image.png` (the 1200x630 link preview) is **generated** by
   `scripts/make_og_image.py`, which inlines `site/public/logo.svg` and the
   self-hosted Inter/JetBrains Mono woff2 that Astro emits, then screenshots the
