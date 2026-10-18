@@ -7,8 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8.4] - 2026-10-18
+
+A fixes-only patch. The guided tour no longer loses the user's place when the
+window is closed mid-tour.
+
 ### Fixed
 
+- **An interrupted guided tour restarted from the first step.**
+  `OnboardingState.last_step` was documented as "the index of the last step
+  shown, so an interrupted tour can be resumed", but nothing ever wrote it, so
+  the value stayed `0` and closing the window mid-tour lost the user's place.
+  The overlay now reports each step it displays, the window persists the index,
+  and `start_tour` resumes an unfinished tour there. Finishing or skipping the
+  tour clears the stored position.
 - **The home page claimed auto-switching was paused whenever any app had focus.**
   The pause banner's reason treated *any* running application as a reason to
   pause, so an ordinary auto-mode session that had nothing on the exception list
@@ -765,6 +777,7 @@ Hotfix for three defects reported after the 0.2.8 live test.
 - The `uk`/`de`/`fr` corpora are opt-in and have not been calibrated against
   live input.
 
+[0.2.8.4]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.8.4
 [0.2.8.3]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.8.3
 [0.2.3]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.3
 [0.2.2]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.2

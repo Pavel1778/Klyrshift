@@ -9,7 +9,7 @@
 // ``<link rel="canonical">``, ``og:url`` and the sitemap -- pointing it at a 404
 // makes search engines drop the page. When the hosts are renamed, only the two
 // origin constants in ``astro.config.mjs``/``lib/site.ts`` change.
-export const VERSION = "0.2.8.3";
+export const VERSION = "0.2.8.4";
 
 export const REPO_OWNER = "Pavel1778";
 export const REPO_NAME = "Klyrshift";

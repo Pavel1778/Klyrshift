@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "klyrshift"
-version = "0.2.8.3"
+version = "0.2.8.4"
 description = "Automatic keyboard layout switcher for Debian GNOME (X11 and Wayland)"
 readme = "README.md"
 requires-python = ">=3.10"
