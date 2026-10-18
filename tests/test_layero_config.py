@@ -23,6 +23,8 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SITE = REPO_ROOT / "site"
 LAYERO_JSON = SITE / "layero.json"
@@ -160,8 +162,24 @@ def test_deploy_sh_rejects_an_older_node(tmp_path: Path) -> None:
     assert "npm" not in result.stdout
 
 
-def test_deploy_sh_accepts_a_node_at_the_floor(tmp_path: Path) -> None:
-    """A Node exactly at the floor is accepted and the build proceeds."""
-    result = _run_deploy_sh_with_node_version(tmp_path, "22.22.0")
-    assert "is required" not in result.stderr
-    assert "npm ci" in result.stdout
+@pytest.mark.parametrize(
+    ("version", "below_floor"),
+    [
+        ("22.18.0", True),  # what the failed Layero deploy reported
+        ("22.9.0", True),  # numerically below, lexically above 22.22.0
+        ("22.21.9", True),
+        ("22.22.0", False),  # exactly at the floor
+        ("22.22.1", False),
+        ("24.22.0", False),  # the pinned line
+    ],
+)
+def test_deploy_sh_compares_versions_numerically(
+    tmp_path: Path, version: str, below_floor: bool
+) -> None:
+    """The floor check is numeric: 22.9.0 is below 22.22.0, not above it."""
+    result = _run_deploy_sh_with_node_version(tmp_path, version)
+    if below_floor:
+        assert result.returncode == 1
+        assert "22.22.0 is required" in result.stderr
+    else:
+        assert result.returncode == 0
