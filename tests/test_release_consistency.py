@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -182,3 +183,126 @@ def test_download_urls_use_the_repository_that_exists(rc: object) -> None:
     url = rc.download_url(facts, facts.deb_asset)
     assert url.startswith(f"https://github.com/{facts.repo_slug}/releases/latest/download/")
     assert url.endswith(facts.deb_asset)
+
+
+# --- the CLI: what the release workflow actually runs -------------------------
+
+
+def _release_payload(tag: str, assets: list[str]) -> dict[str, object]:
+    return {"tag_name": tag, "assets": [{"name": a} for a in assets]}
+
+
+def _staged_assets_file(tmp_path: Path, names: list[str]) -> Path:
+    path = tmp_path / "staged-assets.txt"
+    path.write_text("\n".join(names) + "\n", encoding="utf-8")
+    return path
+
+
+def test_prepublish_gate_passes_before_the_release_exists(
+    rc: object, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The exact pre-publish invocation from ``release.yml`` must succeed.
+
+    The gate runs *before* the release is created, so a fetch would 404 and abort
+    the workflow before it could publish anything. The staged asset names come
+    from the file, so the release never has to be fetched.
+    """
+    facts = rc.collect_source_facts()
+    staged = _staged_assets_file(tmp_path, list(facts.all_assets))
+
+    def _must_not_fetch(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("the pre-publish gate must not fetch a release that does not exist")
+
+    monkeypatch.setattr(rc, "fetch_release", _must_not_fetch)
+
+    exit_code = rc.main(["--source", "--tag", facts.tag, "--assets-file", str(staged)])
+
+    assert exit_code == 0, capsys.readouterr().err
+    assert "[release] ok" in capsys.readouterr().out
+
+
+def test_prepublish_gate_still_fails_on_a_missing_staged_asset(
+    rc: object, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Skipping the fetch must not weaken the check it replaces."""
+    facts = rc.collect_source_facts()
+    staged = _staged_assets_file(tmp_path, list(facts.all_assets[:-1]))
+    monkeypatch.setattr(
+        rc, "fetch_release", lambda *_a, **_k: pytest.fail("no fetch before the release exists")
+    )
+
+    assert rc.main(["--source", "--tag", facts.tag, "--assets-file", str(staged)]) != 0
+
+
+def test_prepublish_gate_still_fails_on_a_source_problem(
+    rc: object, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A tree that disagrees with itself must fail even with ``--assets-file``."""
+    facts = rc.collect_source_facts()
+    staged = _staged_assets_file(tmp_path, list(facts.all_assets))
+    monkeypatch.setattr(
+        rc, "fetch_release", lambda *_a, **_k: pytest.fail("no fetch before the release exists")
+    )
+    monkeypatch.setattr(rc, "collect_source_facts", lambda *a, **k: replace(facts, version="9.9.9"))
+
+    assert rc.main(["--source", "--tag", facts.tag, "--assets-file", str(staged)]) != 0
+
+
+def test_published_release_check_with_tag_uses_the_github_data(
+    rc: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without ``--assets-file`` the published release is still fetched and checked."""
+    facts = rc.collect_source_facts()
+    seen: list[str | None] = []
+
+    def _fetch(_slug: str, tag: str | None) -> dict[str, object]:
+        seen.append(tag)
+        return _release_payload(facts.tag, list(facts.all_assets))
+
+    monkeypatch.setattr(rc, "fetch_release", _fetch)
+
+    assert rc.main(["--tag", facts.tag]) == 0
+    assert seen == [facts.tag], "the published release was not fetched"
+
+
+def test_published_release_check_still_catches_a_stale_release(
+    rc: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The 0.2.8-vs-0.2.8.2 drift, through the CLI this time."""
+    facts = rc.collect_source_facts()
+    monkeypatch.setattr(
+        rc,
+        "fetch_release",
+        lambda *_a, **_k: _release_payload("v0.2.8", ["linguafix_0.2.8_all.deb"]),
+    )
+
+    assert rc.main(["--tag", facts.tag]) != 0
+
+
+def test_latest_still_queries_the_api_even_with_an_assets_file(
+    rc: object, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``--latest`` can only learn the newest tag from the API, so it must fetch."""
+    facts = rc.collect_source_facts()
+    staged = _staged_assets_file(tmp_path, list(facts.all_assets))
+    seen: list[str | None] = []
+
+    def _fetch(_slug: str, tag: str | None) -> dict[str, object]:
+        seen.append(tag)
+        return _release_payload(facts.tag, list(facts.all_assets))
+
+    monkeypatch.setattr(rc, "fetch_release", _fetch)
+
+    assert rc.main(["--latest", "--assets-file", str(staged)]) == 0
+    assert seen == [None], "--latest must ask for the newest release"
+
+
+def test_latest_still_catches_a_newest_release_behind_the_tree(
+    rc: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    facts = rc.collect_source_facts()
+    monkeypatch.setattr(
+        rc, "fetch_release", lambda *_a, **_k: _release_payload("v0.2.8", list(facts.all_assets))
+    )
+
+    assert rc.main(["--latest"]) != 0

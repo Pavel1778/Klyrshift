@@ -304,6 +304,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.source:
         problems += check_source_consistency(facts)
 
+    # ``--assets-file`` supplies the asset names, so the published release does not
+    # have to be fetched to know them. That is what lets the pre-publish gate check
+    # the tag being cut: its release does not exist yet, and fetching it would 404
+    # and abort the workflow before it can create the release. ``--latest`` is the
+    # exception -- the newest tag is knowable only from the API, so it always needs
+    # the network.
+    needs_release = args.latest or (args.tag is not None and not args.assets_file)
+
     if args.assets_file:
         names = [
             line.strip()
@@ -312,7 +320,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ]
         problems += check_published_release(facts, args.tag or facts.tag, names)
 
-    if args.tag or args.latest:
+    if needs_release:
         payload = fetch_release(facts.repo_slug, args.tag)
         tag = _release_tag(payload)
         names = _release_asset_names(payload)

@@ -126,6 +126,15 @@ release tree, the changelog and the published release are reconciled.
   that no file, unit or daemon survives — and `apt-get -f install` clears
   it. `Breaks:` was measured against `Conflicts:` and rejected: `Breaks` leaves
   the old unit on disk and still enabled, so both daemons would run.
+  - **The release gate could never pass on the tag it was checking.** The
+    workflow runs `release_consistency.py --source --tag <tag> --assets-file
+    <staged>` *before* it creates the release, but the script fetched the
+    release whenever `--tag` was present. The tag has no release yet, so the
+    fetch 404ed and the job failed before publishing anything — the gate was
+    added after the last tag was cut, so it had never run for real.
+    `--assets-file` already supplies the asset names, so the release is now
+    fetched only when the API is the only source: with `--latest`, or with
+    `--tag` and no `--assets-file`.
 
 ### Added
 
