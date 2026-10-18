@@ -34,6 +34,12 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 - The pytest suite replaces the OS boundary with fakes, so it **cannot** catch
   packaging bugs. `scripts/smoke_test.sh` installs the real `.deb` into a clean
   container and is the only check that proves the package works.
+- The README screenshots are real renders; regenerate them with
+  `scripts/make_screenshots.py` after any GUI change. The script is hermetic --
+  it pins a placeholder `HOME` and redirects every write into a throwaway tree --
+  so a re-run is byte-stable apart from sub-2/255 antialiasing jitter. Do not
+  render against the developer's real `HOME`: a first-run tour offer covers the
+  home page and the shot then depends on the machine's onboarding state.
 - `tests/test_backend_integration.py` is the exception to the "fakes only" rule:
   it writes real stub executables (`g3kb-switch`, `setxkbmap`, `wtype`,
   `xdotool`) onto a throwaway `PATH` and drives the real `LayoutSwitcher` /
@@ -279,6 +285,22 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 - `python3-evdev` ships in Debian and Ubuntu and is the only native runtime
   dependency; `install.sh` reuses it via `--system-site-packages` so no compiler
   is needed. `python-uinput` is **not** a dependency.
+- **`python3-gi` is not enough for the GUI: the Cairo override is a separate
+  package.** `Gtk.DrawingArea.set_draw_func` (the tour scrim, the fallback power
+  glyph) is handed a `cairo.Context`, and PyGObject can only build that converter
+  when `_gi_cairo` is importable -- `python3-gi-cairo`, which `python3-gi` does
+  not depend on. Without it the window still opens and `from gi.repository import
+  cairo` still succeeds, so the only symptom is a blank widget plus
+  `Couldn't find foreign struct converter for 'cairo.Context'` on every frame.
+  Detect it with `from gi import _gi_cairo` (`klyrshift.gui.cairo_available`), not
+  by importing `gi.repository.cairo`. The package is listed in the `.deb`
+  `Recommends`, `install.sh`, the CI apt list and the docs; keep them in step.
+- **The container's `LD_LIBRARY_PATH` breaks `/usr/local` Python.** It puts
+  `/usr/lib/x86_64-linux-gnu` on the loader path, which resolves libffi to the
+  distro copy and makes `import ctypes` segfault (so `import evdev`, `black` and
+  pytest all die with SIGSEGV). `/usr/bin/python3` is unaffected. When the venv
+  interpreter segfaults in `ctypes/__init__.py`, rerun with
+  `env -u LD_LIBRARY_PATH`. This is an environment quirk, not a code bug.
 
 ## Known limitation
 
