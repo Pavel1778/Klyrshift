@@ -205,7 +205,16 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   plausibility test to TypeScript on top of it. Never hand-edit the JSON: rerun
   the script after a corpus rebuild. `tests/test_demo_model.py` fails when the
   committed model drifts from the corpora.
-- `site/public/og-image.png` (the 1200x630 link preview) is **generated** by
+  - `site/` is Astro 7 + Tailwind CSS 4 via `@tailwindcss/vite`. The theme lives
+    in `site/src/styles/global.css` (`@import "tailwindcss"` + `@theme`); there is
+    no `tailwind.config.mjs`. Two migration traps to keep in mind: Tailwind 4
+    reserves `--font-mono` as a theme key, so Astro's mono font variable is named
+    `--font-jetbrains` (a colliding name silently drops the built `--font-mono`);
+    and v4 decouples `text-*` from `leading-*`, so an explicit `leading-tight`
+    now overrides `text-5xl`'s line-height where v3 let the breakpoint win — pin
+    the intended line-height explicitly. Astro 7 needs Node >=22.22 (see
+    `site/package.json` `engines` and the CI `site` job).
+  - `site/public/og-image.png` (the 1200x630 link preview) is **generated** by
   `scripts/make_og_image.py`, which inlines `site/public/logo.svg` and the
   self-hosted Inter/JetBrains Mono woff2 that Astro emits, then screenshots the
   card with headless `chromium`. It needs a prior `npm run build` in `site/`
