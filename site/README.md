@@ -1,6 +1,6 @@
 # Klyrshift — лендинг
 
-Статический сайт (Astro 5 + Tailwind CSS) для проекта
+Статический сайт (Astro 7 + Tailwind CSS 4) для проекта
 [Klyrshift](https://github.com/Pavel1778/Klyrshift).
 
 ## Локальный запуск
@@ -22,8 +22,7 @@ npm run preview
 
 ```
 site/
-├── astro.config.mjs      # site URL, интеграции (tailwind, sitemap)
-├── tailwind.config.mjs
+├── astro.config.mjs      # site URL, интеграции (tailwind через @tailwindcss/vite, sitemap)
 ├── vercel.json           # конфиг для Vercel
 ├── layero.json           # конфиг для Layero
 ├── deploy.sh             # сборка + деплой
