@@ -25,7 +25,7 @@ site/
 ├── astro.config.mjs      # site URL, интеграции (tailwind через @tailwindcss/vite, sitemap)
 ├── vercel.json           # конфиг для Vercel
 ├── layero.json           # конфиг для Layero (framework, сборка, nodeVersion)
-├── .nvmrc                # версия Node для локальной разработки (22.22.0)
+├── .nvmrc                # версия Node для локальной разработки (24)
 ├── deploy.sh             # сборка + деплой
 ├── public/               # favicon, logo, og-image, robots.txt
 └── src/
@@ -88,15 +88,20 @@ npx layero@latest deploy --dry-run
   "framework": "astro",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "nodeVersion": "22.22.0"
+  "nodeVersion": "24"
 }
 ```
 
-`nodeVersion` обязателен: Layero по умолчанию собирает на Node **22.18.0**, а
-Astro 7 требует `>=22.22.0` (см. `engines.node`), поэтому сборка падала ещё до
-компиляции. Поле перекрывает `.nvmrc` и `engines.node`, и версия `22.22.0`
-должна совпадать во всех трёх местах — в `layero.json`, в `site/.nvmrc` и в
-`engines.node`; иначе у проекта появятся два источника правды.
+`nodeVersion` обязателен, и указывать надо **мажор** (`"24"`), а не патч.
+Причина: Layero держит по одной сборке на мажор и обновляет патч внутри неё сам
+— в их же примере лога `[config] node=22.18.0 (.nvmrc)` при `.nvmrc` = `22`.
+То есть линия 22 у Layero — это `22.18.0`, а Astro 7 требует `>=22.22.0`
+(`engines.node`), поэтому сборка падала ещё до компиляции, и пин `22.22.0` её
+не лечит: платформа всё равно отдаёт патч своей сборки. Безопасен только мажор,
+у которого **вся** линейка выше порога Astro: `24.0.0 >= 22.22.0`, тогда как
+`22.0.0 < 22.22.0`. Поэтому `site/layero.json`, `site/.nvmrc` и CI названы
+мажором `24`, а `tests/test_layero_config.py` проверяет это правило и упадёт,
+если пин опустится до линии, которую Layero собирает ниже порога.
 
 ## Обновление версии
 

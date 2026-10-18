@@ -10,13 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **The Layero deploy failed before Astro ran.** Astro 7 refuses to build below
-  Node `22.22.0` (`site/package.json` `engines.node`), and Layero's own default
-  for the 22 major is the older `22.18.0`, so the build aborted with
-  `Node.js v22.18.0 is not supported by Astro!`. `site/layero.json` now pins
-  `nodeVersion: "22.22.0"` — that field outranks the project setting, `.nvmrc`
-  and `engines.node` — and `site/.nvmrc` carries the same version for local
-  development. `tests/test_layero_config.py` keeps the three declarations in
-  lockstep and fails if the pin drops below the `engines.node` floor.
+  Node `22.22.0` (`site/package.json` `engines.node`), and Layero's build for the
+  22 major is the older `22.18.0`, so the build aborted with
+  `Node.js v22.18.0 is not supported by Astro!`. Pinning the patch does not help:
+  Layero keeps one build per major and updates the patch inside it itself (its own
+  log line reads `[config] node=22.18.0 (.nvmrc)` for `.nvmrc` = `22`), so the 22
+  line stays below Astro's floor no matter what patch is requested. The pin is
+  therefore a major whose *whole* range clears the floor: `site/layero.json` sets
+  `nodeVersion: "24"` (`24.0.0 >= 22.22.0`, whereas `22.0.0 < 22.22.0`), and
+  `site/.nvmrc` and the CI `site` job name the same major. `layero.json` outranks
+  the project setting, `.nvmrc` and `engines.node`.
+  `tests/test_layero_config.py` enforces the rule — a pin whose major can resolve
+  below the `engines.node` floor fails the test — so the deploy cannot silently
+  drop back under Astro's minimum.
 
 - **The landing page still canonised the pre-rename hosts.** The hosts were
   renamed with the project, so `klyrshift.layero.app` and `klyrshift.vercel.app`

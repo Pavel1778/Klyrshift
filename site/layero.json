@@ -3,5 +3,5 @@
   "framework": "astro",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "nodeVersion": "22.22.0"
+  "nodeVersion": "24"
 }

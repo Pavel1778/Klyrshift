@@ -222,12 +222,16 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
     and v4 decouples `text-*` from `leading-*`, so an explicit `leading-tight`
     now overrides `text-5xl`'s line-height where v3 let the breakpoint win — pin
     the intended line-height explicitly. Astro 7 needs Node >=22.22 (see
-    `site/package.json` `engines` and the CI `site` job). Layero's own default
-    for the 22 major is older (`22.18.0`), so the deploy pins it in
-    `site/layero.json` (`nodeVersion: "22.22.0"`); that field outranks project
-    settings, `.nvmrc` and `engines.node`, which is why the pin must be kept in
-    lockstep with `site/.nvmrc` and `engines.node`
-    (`tests/test_layero_config.py`).
+    `site/package.json` `engines` and the CI `site` job). Layero keeps **one
+    build per major** and updates the patch inside it itself — its log line reads
+    `[config] node=22.18.0 (.nvmrc)` for `.nvmrc` = `22` — so the 22 line is
+    `22.18.0`, below Astro's floor, and pinning a patch (`22.22.0`) does not buy
+    that patch. The deploy therefore pins a **major whose whole range clears the
+    floor**: `site/layero.json` `nodeVersion: "24"` (`24.0.0 >= 22.22.0`, while
+    `22.0.0 < 22.22.0`), matched by `site/.nvmrc` and the CI `site` job.
+    `layero.json` outranks project settings, `.nvmrc` and `engines.node`.
+    `tests/test_layero_config.py` enforces the rule, so a pin that could resolve
+    below the `engines.node` floor fails the suite.
   - `site/public/og-image.png` (the 1200x630 link preview) is **generated** by
   `scripts/make_og_image.py`, which inlines `site/public/logo.svg` and the
   self-hosted Inter/JetBrains Mono woff2 that Astro emits, then screenshots the
