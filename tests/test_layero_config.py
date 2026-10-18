@@ -3,9 +3,11 @@
 Astro 7 refuses to build below Node ``22.22.0`` (``site/package.json``
 ``engines.node``). Layero's build image offers the majors 20, 22 and 24, and
 each major is a *single* build whose patch the platform updates on its own: the
-docs' own example shows ``[config] node=22.18.0 (.nvmrc)`` when ``.nvmrc`` says
-``22``. Requesting the patch ``22.22.0`` therefore does not buy that patch -- the
-22 line is ``22.18.0``, which is exactly the version the failed deploy reported.
+docs say to name the major and it updates the exact build within it. The failed
+deploy log shows what that means here -- ``[config] node=22.18.0 (engines.node)``:
+Layero read the major ``22`` out of the ``>=22.22.0`` range and built on its own
+22-line image, ``22.18.0``, which is exactly the version the failed deploy
+reported. Requesting the patch ``22.22.0`` therefore does not buy that patch.
 
 The pin must name a major whose *whole* range clears the floor: the smallest
 version a major ``M`` can resolve to is ``M.0.0``, so ``22`` (i.e. ``22.0.0``)
