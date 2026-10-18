@@ -16,6 +16,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,11 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 WIDTH = 980
 HEIGHT = 720
+
+# Wall-clock window a page is left to settle before it is rendered. Covers the
+# ``Adw.ViewSwitcher`` underline animation, which is timeline-driven and so is
+# not reported by ``Adw.ViewStack``'s ``transition-running`` flag.
+_SETTLE_SECONDS = 0.6
 
 
 def _make_renderer() -> Gsk.Renderer:
@@ -103,6 +109,9 @@ def main() -> int:
     holder: dict[str, Any] = {}
 
     def on_activate(application: Adw.Application) -> None:
+        # A blinking text caret would land in or out of the frame depending on
+        # where the blink happens to be, so turn it off for the capture.
+        Gtk.Settings.get_default().set_property("gtk-cursor-blink", False)
         state = GuiState(config=Config())
         window = KlyrshiftWindow(state, application)
         holder["window"] = window
@@ -112,21 +121,40 @@ def main() -> int:
         # Wait until the window is mapped and allocated before rendering.
         GLib.timeout_add(500, _grab)
 
+    def _settle() -> None:
+        """Let every page transition finish before the frame is captured.
+
+        ``Adw.ViewStack`` cross-fades ``set_visible_child_name`` and the
+        ``Adw.ViewSwitcher`` underline keeps ticking for a moment after that;
+        the tick is driven by a wall-clock timeline, so ``transition-running``
+        alone returns too early and the render catches an arbitrary frame of the
+        animation. Transitions are disabled and the loop is pumped for a fixed
+        settle window, which makes the PNGs byte-stable from run to run instead
+        of drifting by a few antialiasing levels.
+        """
+        context = GLib.MainContext.default()
+        deadline = time.monotonic() + _SETTLE_SECONDS
+        while time.monotonic() < deadline:
+            while context.pending():
+                context.iteration(False)
+            time.sleep(0.01)
+        while context.pending():
+            context.iteration(False)
+
     def _grab() -> bool:
         window = holder.get("window")
         renderer = holder.get("renderer")
         if window is None or renderer is None:
             return False
+        # No cross-fade: every shot must be a settled frame, not a fade midpoint.
+        window.stack.set_enable_transitions(False)
         for page_name, filename in (
             ("home", "main-window.png"),
             ("settings", "advanced-settings.png"),
             ("dictionary", "dictionary.png"),
         ):
             window.stack.set_visible_child_name(page_name)
-            context = GLib.MainContext.default()
-            for _ in range(50):
-                while context.pending():
-                    context.iteration(False)
+            _settle()
             _render(window, out_dir / filename, renderer)
             shots.append(filename)
         app.quit()
