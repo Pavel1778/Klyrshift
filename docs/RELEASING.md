@@ -99,8 +99,9 @@ release may not claim the input path works until this section is done.
   emitted fonts) regenerates `site/public/og-image.png` with no diff: the link
   preview is generated, and a hand-edited one shows the dead name again.
 - [ ] The canonical origin, `og:url` and the `hreflang` alternates point at the
-  hosts that resolve (`linguafix.layero.app`, `linguafix.vercel.app`), not at
-  the `klyrshift.*` names, which are still 404. A test enforces this.
+  live hosts (`klyrshift.layero.app`, `klyrshift.vercel.app`). The pre-rename
+  `linguafix.*` names now return 404, so a canonical that points at them makes
+  search engines drop the page. A test enforces this.
 
 ## 6. The release assets
 
@@ -130,16 +131,15 @@ publishes.
 - [ ] The download links on the landing page resolve. Redeploy the Layero host
   if it still serves the previous version.
 
-## Known blockers for `v0.2.8.4`
+## Renamed hosts
 
-One thing is outside this repository and cannot be fixed from a commit:
+The GitHub repository rename is done: the repository is `Pavel1778/Klyrshift` and
+GitHub redirects the old `Pavel1778/LinguaFix` slug. The site hosts were renamed
+with it, so `klyrshift.layero.app` and `klyrshift.vercel.app` are the live origins
+and the pre-rename `linguafix.*` names return 404.
 
-- `linguafix.layero.app` serves a stale build (old name, `0.2.8.1`, a 404
-  download link). It needs a redeploy with Layero credentials.
-
-The GitHub repository rename is done: the repository is `Pavel1778/Klyrshift`
-and GitHub redirects the old `Pavel1778/LinguaFix` slug.
-
-The Layero host does not block *cutting* the tag, but it should be settled
-before announcing the release, because the site advertises the version.
+The Layero mirror is still deployed by hand (see
+[site/README.md](../site/README.md)), so it can lag behind `main`; redeploy it
+with the Layero credentials before announcing a release, because the site
+advertises the version.
 

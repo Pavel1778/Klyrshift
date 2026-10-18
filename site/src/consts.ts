@@ -3,12 +3,10 @@
 // The GitHub repository is named ``Klyrshift``: the rename from ``LinguaFix`` is
 // done both in the source and on GitHub, and GitHub redirects the old slug.
 //
-// The canonical *hosts*, however, are still the ``linguafix.*`` ones. The DNS
-// entries for ``klyrshift.layero.app`` and ``klyrshift.vercel.app`` exist but
-// resolve to no deployment (404), and the origin below is written into
-// ``<link rel="canonical">``, ``og:url`` and the sitemap -- pointing it at a 404
-// makes search engines drop the page. When the hosts are renamed, only the two
-// origin constants in ``astro.config.mjs``/``lib/site.ts`` change.
+// The canonical hosts are the ``klyrshift.*`` ones, matching the repository name.
+// The origins below are written into ``<link rel="canonical">``, ``og:url`` and
+// the sitemap; the two origin constants in ``astro.config.mjs``/``lib/site.ts``
+// must agree with them.
 export const VERSION = "0.2.8.4";
 
 export const REPO_OWNER = "Pavel1778";

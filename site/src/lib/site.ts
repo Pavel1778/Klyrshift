@@ -1,14 +1,13 @@
 // The site ships to two hosts that are both indexed, so they must not compete as
 // duplicate content. Each host declares itself canonical and cross-links the other
 // with hreflang:
-//   - Layero (primary, Russian):  https://linguafix.layero.app
-//   - Vercel (mirror, English):   https://linguafix.vercel.app
+//   - Layero (primary, Russian):  https://klyrshift.layero.app
+//   - Vercel (mirror, English):   https://klyrshift.vercel.app
 //
-// The hosts are still named ``linguafix.*``: the ``Klyrshift`` rename is done in
-// the source but the DNS entries were never renamed, so the ``klyrshift.*`` names
-// are 404. The canonical URL, ``og:url`` and the sitemap all derive from these
-// constants, and a 404 origin makes search engines drop the page. When the hosts
-// are renamed, only these two constants change.
+// Both hosts are served under the ``klyrshift.*`` names; the ``linguafix.*``
+// names the deployments used before the rename now return 404, so the canonical
+// URL, ``og:url`` and the sitemap must not point at them. When a host is renamed,
+// only these two constants change.
 //
 // VERCEL_URL is set for every Vercel build (including the stable production
 // domain), so it selects the Vercel host. The canonical/OG origin is always the
@@ -18,8 +17,8 @@
 // well as in astro.config.mjs: the sitemap takes its origin from that config
 // while the canonical/og:url/hreflang take theirs from here, so a build that
 // sets only one of the two disagrees with itself.
-export const LAYERO_URL = "https://linguafix.layero.app";
-export const VERCEL_URL = "https://linguafix.vercel.app";
+export const LAYERO_URL = "https://klyrshift.layero.app";
+export const VERCEL_URL = "https://klyrshift.vercel.app";
 
 export const isVercel = Boolean(import.meta.env.VERCEL_URL);
 

@@ -56,6 +56,15 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   without a display server. Talking to a live compositor still needs a desktop.
 
 ## Invariants that have bitten before
+- **The live hosts are `klyrshift.*`, not `linguafix.*`.** The site's canonical
+  origin lives in two places that must agree: `site/astro.config.mjs` (sitemap,
+  `robots.txt`) and `site/src/lib/site.ts` (canonical, `og:url`, hreflang). Both
+  point at `klyrshift.layero.app` / `klyrshift.vercel.app`; the pre-rename
+  `linguafix.*` names return 404, and a canonical that points at a 404 makes
+  search engines drop the page. `README.md` badges and links use the same hosts.
+  `tests/test_repo_urls.py` pins the live origins and fails if any tracked
+  document, template or the config links a `linguafix.*` host.
+
 - **The live GitHub release predates the rename.** Its assets are named
   `linguafix-*` (`linguafix_<v>_all.deb`, `linguafix-dict-<slug>.tar.gz`),
   while the build scripts and `repo.py` emit `klyrshift-*`. A hard-coded

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The landing page still canonised the pre-rename hosts.** The hosts were
+  renamed with the project, so `klyrshift.layero.app` and `klyrshift.vercel.app`
+  are the live origins and the old `linguafix.*` names now return 404. The
+  canonical origin, `og:url`, the `hreflang` alternates, the sitemap and
+  `robots.txt` still named `linguafix.*`, so every page advertised a dead address
+  that search engines drop. `astro.config.mjs`, `src/lib/site.ts`, the footer,
+  the `README.md` badges and the dictionary link now name the live hosts, and
+  `tests/test_repo_urls.py` pins them and fails if a `linguafix.*` host reappears
+  in the site source, the README or `docs/`.
+
 ## [0.2.8.4] - 2026-10-18
 
 A fixes-only patch. The guided tour no longer loses the user's place when the

@@ -8,16 +8,15 @@ import tailwindcss from "@tailwindcss/vite";
 // canonical URLs, og:url and the sitemap point at the host that serves them,
 // otherwise the two copies compete as duplicate content.
 //
-// The hosts are still named ``linguafix.*``: the ``Klyrshift`` rename is done in
-// the source but the DNS entries were never renamed, so ``klyrshift.layero.app``
-// and ``klyrshift.vercel.app`` are 404. Pointing the canonical URL at a 404 makes
-// search engines drop the page, so the names that resolve are used here. When
-// the hosts are renamed, only these two constants change.
+// Both hosts are served under the ``klyrshift.*`` names; the ``linguafix.*``
+// names that the deployments used before the rename now return 404, so the
+// canonical URL must not point at them. When a host is renamed, only these two
+// constants change.
 //
 // VERCEL_URL is set for every Vercel build (including the stable production
 // domain). SITE_URL overrides both for local checks.
-const LAYERO_ORIGIN = "https://linguafix.layero.app";
-const VERCEL_ORIGIN = "https://linguafix.vercel.app";
+const LAYERO_ORIGIN = "https://klyrshift.layero.app";
+const VERCEL_ORIGIN = "https://klyrshift.vercel.app";
 
 const site = process.env.SITE_URL || (process.env.VERCEL_URL ? VERCEL_ORIGIN : LAYERO_ORIGIN);
 
