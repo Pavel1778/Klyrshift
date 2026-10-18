@@ -1,0 +1,25 @@
+# Keep the three dependency surfaces of this repository patched.
+#
+# There is no other automated updater here, and the site's Astro tree is the one
+# that carries the most advisories, so the npm entry watches ``/site`` rather
+# than the repository root. ``open-pull-requests-limit`` is kept low so a batch
+# of minor bumps does not drown the queue.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "npm"
+    directory: "/site"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

@@ -8,7 +8,11 @@ PNGs are deleted, replaced by placeholders, or dropped from the README.
 
 from __future__ import annotations
 
+import os
+import shutil
 import struct
+import subprocess
+import sys
 import zlib
 from pathlib import Path
 
@@ -78,3 +82,50 @@ def test_no_placeholder_screenshot_assets_remain() -> None:
     """The unused site SVG mock-ups are gone; nothing should reintroduce them."""
     stale = list((REPO_ROOT / "site" / "public" / "screenshots").glob("*.svg"))
     assert stale == [], stale
+
+
+def _render_script() -> Path:
+    return REPO_ROOT / "scripts" / "make_screenshots.py"
+
+
+def test_render_disables_blink_and_transitions() -> None:
+    """The render must freeze both the view transition and the text caret.
+
+    ``Adw.ViewStack`` cross-fades a page switch and a focused entry keeps a
+    blinking caret; either one lands at a different point in its animation on a
+    re-run and the PNG then differs by a handful of antialiasing levels. The
+    capture is only reproducible if both are turned off first.
+    """
+    source = _render_script().read_text(encoding="utf-8")
+    assert "gtk-cursor-blink" in source
+    assert "set_enable_transitions(False)" in source
+
+
+@pytest.mark.skipif(
+    not os.environ.get("KLYRSHIFT_RENDER_TEST"),
+    reason="renders the GUI; set KLYRSHIFT_RENDER_TEST=1 under a display to run",
+)
+def test_screenshots_render_byte_identically(tmp_path: Path) -> None:
+    """Two renders of the same code must produce byte-identical PNGs.
+
+    This is the regression guard for the animation jitter: with the transitions
+    and the caret left running the two runs disagree, and the committed
+    screenshots silently drift every time they are regenerated.
+    """
+    if shutil.which("xvfb-run") is None:
+        pytest.skip("xvfb-run not installed")
+    first = tmp_path / "a"
+    second = tmp_path / "b"
+    env = dict(os.environ)
+    env["PYTHONPATH"] = "/usr/lib/python3/dist-packages"
+    for out in (first, second):
+        subprocess.run(
+            ["xvfb-run", "-a", sys.executable, str(_render_script()), str(out)],
+            check=True,
+            env=env,
+            capture_output=True,
+        )
+    for name in EXPECTED:
+        a = (first / name).read_bytes()
+        b = (second / name).read_bytes()
+        assert a == b, f"{name} is not byte-stable across renders"

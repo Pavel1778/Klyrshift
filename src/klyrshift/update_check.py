@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -85,12 +86,26 @@ def _record_check(now: float) -> None:
         logger.debug("Could not write update-check stamp", exc_info=True)
 
 
+def _require_https(url: str) -> None:
+    """Reject any scheme other than ``https``.
+
+    ``urlopen`` happily follows ``file:`` and ``ftp:`` URLs, so a caller that
+    ever passed a different value could turn the update check into a local file
+    read. The endpoint is a constant, but validating the scheme keeps that
+    guarantee local to the one call that opens a socket.
+    """
+    scheme = urllib.parse.urlsplit(url).scheme
+    if scheme != "https":
+        raise OSError(f"refusing non-https update URL: {url!r}")
+
+
 def fetch_latest(url: str = RELEASES_URL, timeout: float = REQUEST_TIMEOUT) -> str:
     """Return the ``tag_name`` of the latest GitHub release.
 
     Raises:
         OSError: On any network or decoding failure.
     """
+    _require_https(url)
     request = urllib.request.Request(
         url,
         headers={
@@ -99,7 +114,8 @@ def fetch_latest(url: str = RELEASES_URL, timeout: float = REQUEST_TIMEOUT) -> s
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        # Scheme checked by _require_https; B310 cannot see that.
+        with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310
             payload = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, OSError, ValueError) as exc:
         raise OSError(str(exc)) from exc
