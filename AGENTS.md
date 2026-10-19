@@ -446,6 +446,12 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   than none.** `/usr/share/common-licenses/CC-BY-SA-4.0` exists on Debian 12
   and 13; `tests/test_packaging_contract.py` checks the reference resolves
   instead of trusting the string.
+- **A `Files:` glob must name a path that exists.** The first `copyright`
+  draft pointed at `src/klyrshift/data/dictionaries/*.txt`, which is neither
+  the repository path (`dictionaries/*-50k.txt` at the root) nor the
+  installed one (`usr/lib/klyrshift/klyrshift/data/dictionaries/*.txt`), so
+  the paragraph attributed nothing while looking compliant. Resolve every
+  glob in `tests/test_packaging_contract.py` instead of matching the string.
 - Verify with `lintian --tag-display-limit 0 dist/<pkg>_*.deb`; the goal is
   zero `E:` tags. The remaining `W:` tags (systemctl in maintainer scripts, no
   man page, udev modalias) are deliberate and documented.
