@@ -62,8 +62,9 @@ Caramba Switcher for Windows.
 - 🔔 Уведомления (`notify-send`) и иконка в трее (AppIndicator)
 - 🛡️ Стоп-слова для защиты паролей и логинов
 - ⚙️ Настраиваемые таймауты, языки и backend'ы
-- 🧩 CLI: `start`, `stop`, `restart`, `kill`, `status`, `config`, `fix`, `dict`,
-  `export`, `import`, `doctor`, `verify`, `collect-logs`, `logs`
+- 🧩 CLI: `start`, `stop`, `restart`, `kill`, `status`, `mode`, `app-mode`,
+  `config`, `fix`, `dict`, `learn`, `undo`, `hotkeys`, `export`, `import`,
+  `doctor`, `verify`, `collect-logs`, `logs`
 - 🩺 `klyrshift doctor` — самодиагностика окружения с таблицей ✅/❌ и подсказками
 - 🔒 `klyrshift verify` — проверка целостности файлов пакета по манифесту `md5sums`
 - 📜 `klyrshift logs` — показать журнал демона (`-n`, `-f`, `--level`)
@@ -73,6 +74,8 @@ Caramba Switcher for Windows.
 - 🎓 Мастер первого запуска (языки, режим, автозапуск), вводный тур,
   контекстная справка «?» у каждой группы настроек и страница
   «Помощь и обучение» с диагностикой окружения и известными ограничениями
+- 🗂️ Профили по приложениям: список исключений, закреплённая раскладка
+  (`[app_layouts]`) и отдельный режим исправления (`[app_modes]`)
 - 🔒 Приватность: в лог пишутся только метаданные, набранный текст не сохраняется
 
 ## 🎯 Сравнение с аналогами / Comparison
