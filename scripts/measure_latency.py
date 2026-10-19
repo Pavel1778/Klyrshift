@@ -69,7 +69,12 @@ def _build_and_measure_memory(converter: LayoutConverter) -> tuple[LanguageDetec
     return detector, peak / 1024 / 1024
 
 
-def measure(limit: int, repeats: int) -> int:
+def measure(
+    limit: int,
+    repeats: int,
+    budget_ms: float | None = None,
+    budget_mib: float | None = None,
+) -> int:
     converter = LayoutConverter()
     detector, peak_mib = _build_and_measure_memory(converter)
 
@@ -78,6 +83,7 @@ def measure(limit: int, repeats: int) -> int:
     print(header)
     print("-" * len(header))
 
+    worst_ms = 0.0
     for language, corpus, own, other in DIRECTIONS:
         script = _CYRILLIC if own == "ru" else _LATIN
         words = [w for w in _read_words(corpus, limit) if _same_script(w, script)]
@@ -89,18 +95,52 @@ def measure(limit: int, repeats: int) -> int:
                 detector.target_layout(typed, other)
         elapsed = time.perf_counter() - started
         per_word_ms = elapsed / max(len(wrong) * repeats, 1) * 1000
+        worst_ms = max(worst_ms, per_word_ms)
         print(f"{language + ' on ' + other:<16}{len(wrong):>8}{per_word_ms:>11.4f}")
 
     print(f"\npeak traced memory: {peak_mib:.1f} MiB")
-    return 0
+    return _check_budgets(worst_ms, peak_mib, budget_ms, budget_mib)
+
+
+def _check_budgets(
+    worst_ms: float, peak_mib: float, budget_ms: float | None, budget_mib: float | None
+) -> int:
+    """Return the process exit code: 1 when either budget is exceeded.
+
+    The thresholds are deliberately loose. This is a shared CI runner, so the
+    point is to catch an order-of-magnitude regression (an accidental O(n^2), a
+    corpus loaded per word), not to police a few percent of noise.
+    """
+    failed = False
+    if budget_ms is not None:
+        ok = worst_ms <= budget_ms
+        print(f"budget ms/word: {worst_ms:.4f} <= {budget_ms:.4f}  {'ok' if ok else 'FAIL'}")
+        failed = failed or not ok
+    if budget_mib is not None:
+        ok = peak_mib <= budget_mib
+        print(f"budget peak MiB: {peak_mib:.1f} <= {budget_mib:.1f}  {'ok' if ok else 'FAIL'}")
+        failed = failed or not ok
+    return 1 if failed else 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=1000, help="words per corpus")
     parser.add_argument("--repeats", type=int, default=3, help="timed passes over the slice")
+    parser.add_argument(
+        "--budget-ms",
+        type=float,
+        default=None,
+        help="fail when the slowest direction exceeds this ms/word",
+    )
+    parser.add_argument(
+        "--budget-mib",
+        type=float,
+        default=None,
+        help="fail when peak traced memory exceeds this many MiB",
+    )
     args = parser.parse_args()
-    return measure(args.limit, args.repeats)
+    return measure(args.limit, args.repeats, args.budget_ms, args.budget_mib)
 
 
 if __name__ == "__main__":

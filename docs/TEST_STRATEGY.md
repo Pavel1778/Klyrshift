@@ -12,7 +12,7 @@ regression thresholds.
 | Lint / types | `ruff`, `isort`, `black --check`, `mypy --strict` | Yes | Style, imports, type soundness |
 | Unit / integration | `pytest`, coverage floor 80 % | Yes | Logic, parsing, config, conversion, daemon policy |
 | Detector quality | `scripts/measure_detector.py` | Manually | Recall, false positives, corruption, speed on fixed corpora |
-| Detector cost | `scripts/measure_latency.py` | Manually | ms/word and peak memory on fixed corpora |
+| Detector cost | `scripts/measure_latency.py` | In CI (`latency-budget`) | ms/word and peak memory on fixed corpora, with a budget |
 | Package smoke | `scripts/smoke_test.sh` | Yes | The built `.deb` installs and its entry points run |
 | Manual desktop | `docs/TESTING.md` level 3 | No | Permissions, D-Bus, `uinput`, real applications |
 
@@ -62,6 +62,12 @@ measured under it reports the tracer's cost, not the detector's.
 ```bash
 PYTHONPATH=src python scripts/measure_latency.py --limit 3000 --repeats 3
 ```
+
+Pass `--budget-ms` and `--budget-mib` to turn the run into a check: the process
+exits non-zero when the slowest direction or the peak memory exceeds the
+budget. The `latency-budget` CI job runs exactly this with loose thresholds
+(0.5 ms/word, 64 MiB) — the point is to catch an order-of-magnitude regression
+on a noisy shared runner, not to police a few percent of noise.
 
 | Slice | Direction | ms/word | Peak traced memory |
 |---|---|---|---|
