@@ -671,6 +671,14 @@ class KlyrshiftDaemon:
         if self._maybe_handle_undo_chord(name):
             return
 
+        # Past this point the key is neither a hotkey action nor the observed
+        # Ctrl+Z, so the caret is about to move: a command chord (Alt+Tab,
+        # Ctrl+V) changes focus or pastes, and an ordinary key changes the text.
+        # Either way the recorded fix is no longer under the caret, so drop the
+        # undo history before handling the key. A Space that triggers a new fix
+        # records a fresh entry afterwards, so that fix stays undoable.
+        self._invalidate_undo_history()
+
         # Any other key pressed while Ctrl/Alt/Super is held is a command chord
         # (Ctrl+C, Alt+Tab, Super+L), not typing. Its key must not reach the
         # buffer, or a stale fragment ("c" from Ctrl+C) would be analysed on the
@@ -1269,6 +1277,20 @@ class KlyrshiftDaemon:
         self._write_history_snapshot()
         return entry_id
 
+    def _invalidate_undo_history(self) -> None:
+        """Forget the restorable fixes once the caret has moved.
+
+        A recorded fix is only safe to restore while the corrected word is still
+        under the caret: undo deletes a fixed character count and retypes the
+        original. If the user types anything else first, that count no longer
+        describes the text at the caret, so restoring it would eat characters of
+        the *new* word. The window and depth bounds alone cannot see this, so
+        every keystroke that changes the text or the caret drops the history and
+        the undo hotkey becomes a no-op until the next fix. A refused undo is
+        safer than a corrupted word.
+        """
+        self._undo_history.clear()
+
     def history_snapshot(self) -> list[dict[str, object]]:
         """Return the recent corrections as metadata-only dicts (newest first)."""
         return [dict(entry) for entry in reversed(self._fix_history)]
@@ -1485,6 +1507,10 @@ class KlyrshiftDaemon:
         word = self._last_undone_word or self._last_fixed_from
         self._last_undone_word = word
         self.learning.observe_rejected(word)
+        # The application performs the undo itself and restores the typed text.
+        # The daemon's own restore would retype the original over text that is
+        # already back, so drop the history: the chord has been handled.
+        self._invalidate_undo_history()
         logger.info("Ctrl+Z observed; the last correction is not repeated")
         return True
 

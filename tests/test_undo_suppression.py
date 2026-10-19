@@ -198,3 +198,87 @@ def test_ctrl_chord_key_does_not_leak_into_the_buffer() -> None:
     assert daemon.buffer == ""
     daemon._handle_event(make_event("KEY_SPACE", 1))
     assert _injector(daemon).replacements == []
+
+
+def test_undo_after_new_typing_does_not_corrupt_the_new_word() -> None:
+    """A fix is only undoable while its word is still under the caret.
+
+    The daemon restores a fix by deleting a fixed number of characters and
+    retyping the original. If the user types something else first, that count no
+    longer matches the text at the caret, so restoring it would delete part of
+    the *new* word. The recorded fix must therefore be dropped on the next
+    keystroke, and the undo hotkey must become a no-op.
+    """
+    daemon = make_daemon()
+    type_word(daemon, "ghbdtn")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
+
+    # The user moves on and types a fresh word.
+    type_word(daemon, "hello")
+
+    # The undo hotkey (SHIFT+BACKSPACE) must not touch the new text.
+    daemon._handle_event(make_event("KEY_LEFTSHIFT", 1))
+    daemon._handle_event(make_event("KEY_BACKSPACE", 1))
+    daemon._handle_event(make_event("KEY_BACKSPACE", 0))
+    daemon._handle_event(make_event("KEY_LEFTSHIFT", 0))
+
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
+    # The new text is untouched: the undo hotkey deleted none of it.
+    assert daemon.buffer == "руддщ"
+
+
+def test_undo_still_works_when_nothing_was_typed_in_between() -> None:
+    """The fix stays undoable while its word is still the last thing typed."""
+    daemon = make_daemon()
+    type_word(daemon, "ghbdtn")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    assert daemon._undo_last_fix() is True
+    assert _injector(daemon).replacements == [
+        (7, "привет ", "ru"),
+        (7, "ghbdtn ", "us"),
+    ]
+
+
+def test_undo_history_is_dropped_by_a_caret_move() -> None:
+    """An arrow key moves the caret, so the recorded fix is no longer undoable."""
+    daemon = make_daemon()
+    type_word(daemon, "ghbdtn")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    assert daemon._undo_history != []
+
+    daemon._handle_event(make_event("KEY_LEFT", 1))
+
+    assert daemon._undo_history == []
+    assert daemon._undo_last_fix() is False
+
+
+def test_undo_after_ctrl_z_does_not_retype_the_restored_word() -> None:
+    """Ctrl+Z already restores the text; the undo hotkey must not retype it."""
+    daemon = make_daemon()
+    type_word(daemon, "ghbdtn")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    press_ctrl_z(daemon)
+
+    daemon._handle_event(make_event("KEY_LEFTSHIFT", 1))
+    daemon._handle_event(make_event("KEY_BACKSPACE", 1))
+    daemon._handle_event(make_event("KEY_BACKSPACE", 0))
+    daemon._handle_event(make_event("KEY_LEFTSHIFT", 0))
+
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
+
+
+def test_undo_history_is_dropped_by_a_command_chord() -> None:
+    """Alt+Tab changes focus, so the recorded fix is no longer under the caret."""
+    daemon = make_daemon()
+    type_word(daemon, "ghbdtn")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    assert daemon._undo_history != []
+
+    daemon._handle_event(make_event("KEY_LEFTALT", 1))
+    daemon._handle_event(make_event("KEY_TAB", 1))
+    daemon._handle_event(make_event("KEY_TAB", 0))
+    daemon._handle_event(make_event("KEY_LEFTALT", 0))
+
+    assert daemon._undo_history == []
+    assert daemon._undo_last_fix() is False
