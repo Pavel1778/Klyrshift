@@ -237,3 +237,87 @@ def test_profile_path_lives_under_the_state_dir(
 ) -> None:
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     assert profile_path() == tmp_path / "klyrshift" / "learning.json"
+
+
+def test_promote_adds_a_word_immediately() -> None:
+    """``promote`` is the manual counterpart of the automatic promotion."""
+    engine = LearningEngine(promote_threshold=99, store=LearningStore(path=Path("/nonexistent")))
+    assert engine.learned_words() == []
+    assert engine.promote("vercel") is True
+    assert engine.learned_words() == ["vercel"]
+    assert engine.is_promoted("vercel") is True
+    # Promoting the same word twice is a no-op, not a duplicate.
+    assert engine.promote("vercel") is False
+    assert engine.learned_words() == ["vercel"]
+
+
+def test_promote_rejects_non_words() -> None:
+    engine = LearningEngine(store=LearningStore(path=Path("/nonexistent")))
+    assert engine.promote("") is False
+    assert engine.promote("   ") is False
+    assert engine.promote("два слова") is False
+    assert engine.learned_words() == []
+
+
+def test_forget_removes_a_promoted_word() -> None:
+    engine = LearningEngine(store=LearningStore(path=Path("/nonexistent")))
+    engine.promote("vercel")
+    assert engine.forget("vercel") is True
+    assert engine.learned_words() == []
+    assert engine.is_promoted("vercel") is False
+    # Forgetting a word that is not present changes nothing.
+    assert engine.forget("vercel") is False
+
+
+def test_forget_clears_a_suppressed_word() -> None:
+    """A word the user once rejected can be un-rejected by hand."""
+    engine = LearningEngine(store=LearningStore(path=Path("/nonexistent")))
+    engine.observe_rejected("ghbdtn")
+    assert engine.is_suppressed("ghbdtn") is True
+    assert engine.forget("ghbdtn") is True
+    assert engine.is_suppressed("ghbdtn") is False
+
+
+def test_promote_evicts_when_at_capacity() -> None:
+    """A promoted word never pushes the vocabulary past ``max_words``."""
+    engine = LearningEngine(max_words=2, store=LearningStore(path=Path("/nonexistent")))
+    engine.promote("один")
+    engine.promote("два")
+    engine.promote("три")
+    assert len(engine.learned_words()) == 2
+    assert engine.is_promoted("три") is True
+
+
+def test_control_handler_lists_promotes_and_forgets() -> None:
+    """The daemon's control handler drives the real learning engine."""
+    daemon = make_daemon()
+    assert daemon._handle_control_request({"cmd": "learn.list"}) == {"words": []}
+
+    promoted = daemon._handle_control_request({"cmd": "learn.promote", "word": "vercel"})
+    assert promoted["ok"] is True
+    assert promoted["changed"] is True
+    assert daemon.learning.learned_words() == ["vercel"]
+    # The detector's vocabulary was refreshed, so the word is now "known".
+    assert daemon._handle_control_request({"cmd": "learn.list"}) == {"words": ["vercel"]}
+
+    forgotten = daemon._handle_control_request({"cmd": "learn.forget", "word": "vercel"})
+    assert forgotten["ok"] is True
+    assert forgotten["changed"] is True
+    assert daemon.learning.learned_words() == []
+
+
+def test_control_handler_rejects_a_missing_word() -> None:
+    daemon = make_daemon()
+    assert daemon._handle_control_request({"cmd": "learn.promote"}) == {"error": "missing word"}
+    assert daemon._handle_control_request({"cmd": "nonsense", "word": "x"}) == {
+        "error": "unknown command"
+    }
+
+
+def test_forgetting_the_last_word_clears_the_detector_vocabulary() -> None:
+    """The early-return bug: forgetting the only word must still update the detector."""
+    daemon = make_daemon()
+    daemon._handle_control_request({"cmd": "learn.promote", "word": "vercel"})
+    assert daemon.detector._learned_words == {"vercel"}
+    daemon._handle_control_request({"cmd": "learn.forget", "word": "vercel"})
+    assert daemon.detector._learned_words == set()

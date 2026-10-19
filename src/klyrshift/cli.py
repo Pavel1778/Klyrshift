@@ -260,14 +260,63 @@ def cmd_undo(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_learn_words(action: str, args: argparse.Namespace) -> int:
+    """Handle ``learn list`` / ``promote`` / ``forget`` over the control socket.
+
+    These words are the ones the daemon promoted from watching the user's typing;
+    they live in memory only, so a one-shot CLI cannot read them from a file. It
+    asks the daemon instead. When no daemon is running there is nothing to list
+    or edit, and the command says so rather than silently doing nothing.
+    """
+    from . import control
+
+    if action == "list":
+        words = control.learn_list()
+        if words is None:
+            print("Демон не запущен: список выученных слов доступен только у работающего демона.")
+            return 1
+        if not words:
+            print("Выученных слов пока нет.")
+            return 0
+        print(f"Выученные слова ({len(words)}):")
+        for word in words:
+            print(f"  {word}")
+        return 0
+
+    word = (args.word or "").strip()
+    if not word:
+        print(f"Укажите слово: klyrshift learn {action} <слово>")
+        return 2
+    if action == "promote":
+        result = control.learn_promote(word)
+        if result is None:
+            print("Демон не запущен: закрепить слово можно только у работающего демона.")
+            return 1
+        print(f"Слово «{word}» закреплено: оно больше не исправляется в этой сессии.")
+        return 0
+    result = control.learn_forget(word)
+    if result is None:
+        print("Демон не запущен: забыть слово можно только у работающего демона.")
+        return 1
+    print(f"Слово «{word}» забыто: оно снова может исправляться.")
+    return 0
+
+
 def cmd_learn(args: argparse.Namespace) -> int:
     """Show or change the always-on learning settings.
 
     The learned words themselves live in the daemon's memory only (nothing the
     user types is ever written to disk), so this reports the persisted
-    *counters* and the current setting, never a word.
+    *counters* and the current setting, never a word. ``learn list`` /
+    ``promote`` / ``forget`` are the exception: the user names a word on
+    purpose, and it is exchanged with the running daemon over the local control
+    socket — it is still never written to the learning profile.
     """
     from .learning import LearningStore
+
+    action = getattr(args, "learn_action", None)
+    if action in {"list", "promote", "forget"}:
+        return _cmd_learn_words(action, args)
 
     config = load_config()
     if args.on:
@@ -974,7 +1023,14 @@ def build_parser() -> argparse.ArgumentParser:
     undo = subparsers.add_parser("undo", help="отменить последнее исправление")
     undo.set_defaults(func=cmd_undo)
 
-    learn = subparsers.add_parser("learn", help="обучение: статистика и вкл/выкл")
+    learn = subparsers.add_parser("learn", help="обучение: статистика, список слов, вкл/выкл")
+    learn.add_argument(
+        "learn_action",
+        nargs="?",
+        choices=["list", "promote", "forget"],
+        help="list — показать выученные слова; promote/forget — закрепить/забыть слово",
+    )
+    learn.add_argument("word", nargs="?", help="слово для promote/forget")
     learn.add_argument("--on", action="store_true", help="включить обучение")
     learn.add_argument("--off", action="store_true", help="выключить обучение")
     learn.add_argument("--reset", action="store_true", help="сбросить счётчики обучения")

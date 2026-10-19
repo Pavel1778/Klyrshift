@@ -719,3 +719,92 @@ def test_dict_verify_rejects_a_tampered_package(
 def test_dict_pack_without_files(isolated_env: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(["dict", "pack"]) == 2
     assert "Укажите файлы" in capsys.readouterr().out
+def test_learn_list_without_a_daemon(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``learn list`` says the daemon is not running instead of printing nothing."""
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(isolated_env / "runtime"))
+    assert cli.main(["learn", "list"]) == 1
+    assert "Демон не запущен" in capsys.readouterr().out
+
+
+def test_learn_promote_without_a_daemon(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(isolated_env / "runtime"))
+    assert cli.main(["learn", "promote", "vercel"]) == 1
+    assert "Демон не запущен" in capsys.readouterr().out
+
+
+def test_learn_promote_requires_a_word(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(isolated_env / "runtime"))
+    assert cli.main(["learn", "promote"]) == 2
+    assert "Укажите слово" in capsys.readouterr().out
+
+
+def test_learn_list_and_promote_against_a_live_socket(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The CLI drives the control socket end to end."""
+    import selectors
+    import threading
+
+    from klyrshift import control
+
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(isolated_env / "runtime"))
+    words: list[str] = []
+
+    def handler(request: dict[str, object]) -> dict[str, object]:
+        command = request.get("cmd")
+        if command == "learn.list":
+            return {"words": list(words)}
+        word = request.get("word")
+        assert isinstance(word, str)
+        if command == "learn.promote":
+            words.append(word)
+            return {"ok": True}
+        if command == "learn.forget":
+            words.remove(word)
+            return {"ok": True}
+        return {"error": "unknown"}
+
+    server = control.ControlServer(handler)
+    assert server.start()
+    selector = selectors.DefaultSelector()
+    selector.register(server.fileno, selectors.EVENT_READ, server)
+    stop = threading.Event()
+
+    def serve() -> None:
+        while not stop.is_set():
+            for key, _mask in selector.select(0.05):
+                key.data.handle()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    try:
+        assert cli.main(["learn", "list"]) == 0
+        assert "Выученных слов пока нет" in capsys.readouterr().out
+
+        assert cli.main(["learn", "promote", "vercel"]) == 0
+        assert "закреплено" in capsys.readouterr().out
+
+        assert cli.main(["learn", "list"]) == 0
+        assert "vercel" in capsys.readouterr().out
+
+        assert cli.main(["learn", "forget", "vercel"]) == 0
+        assert "забыто" in capsys.readouterr().out
+    finally:
+        stop.set()
+        thread.join(timeout=5)
+        selector.close()
+        server.stop()
