@@ -273,10 +273,10 @@ def test_window_wizard_skip_is_recorded(window: Any) -> None:
 
     window._onboarding = load_onboarding_state()
     window._offer_wizard()
-    window._wizard.present(window)
-    _pump()
-    window._wizard.close()
-    _pump()
+    # Emit the signal GTK emits on every close route rather than calling
+    # ``close()``: that only works once the dialog has been mapped, and this
+    # window is never presented. The signal is the contract under test.
+    window._wizard.emit("closed")
     assert load_onboarding_state().wizard_skipped_version == WIZARD_VERSION
 
 
