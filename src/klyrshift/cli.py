@@ -31,6 +31,7 @@ from .converter import LayoutConverter
 from .detector import LanguageDetector
 from .dictionary import load_user_dictionary
 from .doctor import run_doctor
+from .i18n import _, set_locale
 from .injector import TextInjector
 from .switcher import LayoutSwitcher
 
@@ -38,7 +39,9 @@ logger = logging.getLogger(__name__)
 
 LOCK_FILE_NAME = "daemon.lock"
 
-# Russian user-facing strings (English duplicates live in the README).
+# Russian source strings, translated where they are printed: this module is
+# imported before ``--lang`` is parsed, so translating at import time would
+# freeze whichever locale happened to be active first.
 MSG_NOT_RUNNING = "Klyrshift не запущен."
 MSG_STOPPED = "Klyrshift остановлен."
 MSG_STOPPED_FORCED = "Klyrshift не ответил на SIGTERM; отправлен SIGKILL."
@@ -96,7 +99,7 @@ def _config_home() -> Path:
 def cmd_start(args: argparse.Namespace) -> int:
     """Start the daemon, either in the foreground or detached."""
     if _read_pid() is not None:
-        print(MSG_STARTED)
+        print(_(MSG_STARTED))
         return 0
     if args.foreground:
         from .daemon import KlyrshiftDaemon
@@ -114,11 +117,11 @@ def cmd_start(args: argparse.Namespace) -> int:
     from .daemon_control import last_error, start
 
     if start(dry_run=args.dry_run):
-        print(MSG_STARTED)
+        print(_(MSG_STARTED))
         return 0
     reason = last_error()
-    print("Не удалось запустить Klyrshift." + (f" {reason}" if reason else ""))
-    print("Смотрите логи: ~/.local/state/klyrshift/")
+    print(_("Не удалось запустить Klyrshift.") + (f" {reason}" if reason else ""))
+    print(_("Смотрите логи: ~/.local/state/klyrshift/"))
     return 1
 
 
@@ -133,12 +136,12 @@ def cmd_stop(_args: argparse.Namespace) -> int:
     from .daemon_control import is_running, stop
 
     if not is_running():
-        print(MSG_ALREADY_STOPPED)
+        print(_(MSG_ALREADY_STOPPED))
         return 0
     if stop():
-        print(MSG_STOPPED)
+        print(_(MSG_STOPPED))
         return 0
-    print("Не удалось остановить Klyrshift. Смотрите логи: ~/.local/state/klyrshift/")
+    print(_("Не удалось остановить Klyrshift. Смотрите логи: ~/.local/state/klyrshift/"))
     return 1
 
 
@@ -147,12 +150,12 @@ def cmd_kill(_args: argparse.Namespace) -> int:
     from .daemon_control import is_running, kill
 
     if not is_running():
-        print(MSG_ALREADY_STOPPED)
+        print(_(MSG_ALREADY_STOPPED))
         return 0
     if kill():
-        print(MSG_KILLED)
+        print(_(MSG_KILLED))
         return 0
-    print("Не удалось принудительно завершить Klyrshift.")
+    print(_("Не удалось принудительно завершить Klyrshift."))
     return 1
 
 
@@ -161,9 +164,9 @@ def cmd_restart(_args: argparse.Namespace) -> int:
     from .daemon_control import restart
 
     if restart():
-        print(MSG_STARTED)
+        print(_(MSG_STARTED))
         return 0
-    print("Не удалось перезапустить Klyrshift.")
+    print(_("Не удалось перезапустить Klyrshift."))
     return 1
 
 
@@ -178,18 +181,22 @@ def cmd_status(_args: argparse.Namespace) -> int:
     # report "not running" for a service daemon whose lock was not written yet,
     # disagreeing with the very next ``stop``.
     if is_running():
-        print(f"Klyrshift запущен (PID {pid})." if pid else "Klyrshift запущен (systemd).")
+        print(
+            _("Klyrshift запущен (PID {0}).").format(pid)
+            if pid
+            else _("Klyrshift запущен (systemd).")
+        )
     else:
-        print(MSG_NOT_RUNNING)
+        print(_(MSG_NOT_RUNNING))
 
     switcher = LayoutSwitcher(layouts=config.layouts, switch_method=config.switch_method)
     injector = TextInjector(backend=config.backend)
-    print(f"Раскладки: {', '.join(config.layouts)}")
-    print(f"Текущая раскладка: {switcher.get_current_layout(force=True)}")
-    print(f"Режим: {config.mode}")
-    print(f"Переключение: {switcher.describe()}")
-    print(f"Ввод текста: {injector.describe()}")
-    print(f"Конфигурация: {config_path()}")
+    print(_("Раскладки: {0}").format(", ".join(config.layouts)))
+    print(_("Текущая раскладка: {0}").format(switcher.get_current_layout(force=True)))
+    print(_("Режим: {0}").format(config.mode))
+    print(_("Переключение: {0}").format(switcher.describe()))
+    print(_("Ввод текста: {0}").format(injector.describe()))
+    print(_("Конфигурация: {0}").format(config_path()))
     return 0
 
 
@@ -203,7 +210,7 @@ def cmd_mode(args: argparse.Namespace) -> int:
     try:
         config.validate()
     except ValueError as exc:
-        print(f"Недопустимый режим: {exc}")
+        print(_("Недопустимый режим: {0}").format(exc))
         return 2
     save_config(config)
     # A running daemon holds its own config copy; ask it to reload so the new
@@ -212,7 +219,7 @@ def cmd_mode(args: argparse.Namespace) -> int:
 
     if is_running():
         reload_config()
-    print(f"Режим: {config.mode}")
+    print(_("Режим: {0}").format(config.mode))
     return 0
 
 
@@ -226,22 +233,22 @@ def cmd_hotkeys(_args: argparse.Namespace) -> int:
     config = load_config()
 
     def show(label: str, value: str, enabled: bool = True) -> None:
-        print(f"{label}: {value if value and enabled else '(выключено)'}")
+        print(_("{0}: {1}").format(label, value if value and enabled else _("(выключено)")))
 
-    show("Исправление последнего слова", config.hotkey_fix_last_word)
-    show("Отмена последнего исправления", config.hotkey_undo_last_fix)
-    show("Смена раскладки последнего слова", config.hotkey_toggle_layout_last_word)
-    show("Переключение режима", config.hotkey_toggle_mode)
-    show("Перезагрузка конфигурации", config.hotkey_reload_config)
-    show("Правка выделенного", config.selection_fix_hotkey, config.selection_fix_enabled)
+    show(_("Исправление последнего слова"), config.hotkey_fix_last_word)
+    show(_("Отмена последнего исправления"), config.hotkey_undo_last_fix)
+    show(_("Смена раскладки последнего слова"), config.hotkey_toggle_layout_last_word)
+    show(_("Переключение режима"), config.hotkey_toggle_mode)
+    show(_("Перезагрузка конфигурации"), config.hotkey_reload_config)
+    show(_("Правка выделенного"), config.selection_fix_hotkey, config.selection_fix_enabled)
     # The per-feature hotkeys stay visible even when the feature is off: the
     # binding is what the user configures, and the mode is reported next to it.
-    show("Т9 (опечатки)", config.typo_hotkey)
-    show("Пунктуация", config.punctuation_hotkey)
-    print(f"Режим Т9: {config.typo_mode}")
-    print(f"Режим пунктуации: {config.punctuation_mode}")
-    print(f"Хоткеи: {'включены' if config.hotkeys_enabled else 'выключены'}")
-    print(f"Окно двойного тапа: {config.hotkey_double_tap_ms} мс")
+    show(_("Т9 (опечатки)"), config.typo_hotkey)
+    show(_("Пунктуация"), config.punctuation_hotkey)
+    print(_("Режим Т9: {0}").format(config.typo_mode))
+    print(_("Режим пунктуации: {0}").format(config.punctuation_mode))
+    print(_("Хоткеи: {0}").format(_("включены") if config.hotkeys_enabled else _("выключены")))
+    print(_("Окно двойного тапа: {0} мс").format(config.hotkey_double_tap_ms))
     return 0
 
 
@@ -249,14 +256,14 @@ def cmd_undo(_args: argparse.Namespace) -> int:
     """Ask a running daemon to undo its most recent correction."""
     pid = _read_pid()
     if pid is None:
-        print(MSG_NOT_RUNNING)
+        print(_(MSG_NOT_RUNNING))
         return 1
     try:
         os.kill(pid, signal.SIGUSR1)
     except OSError as exc:
-        print(f"Не удалось отменить исправление: {exc}")
+        print(_("Не удалось отменить исправление: {0}").format(exc))
         return 1
-    print("Запрошена отмена последнего исправления.")
+    print(_("Запрошена отмена последнего исправления."))
     return 0
 
 
@@ -273,32 +280,34 @@ def _cmd_learn_words(action: str, args: argparse.Namespace) -> int:
     if action == "list":
         words = control.learn_list()
         if words is None:
-            print("Демон не запущен: список выученных слов доступен только у работающего демона.")
+            print(
+                _("Демон не запущен: список выученных слов доступен только у работающего демона.")
+            )
             return 1
         if not words:
-            print("Выученных слов пока нет.")
+            print(_("Выученных слов пока нет."))
             return 0
-        print(f"Выученные слова ({len(words)}):")
+        print(_("Выученные слова ({0}):").format(len(words)))
         for word in words:
             print(f"  {word}")
         return 0
 
     word = (args.word or "").strip()
     if not word:
-        print(f"Укажите слово: klyrshift learn {action} <слово>")
+        print(_("Укажите слово: klyrshift learn {0} <слово>").format(action))
         return 2
     if action == "promote":
         result = control.learn_promote(word)
         if result is None:
-            print("Демон не запущен: закрепить слово можно только у работающего демона.")
+            print(_("Демон не запущен: закрепить слово можно только у работающего демона."))
             return 1
-        print(f"Слово «{word}» закреплено: оно больше не исправляется в этой сессии.")
+        print(_("Слово «{0}» закреплено: оно больше не исправляется в этой сессии.").format(word))
         return 0
     result = control.learn_forget(word)
     if result is None:
-        print("Демон не запущен: забыть слово можно только у работающего демона.")
+        print(_("Демон не запущен: забыть слово можно только у работающего демона."))
         return 1
-    print(f"Слово «{word}» забыто: оно снова может исправляться.")
+    print(_("Слово «{0}» забыто: оно снова может исправляться.").format(word))
     return 0
 
 
@@ -332,16 +341,16 @@ def cmd_learn(args: argparse.Namespace) -> int:
             reload_config()
     if args.reset:
         LearningStore().reset()
-        print("Счётчики обучения сброшены.")
+        print(_("Счётчики обучения сброшены."))
     stats = LearningStore().load()
-    print(f"Обучение: {'включено' if config.learning_enabled else 'выключено'}")
-    print(f"Порог закрепления слова: {config.learning_promote_threshold}")
-    print("Наблюдаемые слова хранятся только в памяти демона и никогда не пишутся на диск.")
-    print(f"Слов увидено: {stats.observed}")
-    print(f"Оставлено без изменений: {stats.kept}")
-    print(f"Исправлено: {stats.corrected}")
-    print(f"Отклонено (Ctrl+Z / отмена): {stats.rejected}")
-    print(f"Закреплено слов: {stats.promoted}")
+    print(_("Обучение: {0}").format(_("включено") if config.learning_enabled else _("выключено")))
+    print(_("Порог закрепления слова: {0}").format(config.learning_promote_threshold))
+    print(_("Наблюдаемые слова хранятся только в памяти демона и никогда не пишутся на диск."))
+    print(_("Слов увидено: {0}").format(stats.observed))
+    print(_("Оставлено без изменений: {0}").format(stats.kept))
+    print(_("Исправлено: {0}").format(stats.corrected))
+    print(_("Отклонено (Ctrl+Z / отмена): {0}").format(stats.rejected))
+    print(_("Закреплено слов: {0}").format(stats.promoted))
     return 0
 
 
@@ -370,43 +379,34 @@ def cmd_dict(args: argparse.Namespace) -> int:
     if action == "list":
         words = load_user_dictionary(str(path))
         if not words:
-            print(f"Словарь пуст ({path}).")
+            print(_("Словарь пуст ({0}).").format(path))
             return 0
         print("\n".join(words))
         return 0
     if action == "add":
         if not args.word:
-            print("Укажите слово: klyrshift dict add <слово>")
+            print(_("Укажите слово: klyrshift dict add <слово>"))
             return 2
         words = add_user_word(args.word, str(path))
-        print(f"Добавлено. Всего слов: {len(words)}.")
+        print(_("Добавлено. Всего слов: {0}.").format(len(words)))
         return 0
     if action == "remove":
         if not args.word:
-            print("Укажите слово: klyrshift dict remove <слово>")
+            print(_("Укажите слово: klyrshift dict remove <слово>"))
             return 2
         words = load_user_dictionary(str(path))
         remaining = [w for w in words if w.lower() != args.word.lower()]
         if len(remaining) == len(words):
-            print(f"Слово {args.word!r} не найдено.")
+            print(_("Слово {0!r} не найдено.").format(args.word))
             return 1
         save_user_dictionary(remaining, str(path))
-        print(f"Удалено. Всего слов: {len(remaining)}.")
+        print(_("Удалено. Всего слов: {0}.").format(len(remaining)))
         return 0
     languages = "|".join(BUNDLED_DICTIONARY_LANGUAGES)
     print(
-        "Использование:\n"
-        "  klyrshift dict list|add <слово>|remove <слово>\n"
-        f"  klyrshift dict download <{languages}>\n"
-        "  klyrshift dict import-file <путь>\n"
-        "  klyrshift dict categories\n"
-        "  klyrshift dict install <категория> [--lang ru]\n"
-        "  klyrshift dict list-installed\n"
-        "  klyrshift dict remove-category <категория>\n"
-        "  klyrshift dict pack <файл> --name <имя> --lang <язык> [--kind frequency]\n"
-        "  klyrshift dict verify <пакет.tar.gz>\n"
-        "  klyrshift dict install-file <пакет.tar.gz>\n"
-        "  klyrshift dict uninstall-file <пакет.tar.gz>"
+        _(
+            "Использование:\n  klyrshift dict list|add <слово>|remove <слово>\n  klyrshift dict download <{0}>\n  klyrshift dict import-file <путь>\n  klyrshift dict categories\n  klyrshift dict install <категория> [--lang ru]\n  klyrshift dict list-installed\n  klyrshift dict remove-category <категория>\n  klyrshift dict pack <файл> --name <имя> --lang <язык> [--kind frequency]\n  klyrshift dict verify <пакет.tar.gz>\n  klyrshift dict install-file <пакет.tar.gz>\n  klyrshift dict uninstall-file <пакет.tar.gz>"
+        ).format(languages)
     )
     return 2
 
@@ -427,30 +427,30 @@ def _cmd_dict_extended(
 
     if action == "import-file":
         if not args.word:
-            print("Укажите путь к файлу: klyrshift dict import-file ~/Downloads/ru-50k.txt")
+            print(_("Укажите путь к файлу: klyrshift dict import-file ~/Downloads/ru-50k.txt"))
             return 2
         # The language is inferred from the file name prefix (``ru-50k.txt`` ->
         # ``ru``) unless an explicit --lang is given.
         language = getattr(args, "lang", "") or Path(args.word).name.split("-")[0].split(".")[0]
         if not language:
-            print("Не удалось определить язык: klyrshift dict import-file <путь> --lang ru")
+            print(_("Не удалось определить язык: klyrshift dict import-file <путь> --lang ru"))
             return 2
         try:
             count = import_dictionary_file(args.word, language, directory)
         except FileNotFoundError:
-            print(f"Файл не найден: {args.word}")
+            print(_("Файл не найден: {0}").format(args.word))
             return 1
         except (OSError, ValueError) as exc:
-            print(f"Не удалось импортировать словарь: {exc}")
+            print(_("Не удалось импортировать словарь: {0}").format(exc))
             return 1
         _remember_extended_dir(config, directory, save_config)
         target = extended_dictionary_path(language, directory)
-        print(f"Импортировано {count} слов ({language}) в {target}.")
-        print("Перезапустите демон или нажмите хоткей перезагрузки конфигурации.")
+        print(_("Импортировано {0} слов ({1}) в {2}.").format(count, language, target))
+        print(_("Перезапустите демон или нажмите хоткей перезагрузки конфигурации."))
         return 0
 
     if not args.word:
-        print("Укажите язык: klyrshift dict download ru")
+        print(_("Укажите язык: klyrshift dict download ru"))
         return 2
     try:
         target, count = download_extended_dictionary(args.word, directory)
@@ -458,11 +458,11 @@ def _cmd_dict_extended(
         print(str(exc))
         return 2
     except OSError as exc:
-        print(f"Не удалось скачать словарь: {exc}")
+        print(_("Не удалось скачать словарь: {0}").format(exc))
         return 1
     _remember_extended_dir(config, directory, save_config)
-    print(f"Скачано {count} слов ({args.word}) в {target}.")
-    print("Перезапустите демон или нажмите хоткей перезагрузки конфигурации.")
+    print(_("Скачано {0} слов ({1}) в {2}.").format(count, args.word, target))
+    print(_("Перезапустите демон или нажмите хоткей перезагрузки конфигурации."))
     return 0
 
 
@@ -494,35 +494,43 @@ def _cmd_dict_thematic(
 
     if action == "categories":
         enabled = set(config.installed_dict_categories)
-        print("Категории тематических словарей:")
+        print(_("Категории тематических словарей:"))
         for cat in CATEGORIES:
             langs = ", ".join(cat.languages)
-            mark = " [установлена]" if cat.slug in enabled else ""
-            print(f"  {cat.slug:<12} {cat.title_ru} ({langs}){mark}")
-        print("\nУстановка: klyrshift dict install <категория> --lang ru")
+            mark = _(" [установлена]") if cat.slug in enabled else ""
+            print(f"  {cat.slug:<12} {cat.title()} ({langs}){mark}")
+        print(_("\nУстановка: klyrshift dict install <категория> --lang ru"))
         return 0
 
     if action == "list-installed":
         slugs = installed_category_slugs("ru", directory)
-        print("Включённые категории: " + ", ".join(config.installed_dict_categories))
+        print(_("Включённые категории: ") + ", ".join(config.installed_dict_categories))
         if slugs:
-            print("Файлы на диске (ru): " + ", ".join(slugs))
+            print(_("Файлы на диске (ru): ") + ", ".join(slugs))
         else:
-            print("Тематические файлы ещё не скачаны.")
+            print(_("Тематические файлы ещё не скачаны."))
         return 0
 
     slug = (args.word or "").strip().lower()
     if not slug:
-        print(f"Укажите категорию: klyrshift dict {action} <{ '|'.join(category_slugs()) }>")
+        print(
+            _("Укажите категорию: klyrshift dict {0} <{1}>").format(
+                action, "|".join(category_slugs())
+            )
+        )
         return 2
     if category(slug) is None:
-        print(f"Неизвестная категория {slug!r}. Доступны: {', '.join(category_slugs())}.")
+        print(
+            _("Неизвестная категория {0!r}. Доступны: {1}.").format(
+                slug, ", ".join(category_slugs())
+            )
+        )
         return 2
 
     if action == "remove-category":
         config.installed_dict_categories = disable_category(config.installed_dict_categories, slug)
         save_config(config)
-        print(f"Категория {slug!r} отключена. Файл на диске сохранён.")
+        print(_("Категория {0!r} отключена. Файл на диске сохранён.").format(slug))
         return 0
 
     # action == "install"
@@ -533,12 +541,12 @@ def _cmd_dict_thematic(
         print(str(exc))
         return 2
     except OSError as exc:
-        print(f"Не удалось скачать категорию: {exc}")
+        print(_("Не удалось скачать категорию: {0}").format(exc))
         return 1
     config.installed_dict_categories = enable_category(config.installed_dict_categories, slug)
     _remember_extended_dir(config, directory, save_config)
-    print(f"Установлено {count} слов ({slug}/{language}) в {target}.")
-    print("Категория подключена. Перезапустите демон или нажмите хоткей перезагрузки.")
+    print(_("Установлено {0} слов ({1}/{2}) в {3}.").format(count, slug, language, target))
+    print(_("Категория подключена. Перезапустите демон или нажмите хоткей перезагрузки."))
     return 0
 
 
@@ -570,13 +578,15 @@ def _cmd_dict_langpack(
         requested = ([args.word] if args.word else []) + list(getattr(args, "file", []) or [])
         if not requested:
             print(
-                "Укажите файлы: klyrshift dict pack <файл> [--file <файл> ...] --name ru-50k --lang ru"
+                _(
+                    "Укажите файлы: klyrshift dict pack <файл> [--file <файл> ...] --name ru-50k --lang ru"
+                )
             )
             return 2
         sources = [Path(p).expanduser() for p in requested]
         missing = [str(p) for p in sources if not p.is_file()]
         if missing:
-            print("Файлы не найдены: " + ", ".join(missing))
+            print(_("Файлы не найдены: ") + ", ".join(missing))
             return 1
         name = args.name or sources[0].stem
         language = (args.lang or "").strip().lower()
@@ -596,85 +606,104 @@ def _cmd_dict_langpack(
                 source="klyrshift dict pack",
             )
         except (PackageError, OSError) as exc:
-            print(f"Не удалось собрать пакет: {exc}")
+            print(_("Не удалось собрать пакет: {0}").format(exc))
             return 1
-        print(f"Собран пакет {destination} ({manifest.kind}/{manifest.language}, {name}).")
+        print(
+            _("Собран пакет {0} ({1}/{2}, {3}).").format(
+                destination, manifest.kind, manifest.language, name
+            )
+        )
         for entry in manifest.files:
-            print(f"  {entry.name}: {entry.words} слов, sha256 {entry.sha256[:12]}…")
+            print(
+                _("  {0}: {1} слов, sha256 {2}…").format(entry.name, entry.words, entry.sha256[:12])
+            )
         return 0
 
     if action == "verify":
         if not args.word:
-            print("Укажите пакет: klyrshift dict verify <пакет.tar.gz>")
+            print(_("Укажите пакет: klyrshift dict verify <пакет.tar.gz>"))
             return 2
         archive = Path(args.word).expanduser()
         if not archive.is_file():
-            print(f"Файл не найден: {archive}")
+            print(_("Файл не найден: {0}").format(archive))
             return 1
         try:
             manifest = read_manifest(archive)
         except PackageError as exc:
-            print(f"Пакет недействителен: {exc}")
+            print(_("Пакет недействителен: {0}").format(exc))
             return 1
         problems = verify_package(archive, manifest)
         if problems:
-            print(f"Пакет {archive} не прошёл проверку:")
+            print(_("Пакет {0} не прошёл проверку:").format(archive))
             for problem in problems:
                 print(f"  - {problem}")
             return 1
-        print(f"Пакет {archive} в порядке.")
+        print(_("Пакет {0} в порядке.").format(archive))
         print(
-            f"  {manifest.kind}/{manifest.language}, версия {manifest.version}, "
-            f"формат {manifest.format}, файлов {len(manifest.files)}"
+            _("  {0}/{1}, версия {2}, формат {3}, файлов {4}").format(
+                manifest.kind,
+                manifest.language,
+                manifest.version,
+                manifest.format,
+                len(manifest.files),
+            )
         )
         if manifest.license:
-            print(f"  лицензия: {manifest.license}")
+            print(_("  лицензия: {0}").format(manifest.license))
         return 0
 
     if action == "install-file":
         if not args.word:
-            print("Укажите пакет: klyrshift dict install-file <пакет.tar.gz>")
+            print(_("Укажите пакет: klyrshift dict install-file <пакет.tar.gz>"))
             return 2
         archive = Path(args.word).expanduser()
         if not archive.is_file():
-            print(f"Файл не найден: {archive}")
+            print(_("Файл не найден: {0}").format(archive))
             return 1
         try:
             result = install_package(archive, Path(directory))
         except PackageError as exc:
-            print(f"Установка отклонена: {exc}")
+            print(_("Установка отклонена: {0}").format(exc))
             return 1
         except OSError as exc:
-            print(f"Не удалось установить пакет: {exc}")
+            print(_("Не удалось установить пакет: {0}").format(exc))
             return 1
         _remember_extended_dir(config, directory, save_config)
         print(
-            f"Установлен пакет {result.manifest.name} "
-            f"({result.manifest.kind}/{result.manifest.language}): "
-            f"{len(result.installed)} файл(ов) в {directory}."
+            _("Установлен пакет {0} ({1}/{2}): {3} файл(ов) в {4}.").format(
+                result.manifest.name,
+                result.manifest.kind,
+                result.manifest.language,
+                len(result.installed),
+                directory,
+            )
         )
         if result.replaced:
-            print(f"Заменено файлов: {len(result.replaced)} (старые версии сохранены как резерв).")
-        print("Перезапустите демон или нажмите хоткей перезагрузки конфигурации.")
+            print(
+                _("Заменено файлов: {0} (старые версии сохранены как резерв).").format(
+                    len(result.replaced)
+                )
+            )
+        print(_("Перезапустите демон или нажмите хоткей перезагрузки конфигурации."))
         return 0
 
     # action == "uninstall-file"
     if not args.word:
-        print("Укажите пакет: klyrshift dict uninstall-file <пакет.tar.gz>")
+        print(_("Укажите пакет: klyrshift dict uninstall-file <пакет.tar.gz>"))
         return 2
     archive = Path(args.word).expanduser()
     if not archive.is_file():
-        print(f"Файл не найден: {archive}")
+        print(_("Файл не найден: {0}").format(archive))
         return 1
     try:
         manifest = read_manifest(archive)
     except PackageError as exc:
-        print(f"Пакет недействителен: {exc}")
+        print(_("Пакет недействителен: {0}").format(exc))
         return 1
     removed = uninstall_package(
         manifest.kind, manifest.language, [f.name for f in manifest.files], Path(directory)
     )
-    print(f"Удалено файлов: {len(removed)}.")
+    print(_("Удалено файлов: {0}.").format(len(removed)))
     return 0
 
 
@@ -693,24 +722,24 @@ def cmd_config(args: argparse.Namespace) -> int:
             # Only reachable when the file could not be rewritten (read-only
             # config dir): the runtime differs from the file, so say so instead
             # of silently disagreeing with the daemon.
-            print("Предупреждение: значения в файле отличаются от действующих:")
+            print(_("Предупреждение: значения в файле отличаются от действующих:"))
             for field, old, new in pending:
-                print(f"  {field}: {old!r} -> {new!r} (не сохранено)")
-            print("Проверьте права на каталог конфигурации.")
+                print(_("  {0}: {1!r} -> {2!r} (не сохранено)").format(field, old, new))
+            print(_("Проверьте права на каталог конфигурации."))
         return 0
     if args.config_action == "migrate":
         path = config_path()
         changes = preview_migrations(path)
         if not changes:
-            print("Миграции не требуются: конфигурация актуальна.")
+            print(_("Миграции не требуются: конфигурация актуальна."))
             return 0
         if args.dry_run:
-            print("Будут применены и сохранены:")
+            print(_("Будут применены и сохранены:"))
             for field, old, new in changes:
                 print(f"  {field}: {old!r} -> {new!r}")
             return 0
         load_config(path)
-        print(f"Миграции применены и сохранены в {path}:")
+        print(_("Миграции применены и сохранены в {0}:").format(path))
         for field, old, new in changes:
             print(f"  {field}: {old!r} -> {new!r}")
         return 0
@@ -722,16 +751,16 @@ def cmd_config(args: argparse.Namespace) -> int:
             # Not captured: the editor needs the terminal.
             return subprocess.run([editor, str(config_path())], check=False).returncode
         except OSError as exc:
-            print(f"Не удалось запустить редактор {editor}: {exc}")
+            print(_("Не удалось запустить редактор {0}: {1}").format(editor, exc))
             return 1
     if args.config_action == "reset":
         save_config(Config())
-        print(MSG_CONFIG_RESET)
+        print(_(MSG_CONFIG_RESET))
         return 0
     if args.config_action == "path":
         print(config_path())
         return 0
-    print("Использование: klyrshift config show|edit|reset|path")
+    print(_("Использование: klyrshift config show|edit|reset|path"))
     return 2
 
 
@@ -742,9 +771,9 @@ def cmd_export(args: argparse.Namespace) -> int:
     try:
         path = write_backup(Path(args.output).expanduser())
     except OSError as exc:
-        print(f"Не удалось сохранить бэкап: {exc}")
+        print(_("Не удалось сохранить бэкап: {0}").format(exc))
         return 1
-    print(f"Настройки сохранены в {path}.")
+    print(_("Настройки сохранены в {0}.").format(path))
     return 0
 
 
@@ -755,11 +784,11 @@ def cmd_import(args: argparse.Namespace) -> int:
     try:
         data = read_backup(Path(args.source).expanduser())
     except (OSError, ValueError) as exc:
-        print(f"Не удалось прочитать бэкап: {exc}")
+        print(_("Не удалось прочитать бэкап: {0}").format(exc))
         return 1
     result = apply_backup(data)
     summary = ", ".join(f"{key}={value}" for key, value in result.items() if value)
-    print(f"Восстановлено: {summary or 'ничего'}.")
+    print(_("Восстановлено: {0}.").format(summary or _("ничего")))
     return 0
 
 
@@ -807,7 +836,7 @@ def cmd_fix(args: argparse.Namespace) -> int:
     config = load_config()
     text = args.text if args.text else sys.stdin.read().strip()
     if not text:
-        print("Нет текста для исправления.")
+        print(_("Нет текста для исправления."))
         return 2
 
     converter = LayoutConverter()
@@ -830,7 +859,7 @@ def cmd_fix(args: argparse.Namespace) -> int:
         # in place, so ``fix --text "превет"`` gives ``привет`` when T9 is on.
         corrected = _typo_correction_for_cli(text, current, detector, config)
         if corrected is None:
-            print(f"Исправление не требуется (раскладка {current}).")
+            print(_("Исправление не требуется (раскладка {0}).").format(current))
             return 0
         # A typo fix never changes the layout, so the target stays ``current``.
         converted, target, kind = corrected, current, "typo"
@@ -847,14 +876,14 @@ def cmd_fix(args: argparse.Namespace) -> int:
         print(f"{text} -> {converted} ({current} -> {target})")
     if args.dry_run:
         logger.info("Dry run: skipping layout switch and text replacement")
-        print("Режим --dry-run: изменения не применены.")
+        print(_("Режим --dry-run: изменения не применены."))
         return 0
     if args.apply:
         if kind == "layout":
             switcher.switch_to(target)
             time.sleep(0.05)
         if not injector.replace_text(len(text), converted, target):
-            print("Не удалось применить исправление.")
+            print(_("Не удалось применить исправление."))
             return 1
     return 0
 
@@ -906,7 +935,7 @@ def cmd_install_autostart(_args: argparse.Namespace) -> int:
 
     source = _bundled_data_file("klyrshift-autostart.desktop")
     if source is None:
-        print("Не найден файл klyrshift-autostart.desktop.")
+        print(_("Не найден файл klyrshift-autostart.desktop."))
         return 1
     target = _autostart_path()
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -923,7 +952,7 @@ def cmd_install_autostart(_args: argparse.Namespace) -> int:
     # Lift a mask left by a previous uninstall; otherwise the unit stays
     # suppressed and the entry has no effect.
     enable_autostart()
-    print(MSG_AUTOSTART_INSTALLED)
+    print(_(MSG_AUTOSTART_INSTALLED))
     return 0
 
 
@@ -936,7 +965,7 @@ def cmd_uninstall_autostart(_args: argparse.Namespace) -> int:
     # an unprivileged user cannot disable outright).
     disable_autostart()
     _run_quiet(["systemctl", "--user", "disable", "--now", "klyrshift.service"])
-    print(MSG_AUTOSTART_REMOVED)
+    print(_(MSG_AUTOSTART_REMOVED))
     return 0
 
 
@@ -959,10 +988,10 @@ def cmd_collect_logs(args: argparse.Namespace) -> int:
     try:
         archive = collect_logs(output_dir)
     except OSError as exc:
-        print(f"Не удалось создать архив: {exc}")
+        print(_("Не удалось создать архив: {0}").format(exc))
         return 1
-    print(f"Диагностический архив создан: {archive}")
-    print("Приложите его к issue на GitHub (текст, который вы набирали, в него не попадает).")
+    print(_("Диагностический архив создан: {0}").format(archive))
+    print(_("Приложите его к issue на GitHub (текст, который вы набирали, в него не попадает)."))
     return 0
 
 
@@ -978,7 +1007,7 @@ def cmd_explain(args: argparse.Namespace) -> int:
     config = load_config()
     text = args.text if args.text else sys.stdin.read().strip()
     if not text:
-        print("Нет текста для анализа.")
+        print(_("Нет текста для анализа."))
         return 2
 
     converter = LayoutConverter()
@@ -996,16 +1025,16 @@ def cmd_explain(args: argparse.Namespace) -> int:
 
     target = detector.target_layout(text, current)
     confidence = detector.analyze(text, current)
-    print(f"Текст: {text}")
-    print(f"Текущая раскладка: {current}")
+    print(_("Текст: {0}").format(text))
+    print(_("Текущая раскладка: {0}").format(current))
     if target is None:
-        print("Решение: не исправлять.")
+        print(_("Решение: не исправлять."))
     else:
         converted = converter.convert(text, current, target)
-        print(f"Решение: исправить в {target} -> {converted}")
-    print(f"Оценка: {confidence.describe()}")
+        print(_("Решение: исправить в {0} -> {1}").format(target, converted))
+    print(_("Оценка: {0}").format(confidence.describe()))
     if confidence.evidence == "model":
-        print(f"  доля известных слов в цели: {confidence.vocabulary_share:.0%}")
+        print(_("  доля известных слов в цели: {0:.0%}").format(confidence.vocabulary_share))
     return 0
 
 
@@ -1031,8 +1060,8 @@ def cmd_logs(args: argparse.Namespace) -> int:
     if args.follow:
         return follow(path, lines, level)
     if not path.exists():
-        print(f"Лог не найден: {path}")
-        print("Запустите демон: klyrshift start")
+        print(_("Лог не найден: {0}").format(path))
+        print(_("Запустите демон: klyrshift start"))
         return 0
     for line in read_tail(path, lines, level):
         print(line)
@@ -1043,53 +1072,59 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the top-level argument parser."""
     parser = argparse.ArgumentParser(
         prog="klyrshift",
-        description="Klyrshift — автоматический переключатель раскладки клавиатуры.",
+        description=_("Klyrshift — автоматический переключатель раскладки клавиатуры."),
     )
     parser.add_argument("--version", action="version", version=f"Klyrshift {__version__}")
+    parser.add_argument(
+        "--lang",
+        default="",
+        metavar="LOCALE",
+        help=_("язык вывода: auto (по окружению), ru или en"),
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    start = subparsers.add_parser("start", help="запустить демон")
-    start.add_argument("--foreground", action="store_true", help="не уходить в фон")
+    start = subparsers.add_parser("start", help=_("запустить демон"))
+    start.add_argument("--foreground", action="store_true", help=_("не уходить в фон"))
     start.add_argument(
         "--dry-run",
         action="store_true",
-        help="анализировать, но не менять раскладку и не заменять текст",
+        help=_("анализировать, но не менять раскладку и не заменять текст"),
     )
     start.set_defaults(func=cmd_start)
 
-    stop = subparsers.add_parser("stop", help="остановить демон")
+    stop = subparsers.add_parser("stop", help=_("остановить демон"))
     stop.set_defaults(func=cmd_stop)
 
-    kill = subparsers.add_parser("kill", help="принудительно завершить зависший демон (SIGKILL)")
+    kill = subparsers.add_parser("kill", help=_("принудительно завершить зависший демон (SIGKILL)"))
     kill.set_defaults(func=cmd_kill)
 
-    status = subparsers.add_parser("status", help="показать статус")
+    status = subparsers.add_parser("status", help=_("показать статус"))
     status.set_defaults(func=cmd_status)
 
-    mode = subparsers.add_parser("mode", help="показать или сменить режим (auto/manual/hybrid)")
+    mode = subparsers.add_parser("mode", help=_("показать или сменить режим (auto/manual/hybrid)"))
     mode.add_argument("mode", nargs="?", choices=["auto", "manual", "hybrid"], default=None)
     mode.set_defaults(func=cmd_mode)
 
-    undo = subparsers.add_parser("undo", help="отменить последнее исправление")
+    undo = subparsers.add_parser("undo", help=_("отменить последнее исправление"))
     undo.set_defaults(func=cmd_undo)
 
-    learn = subparsers.add_parser("learn", help="обучение: статистика, список слов, вкл/выкл")
+    learn = subparsers.add_parser("learn", help=_("обучение: статистика, список слов, вкл/выкл"))
     learn.add_argument(
         "learn_action",
         nargs="?",
         choices=["list", "promote", "forget"],
-        help="list — показать выученные слова; promote/forget — закрепить/забыть слово",
+        help=_("list — показать выученные слова; promote/forget — закрепить/забыть слово"),
     )
-    learn.add_argument("word", nargs="?", help="слово для promote/forget")
-    learn.add_argument("--on", action="store_true", help="включить обучение")
-    learn.add_argument("--off", action="store_true", help="выключить обучение")
-    learn.add_argument("--reset", action="store_true", help="сбросить счётчики обучения")
+    learn.add_argument("word", nargs="?", help=_("слово для promote/forget"))
+    learn.add_argument("--on", action="store_true", help=_("включить обучение"))
+    learn.add_argument("--off", action="store_true", help=_("выключить обучение"))
+    learn.add_argument("--reset", action="store_true", help=_("сбросить счётчики обучения"))
     learn.set_defaults(func=cmd_learn)
 
-    hotkeys = subparsers.add_parser("hotkeys", help="показать действующие хоткеи")
+    hotkeys = subparsers.add_parser("hotkeys", help=_("показать действующие хоткеи"))
     hotkeys.set_defaults(func=cmd_hotkeys)
 
-    dict_parser = subparsers.add_parser("dict", help="словарь слов, которые не исправлять")
+    dict_parser = subparsers.add_parser("dict", help=_("словарь слов, которые не исправлять"))
     dict_parser.add_argument(
         "dict_action",
         choices=[
@@ -1108,124 +1143,145 @@ def build_parser() -> argparse.ArgumentParser:
             "uninstall-file",
         ],
         help=(
-            "list/add/remove — словарь пользователя; download/import-file — базовые "
-            "расширенные словари; categories/install/list-installed/remove-category — "
-            "тематические словари; pack/verify/install-file/uninstall-file — "
-            "версионированные пакеты языков (manifest + sha256)"
+            _(
+                "list/add/remove — словарь пользователя; download/import-file — базовые "
+                "расширенные словари; categories/install/list-installed/remove-category — "
+                "тематические словари; pack/verify/install-file/uninstall-file — "
+                "версионированные пакеты языков (manifest + sha256)"
+            )
         ),
     )
     dict_parser.add_argument(
-        "word", nargs="?", help="слово (add/remove) или язык/путь (download/import-file)"
+        "word", nargs="?", help=_("слово (add/remove) или язык/путь (download/import-file)")
     )
     dict_parser.add_argument(
-        "--lang", default="", help="язык для import-file/pack, если его нет в имени файла"
+        "--lang", default="", help=_("язык для import-file/pack, если его нет в имени файла")
     )
     dict_parser.add_argument(
-        "--file", action="append", default=[], help="дополнительный файл для dict pack"
+        "--file", action="append", default=[], help=_("дополнительный файл для dict pack")
     )
-    dict_parser.add_argument("--name", default="", help="имя пакета для dict pack")
+    dict_parser.add_argument("--name", default="", help=_("имя пакета для dict pack"))
     dict_parser.add_argument(
         "--kind",
         default="frequency",
         choices=["frequency", "thematic", "ngrams"],
-        help="тип пакета для dict pack",
+        help=_("тип пакета для dict pack"),
     )
-    dict_parser.add_argument("--output", default="", help="куда записать пакет (dict pack)")
-    dict_parser.add_argument("--package-version", default="1.0.0", help="версия пакета (dict pack)")
-    dict_parser.add_argument("--license", default="", help="лицензия пакета (dict pack)")
+    dict_parser.add_argument("--output", default="", help=_("куда записать пакет (dict pack)"))
+    dict_parser.add_argument(
+        "--package-version", default="1.0.0", help=_("версия пакета (dict pack)")
+    )
+    dict_parser.add_argument("--license", default="", help=_("лицензия пакета (dict pack)"))
     dict_parser.set_defaults(func=cmd_dict)
 
-    config = subparsers.add_parser("config", help="работа с конфигурацией")
+    config = subparsers.add_parser("config", help=_("работа с конфигурацией"))
     config.add_argument("config_action", choices=["show", "edit", "reset", "path", "migrate"])
     config.add_argument(
         "--dry-run",
         action="store_true",
-        help="для migrate: показать изменения, ничего не записывать",
+        help=_("для migrate: показать изменения, ничего не записывать"),
     )
     config.set_defaults(func=cmd_config)
 
-    export = subparsers.add_parser("export", help="сохранить настройки в файл (JSON)")
+    export = subparsers.add_parser("export", help=_("сохранить настройки в файл (JSON)"))
     export.add_argument(
-        "output", nargs="?", default="klyrshift-backup.json", help="файл для бэкапа"
+        "output", nargs="?", default="klyrshift-backup.json", help=_("файл для бэкапа")
     )
     export.set_defaults(func=cmd_export)
 
-    imp = subparsers.add_parser("import", help="восстановить настройки из файла (JSON)")
-    imp.add_argument("source", help="файл бэкапа")
+    imp = subparsers.add_parser("import", help=_("восстановить настройки из файла (JSON)"))
+    imp.add_argument("source", help=_("файл бэкапа"))
     imp.set_defaults(func=cmd_import)
 
-    restart = subparsers.add_parser("restart", help="перезапустить демон")
+    restart = subparsers.add_parser("restart", help=_("перезапустить демон"))
     restart.set_defaults(func=cmd_restart)
 
-    fix = subparsers.add_parser("fix", help="исправить текст вручную")
-    fix.add_argument("--text", help="текст для исправления (иначе читается из stdin)")
-    fix.add_argument("--apply", action="store_true", help="применить исправление на экране")
+    fix = subparsers.add_parser("fix", help=_("исправить текст вручную"))
+    fix.add_argument("--text", help=_("текст для исправления (иначе читается из stdin)"))
+    fix.add_argument("--apply", action="store_true", help=_("применить исправление на экране"))
     fix.add_argument(
         "--dry-run",
         action="store_true",
-        help="только показать исправление, ничего не применять",
+        help=_("только показать исправление, ничего не применять"),
     )
     fix.set_defaults(func=cmd_fix)
 
     explain = subparsers.add_parser(
-        "explain", help="объяснить решение детектора для слова (только чтение)"
+        "explain", help=_("объяснить решение детектора для слова (только чтение)")
     )
-    explain.add_argument("--text", help="текст для анализа (иначе читается из stdin)")
-    explain.add_argument("--layout", default="", help="текущая раскладка (иначе определяется)")
+    explain.add_argument("--text", help=_("текст для анализа (иначе читается из stdin)"))
+    explain.add_argument("--layout", default="", help=_("текущая раскладка (иначе определяется)"))
     explain.set_defaults(func=cmd_explain)
 
-    doctor = subparsers.add_parser("doctor", help="самодиагностика окружения")
+    doctor = subparsers.add_parser("doctor", help=_("самодиагностика окружения"))
     doctor.set_defaults(func=cmd_doctor)
 
     verify = subparsers.add_parser(
-        "verify", help="проверить целостность файлов установленного пакета"
+        "verify", help=_("проверить целостность файлов установленного пакета")
     )
     verify.set_defaults(func=cmd_verify)
 
-    collect = subparsers.add_parser("collect-logs", help="собрать диагностический архив для issue")
+    collect = subparsers.add_parser(
+        "collect-logs", help=_("собрать диагностический архив для issue")
+    )
     collect.add_argument(
         "--output",
         metavar="DIR",
-        help="каталог для архива (по умолчанию — домашний каталог)",
+        help=_("каталог для архива (по умолчанию — домашний каталог)"),
     )
     collect.set_defaults(func=cmd_collect_logs)
 
-    logs = subparsers.add_parser("logs", help="показать журнал демона")
+    logs = subparsers.add_parser("logs", help=_("показать журнал демона"))
     logs.add_argument(
         "-n",
         "--lines",
         type=int,
         default=50,
         metavar="N",
-        help="сколько последних строк показать (по умолчанию 50)",
+        help=_("сколько последних строк показать (по умолчанию 50)"),
     )
     logs.add_argument(
         "-f",
         "--follow",
         action="store_true",
-        help="следить за журналом в реальном времени",
+        help=_("следить за журналом в реальном времени"),
     )
     logs.add_argument(
         "--level",
         default=None,
         metavar="LEVEL",
-        help="показывать только строки этого уровня (DEBUG/INFO/WARNING/ERROR)",
+        help=_("показывать только строки этого уровня (DEBUG/INFO/WARNING/ERROR)"),
     )
     logs.set_defaults(func=cmd_logs)
 
-    install = subparsers.add_parser("install-autostart", help="включить автозапуск")
+    install = subparsers.add_parser("install-autostart", help=_("включить автозапуск"))
     install.set_defaults(func=cmd_install_autostart)
 
-    uninstall = subparsers.add_parser("uninstall-autostart", help="выключить автозапуск")
+    uninstall = subparsers.add_parser("uninstall-autostart", help=_("выключить автозапуск"))
     uninstall.set_defaults(func=cmd_uninstall_autostart)
 
-    version = subparsers.add_parser("version", help="показать версию")
+    version = subparsers.add_parser("version", help=_("показать версию"))
     version.set_defaults(func=cmd_version)
 
-    gui = subparsers.add_parser("gui", help="открыть графический интерфейс (GTK4)")
+    gui = subparsers.add_parser("gui", help=_("открыть графический интерфейс (GTK4)"))
     gui.set_defaults(func=cmd_gui)
 
     return parser
+
+
+def _locale_from_argv(argv: list[str]) -> str:
+    """Return the ``--lang`` value in ``argv`` without a full parse.
+
+    The parser is built before ``--lang`` is known, so its help strings would
+    otherwise always be Russian. Pre-scanning the vector lets the locale be set
+    before the parser is built, which is also what makes ``--help`` translate.
+    """
+    for index, item in enumerate(argv):
+        if item == "--lang" and index + 1 < len(argv):
+            return argv[index + 1]
+        if item.startswith("--lang="):
+            return item.partition("=")[2]
+    return ""
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1237,8 +1293,10 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         The process exit code.
     """
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    set_locale(_locale_from_argv(arguments))
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
     try:
         return int(args.func(args))
     except KeyboardInterrupt:

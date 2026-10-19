@@ -37,6 +37,7 @@ from typing import Final
 
 from . import repo
 from .dictionary import _write_words, default_extended_dictionary_dir
+from .i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,15 @@ class DictionaryCategory:
     title_ru: str
     title_en: str
     languages: tuple[str, ...]
+
+    def title(self) -> str:
+        """Return the title in the active locale.
+
+        The catalogue is the single translation mechanism, so the Russian title
+        is looked up there; ``title_en`` stays as the authoritative English
+        spelling the catalogue is checked against in the test-suite.
+        """
+        return _(self.title_ru)
 
     def file_name(self, language: str) -> str:
         """Return the word-list file name for ``language`` in this category."""

@@ -16,6 +16,8 @@ from collections.abc import Callable
 
 import gi
 
+from ..i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -28,7 +30,16 @@ from .widgets.hotkey_row import HotkeyRow  # noqa: E402
 
 # Mode option order and their Russian labels, shared by both feature combos.
 _MODE_OPTIONS = ["off", "manual", "auto", "hybrid"]
-_MODE_LABELS = ["Выключено", "Ручной", "Авто", "Гибрид"]
+_MODE_LABELS_SOURCE = ["Выключено", "Ручной", "Авто", "Гибрид"]
+
+
+def _mode_labels() -> list[str]:
+    """Translated labels for ``_MODE_OPTIONS``, resolved on each call.
+
+    The list cannot be translated at import time: the locale is chosen
+    later, when the preferences window opens.
+    """
+    return [_(label) for label in _MODE_LABELS_SOURCE]
 
 
 class TypoPage(BoundPreferencesPage):
@@ -56,30 +67,32 @@ class TypoPage(BoundPreferencesPage):
         self.add(status_group)
 
         typo_group = Adw.PreferencesGroup(
-            title="Опечатки",
-            description="Исправлять опечатки только в неизвестном слове и только "
-            "когда вариант однозначен",
+            title=_("Опечатки"),
+            description=_(
+                "Исправлять опечатки только в неизвестном слове и только "
+                "когда вариант однозначен"
+            ),
         )
         self._typo_mode_combo = self.add_combo(
             typo_group,
-            "Режим Т9",
+            _("Режим Т9"),
             _MODE_OPTIONS,
-            _MODE_LABELS,
+            _mode_labels(),
             state.config.typo_mode,
             lambda mode: self._set_mode("typo", mode),
-            subtitle="В ручном режиме T9 срабатывает только по хоткею",
+            subtitle=_("В ручном режиме T9 срабатывает только по хоткею"),
         )
-        self._typo_switch = self.add_switch(typo_group, "Исправлять опечатки", "typo_correction")
+        self._typo_switch = self.add_switch(typo_group, _("Исправлять опечатки"), "typo_correction")
         self._typo_hotkey = HotkeyRow(
-            "Хоткей Т9",
-            "Срабатывает в ручном и гибридном режимах. Пустое значение — выключено.",
+            _("Хоткей Т9"),
+            _("Срабатывает в ручном и гибридном режимах. Пустое значение — выключено."),
             state.config.typo_hotkey,
             on_change=self._make_hotkey_handler("typo_hotkey"),
         )
         typo_group.add(self._typo_hotkey)
         self.add_spin(
             typo_group,
-            "Минимальная длина слова",
+            _("Минимальная длина слова"),
             "typo_min_word_length",
             lower=3,
             upper=10,
@@ -87,7 +100,7 @@ class TypoPage(BoundPreferencesPage):
         )
         self.add_spin(
             typo_group,
-            "Максимум правок (короткие слова)",
+            _("Максимум правок (короткие слова)"),
             "typo_max_distance",
             lower=1,
             upper=2,
@@ -95,7 +108,7 @@ class TypoPage(BoundPreferencesPage):
         )
         self.add_spin(
             typo_group,
-            "Максимум правок (слова от 6 символов)",
+            _("Максимум правок (слова от 6 символов)"),
             "typo_max_distance_long",
             lower=1,
             upper=2,
@@ -103,7 +116,7 @@ class TypoPage(BoundPreferencesPage):
         )
         self.add_spin(
             typo_group,
-            "Порог длины «длинного» слова",
+            _("Порог длины «длинного» слова"),
             "typo_long_word_threshold",
             lower=3,
             upper=20,
@@ -111,7 +124,7 @@ class TypoPage(BoundPreferencesPage):
         )
         self.add_spin(
             typo_group,
-            "Уверенность (отрыв лучшего варианта)",
+            _("Уверенность (отрыв лучшего варианта)"),
             "typo_top1_ratio_strict",
             lower=1.0,
             upper=50.0,
@@ -121,39 +134,39 @@ class TypoPage(BoundPreferencesPage):
         self.add(typo_group)
 
         punct_group = Adw.PreferencesGroup(
-            title="Пунктуация",
-            description="Правила, а не языковая модель: предсказуемо и без выдумок",
+            title=_("Пунктуация"),
+            description=_("Правила, а не языковая модель: предсказуемо и без выдумок"),
         )
         self._punct_mode_combo = self.add_combo(
             punct_group,
-            "Режим пунктуации",
+            _("Режим пунктуации"),
             _MODE_OPTIONS,
-            _MODE_LABELS,
+            _mode_labels(),
             state.config.punctuation_mode,
             lambda mode: self._set_mode("punctuation", mode),
-            subtitle="В ручном режиме пунктуация срабатывает только по хоткею",
+            subtitle=_("В ручном режиме пунктуация срабатывает только по хоткею"),
         )
         self._punct_switch = self.add_switch(
-            punct_group, "Исправлять пунктуацию", "punctuation_correction"
+            punct_group, _("Исправлять пунктуацию"), "punctuation_correction"
         )
         self._punct_hotkey = HotkeyRow(
-            "Хоткей пунктуации",
-            "Срабатывает в ручном и гибридном режимах. Пустое значение — выключено.",
+            _("Хоткей пунктуации"),
+            _("Срабатывает в ручном и гибридном режимах. Пустое значение — выключено."),
             state.config.punctuation_hotkey,
             on_change=self._make_hotkey_handler("punctuation_hotkey"),
         )
         punct_group.add(self._punct_hotkey)
         self._dashes_switch = self.add_switch(
-            punct_group, "Заменять -- на тире", "punctuation_dashes"
+            punct_group, _("Заменять -- на тире"), "punctuation_dashes"
         )
         self._ellipsis_switch = self.add_switch(
-            punct_group, "Заменять ... на многоточие", "punctuation_ellipsis"
+            punct_group, _("Заменять ... на многоточие"), "punctuation_ellipsis"
         )
         self._quotes_switch = self.add_switch(
-            punct_group, "Умные кавычки «» (кириллица)", "punctuation_smart_quotes"
+            punct_group, _("Умные кавычки «» (кириллица)"), "punctuation_smart_quotes"
         )
         self._spacing_switch = self.add_switch(
-            punct_group, "Исправлять пробелы у знаков", "punctuation_fix_spacing"
+            punct_group, _("Исправлять пробелы у знаков"), "punctuation_fix_spacing"
         )
         self.add(punct_group)
 
@@ -162,7 +175,7 @@ class TypoPage(BoundPreferencesPage):
         examples_group.add(examples)
         self.add(examples_group)
 
-        check = Gtk.Button(label="Проверить сейчас")
+        check = Gtk.Button(label=_("Проверить сейчас"))
         check.add_css_class("pill")
         check.set_halign(Gtk.Align.CENTER)
         check.connect("clicked", self._on_check_clicked)
@@ -172,14 +185,14 @@ class TypoPage(BoundPreferencesPage):
 
         docs = Gtk.LinkButton.new_with_label(
             f"{repo.REPO_URL}/blob/main/docs/ARCHITECTURE.md",
-            "Документация Т9",
+            _("Документация Т9"),
         )
         docs.set_halign(Gtk.Align.CENTER)
         docs_group = Adw.PreferencesGroup()
         docs_group.add(docs)
         self.add(docs_group)
 
-        reset = Gtk.Button(label="Сбросить к дефолтным")
+        reset = Gtk.Button(label=_("Сбросить к дефолтным"))
         reset.add_css_class("pill")
         reset.set_halign(Gtk.Align.CENTER)
         reset.connect("clicked", self._on_reset)
@@ -192,13 +205,13 @@ class TypoPage(BoundPreferencesPage):
     def _build_examples_group(self) -> Adw.ExpanderRow:
         """A collapsible row listing ready-made examples."""
         row = Adw.ExpanderRow(
-            title="Примеры",
-            subtitle="Нажмите, чтобы посмотреть, как это работает",
+            title=_("Примеры"),
+            subtitle=_("Нажмите, чтобы посмотреть, как это работает"),
         )
         for source, result in (
-            ("првет", "привет"),
-            ("программма", "программа"),
-            ("текст--", "текст —"),
+            (_("првет"), _("привет")),
+            (_("программма"), _("программа")),
+            (_("текст--"), _("текст —")),
         ):
             item = Adw.ActionRow(title=f"{source} → {result}")
             row.add_row(item)
@@ -228,7 +241,7 @@ class TypoPage(BoundPreferencesPage):
 
         def handler(value: str) -> None:
             setattr(self._config, field, value)
-            self._save("Хоткей сохранён")
+            self._save(_("Хоткей сохранён"))
 
         return handler
 
@@ -237,8 +250,8 @@ class TypoPage(BoundPreferencesPage):
         setattr(self._config, f"{feature}_mode", mode)
         setattr(self._config, f"{feature}_correction", mode != "off")
         self._config.validate()
-        label = {"typo": "Т9", "punctuation": "Пунктуация"}[feature]
-        self._save(f"{label}: режим «{_MODE_LABELS[_MODE_OPTIONS.index(mode)]}»")
+        label = {"typo": _("Т9"), "punctuation": _("Пунктуация")}[feature]
+        self._save(_("{0}: режим «{1}»").format(label, _mode_labels()[_MODE_OPTIONS.index(mode)]))
         self._sync()
 
     def _on_toggle_clicked(self) -> None:
@@ -254,7 +267,7 @@ class TypoPage(BoundPreferencesPage):
         self._config.validate()
         # ``_save`` persists the config and pushes it to a running daemon, so no
         # separate reload is needed here.
-        self._save("Т9 включён" if enabled else "Т9 выключен")
+        self._save(_("Т9 включён") if enabled else _("Т9 выключен"))
         self._sync()
 
     def _feature_on(self) -> bool:
@@ -264,15 +277,15 @@ class TypoPage(BoundPreferencesPage):
         """Open a small dialog that previews T9 for one word."""
         dialog = Adw.MessageDialog(
             transient_for=self.get_root(),
-            heading="Проверить слово",
-            body="Введите слово — покажем, что предложит Т9.",
+            heading=_("Проверить слово"),
+            body=_("Введите слово — покажем, что предложит Т9."),
         )
-        entry = Gtk.Entry(placeholder_text="првет")
+        entry = Gtk.Entry(placeholder_text=_("првет"))
         entry.set_margin_top(6)
         entry.set_margin_bottom(6)
         dialog.set_extra_child(entry)
-        dialog.add_response("close", "Закрыть")
-        dialog.add_response("check", "Проверить")
+        dialog.add_response("close", _("Закрыть"))
+        dialog.add_response("check", _("Проверить"))
         dialog.set_response_appearance("check", Adw.ResponseAppearance.SUGGESTED)
         dialog.set_default_response("check")
 
@@ -281,7 +294,9 @@ class TypoPage(BoundPreferencesPage):
                 return
             suggestion = self.preview_suggestion(entry.get_text())
             result = (
-                f"{entry.get_text()} → {suggestion}" if suggestion else "Нет уверенного варианта."
+                f"{entry.get_text()} → {suggestion}"
+                if suggestion
+                else _("Нет уверенного варианта.")
             )
             self._toasts.add_toast(Adw.Toast(title=result))
 
@@ -339,15 +354,15 @@ class TypoPage(BoundPreferencesPage):
         self._config.punctuation_fix_spacing = True
         self._config.punctuation_hotkey = DEFAULT_PUNCTUATION_HOTKEY
         self._config.validate()
-        self._save("Настройки Т9 сброшены")
+        self._save(_("Настройки Т9 сброшены"))
         self._sync()
 
     def _sync(self) -> None:
         """Reflect the current config in the button and the status line."""
         self._toggle.set_state(STATE_ON if self._feature_on() else STATE_OFF)
-        typo = "вкл" if self._config.typo_mode != "off" else "выкл"
-        punct = "вкл" if self._config.punctuation_mode != "off" else "выкл"
-        self._status.set_label(f"Опечатки: {typo} · Пунктуация: {punct}")
+        typo = _("вкл") if self._config.typo_mode != "off" else _("выкл")
+        punct = _("вкл") if self._config.punctuation_mode != "off" else _("выкл")
+        self._status.set_label(_("Опечатки: {0} · Пунктуация: {1}").format(typo, punct))
         for row, field in (
             (self._typo_switch, "typo_correction"),
             (self._punct_switch, "punctuation_correction"),

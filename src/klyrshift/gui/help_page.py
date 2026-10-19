@@ -12,6 +12,8 @@ from collections.abc import Callable
 
 import gi
 
+from ..i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -33,16 +35,23 @@ _STATUS_ICON = {
 
 # Known limitations, stated plainly. Every line here is a real constraint of the
 # current code, not a roadmap item: the app must not promise more than it does.
-LIMITATIONS = (
+# A function, not a tuple: the strings must be translated when the page opens,
+# not when the module is first imported.
+_LIMITATIONS_SOURCE = (
     "Только Linux (Debian и производные). Windows и macOS не поддерживаются.",
     "Переключение раскладки опирается на раскладки, уже настроенные в системе.",
     "Защита полей пароля зависит от AT-SPI (доступность) и не срабатывает, "
     "если окружение его не предоставляет.",
     "Определение активного приложения работает через D-Bus GNOME Shell; "
     "в других окружениях функция «раскладка по приложениям» недоступна.",
-    "Пользовательские языковые пакеты пока не подключены: доступны только " "встроенные раскладки.",
+    "Пользовательские языковые пакеты пока не подключены: доступны только встроенные раскладки.",
     "Проверка обновлений — единственная сетевая функция и выключена по умолчанию.",
 )
+
+
+def limitations() -> tuple[str, ...]:
+    """The known limitations, translated for the active locale."""
+    return tuple(_(line) for line in _LIMITATIONS_SOURCE)
 
 
 class HelpPage(Adw.PreferencesPage):
@@ -62,16 +71,18 @@ class HelpPage(Adw.PreferencesPage):
     # --- tour -----------------------------------------------------------------
     def _build_tour_group(self) -> None:
         group = Adw.PreferencesGroup(
-            title="Помощь и обучение",
-            description="Повторите обучение, найдите объяснение настройки или "
-            "проверьте готовность окружения. Ничего из этого не показывается "
-            "автоматически.",
+            title=_("Помощь и обучение"),
+            description=_(
+                "Повторите обучение, найдите объяснение настройки или "
+                "проверьте готовность окружения. Ничего из этого не показывается "
+                "автоматически."
+            ),
         )
         row = Adw.ActionRow(
-            title="Повторить вводный тур",
-            subtitle="Пошаговое знакомство с главным экраном и основными настройками",
+            title=_("Повторить вводный тур"),
+            subtitle=_("Пошаговое знакомство с главным экраном и основными настройками"),
         )
-        button = Gtk.Button(label="Начать тур")
+        button = Gtk.Button(label=_("Начать тур"))
         button.add_css_class("pill")
         button.set_valign(Gtk.Align.CENTER)
         button.connect("clicked", self._on_tour_clicked)
@@ -86,16 +97,16 @@ class HelpPage(Adw.PreferencesPage):
     # --- topics ---------------------------------------------------------------
     def _build_topics_group(self) -> None:
         group = Adw.PreferencesGroup(
-            title="Объяснения настроек",
-            description="Кратко — что делает настройка; подробнее — как она работает.",
+            title=_("Объяснения настроек"),
+            description=_("Кратко — что делает настройка; подробнее — как она работает."),
         )
         for topic in HELP_TOPICS.values():
-            row = Adw.ActionRow(title=topic.title, subtitle=topic.short)
+            row = Adw.ActionRow(title=_(topic.title), subtitle=_(topic.short))
             button = Gtk.Button(icon_name="help-about-symbolic")
             button.add_css_class("flat")
             button.add_css_class("help-button")
             button.set_valign(Gtk.Align.CENTER)
-            button.set_tooltip_text(f"Справка: {topic.title}")
+            button.set_tooltip_text(_("Справка: {0}").format(_(topic.title)))
             button.connect("clicked", lambda _b, t=topic: show_help_dialog(t, _b))
             row.add_suffix(button)
             group.add(row)
@@ -104,12 +115,12 @@ class HelpPage(Adw.PreferencesPage):
 
     # --- diagnostics ----------------------------------------------------------
     def _build_diagnostics_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Диагностика")
+        group = Adw.PreferencesGroup(title=_("Диагностика"))
         row = Adw.ActionRow(
-            title="Проверить окружение",
-            subtitle="Права на устройства ввода, раскладки и инструменты переключения",
+            title=_("Проверить окружение"),
+            subtitle=_("Права на устройства ввода, раскладки и инструменты переключения"),
         )
-        self._diagnostics_button = Gtk.Button(label="Проверить")
+        self._diagnostics_button = Gtk.Button(label=_("Проверить"))
         self._diagnostics_button.add_css_class("pill")
         self._diagnostics_button.set_valign(Gtk.Align.CENTER)
         self._diagnostics_button.connect("clicked", self._on_diagnostics_clicked)
@@ -127,32 +138,32 @@ class HelpPage(Adw.PreferencesPage):
 
     def _on_diagnostics_clicked(self, _button: Gtk.Button) -> None:
         self._diagnostics_button.set_sensitive(False)
-        self._diagnostics_output.set_label("Проверка…")
+        self._diagnostics_output.set_label(_("Проверка…"))
         self._diagnostics_output.set_visible(True)
         run_in_background(collect_checks, self._apply_diagnostics)
 
     def _apply_diagnostics(self, results: object) -> None:
         self._diagnostics_button.set_sensitive(True)
         if not isinstance(results, list) or not results:
-            self._diagnostics_output.set_label("Не удалось выполнить проверку.")
+            self._diagnostics_output.set_label(_("Не удалось выполнить проверку."))
             return
         self._diagnostics_output.set_label(format_diagnostics(results))
 
     # --- languages ------------------------------------------------------------
     def _build_languages_group(self) -> None:
         group = Adw.PreferencesGroup(
-            title="Поддерживаемые языки",
-            description="Встроенные раскладки, доступные для распознавания",
+            title=_("Поддерживаемые языки"),
+            description=_("Встроенные раскладки, доступные для распознавания"),
         )
         names = ", ".join(LANGUAGE_LABELS.get(lang, lang) for lang in SUPPORTED_LANGUAGES)
-        row = Adw.ActionRow(title="Раскладки", subtitle=names)
+        row = Adw.ActionRow(title=_("Раскладки"), subtitle=names)
         group.add(row)
         self.add(group)
 
     # --- limitations ----------------------------------------------------------
     def _build_limitations_group(self) -> None:
-        group = Adw.PreferencesGroup(title="Известные ограничения")
-        for text in LIMITATIONS:
+        group = Adw.PreferencesGroup(title=_("Известные ограничения"))
+        for text in limitations():
             row = Adw.ActionRow(title=text)
             row.add_css_class("property")
             group.add(row)
@@ -186,4 +197,4 @@ def format_diagnostics(results: list[CheckResult]) -> str:
     return "\n".join(lines)
 
 
-__all__ = ["LIMITATIONS", "HelpPage", "format_diagnostics"]
+__all__ = ["HelpPage", "format_diagnostics", "limitations"]

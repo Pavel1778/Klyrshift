@@ -11,6 +11,8 @@ import logging
 import subprocess
 from collections.abc import Callable
 
+from .i18n import _
+
 logger = logging.getLogger(__name__)
 
 APP_ID = "klyrshift"
@@ -124,11 +126,11 @@ class TrayIcon:
         """Build the tray context menu."""
         menu = gtk_module.Menu()  # type: ignore[attr-defined]
         entries = [
-            ("Показать статус", self._show_status),
-            ("Исправить сейчас", self.on_fix),
-            ("Применить предложение", self.on_accept_suggestion),
-            ("Настройки", self.on_settings),
-            ("Выход", self.on_quit),
+            (_("Показать статус"), self._show_status),
+            (_("Исправить сейчас"), self.on_fix),
+            (_("Применить предложение"), self.on_accept_suggestion),
+            (_("Настройки"), self.on_settings),
+            (_("Выход"), self.on_quit),
         ]
         for label, callback in entries:
             item = gtk_module.MenuItem(label=label)  # type: ignore[attr-defined]
@@ -136,7 +138,7 @@ class TrayIcon:
                 item.connect("activate", lambda _item, cb=callback: cb())
             else:
                 item.set_sensitive(False)
-            if label == "Применить предложение":
+            if label == _("Применить предложение"):
                 # Insensitive until the daemon offers a suggestion; the entry is
                 # a no-op the rest of the time.
                 item.set_sensitive(False)

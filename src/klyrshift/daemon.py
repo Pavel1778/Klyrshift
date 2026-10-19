@@ -54,6 +54,7 @@ from .control import ControlServer
 from .converter import LayoutConverter
 from .detector import LanguageDetector
 from .dictionary import load_user_dictionary
+from .i18n import _
 from .injector import TextInjector
 from .learning import LearningEngine, LearningStore
 from .punctuation import PunctuationCorrector
@@ -1149,7 +1150,7 @@ class KlyrshiftDaemon:
                     "notify-send",
                     "--app-name=Klyrshift",
                     "Klyrshift",
-                    "Есть предложение по раскладке — нажмите двойной Shift",
+                    _("Есть предложение по раскладке — нажмите двойной Shift"),
                 ],
                 check=False,
                 capture_output=True,
@@ -2059,7 +2060,7 @@ class KlyrshiftDaemon:
                     "notify-send",
                     "--app-name=Klyrshift",
                     "Klyrshift",
-                    "Раскладка исправлена",
+                    _("Раскладка исправлена"),
                 ],
                 check=False,
                 capture_output=True,
@@ -2378,7 +2379,7 @@ class KlyrshiftDaemon:
                     "notify-send",
                     "--app-name=Klyrshift",
                     "Klyrshift",
-                    f"Доступна версия {latest}",
+                    _("Доступна версия {0}").format(latest),
                 ],
                 check=False,
                 capture_output=True,

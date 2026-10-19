@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import gi
 
+from ..i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, GObject, Gtk  # noqa: E402
@@ -112,10 +114,10 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         header.set_title_widget(self._switcher_title)
 
         menu = Gio.Menu()
-        menu.append("Помощь и обучение", "win.show-help")
-        menu.append("Пройти тур заново", "win.start-tour")
-        menu.append("О программе", "win.about")
-        menu.append("Открыть config.toml", "win.open-config")
+        menu.append(_("Помощь и обучение"), "win.show-help")
+        menu.append(_("Пройти тур заново"), "win.start-tour")
+        menu.append(_("О программе"), "win.about")
+        menu.append(_("Открыть config.toml"), "win.open-config")
         menu_button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu)
         header.pack_end(menu_button)
         toolbar.add_top_bar(header)
@@ -130,27 +132,29 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         toolbar.add_bottom_bar(self._switcher_bar)
 
         self._home = HomePage(state, self._toasts)
-        self._settings = SettingsPage(state, on_saved=self._on_saved)
+        self._settings = SettingsPage(
+            state, on_saved=self._on_saved, on_locale_changed=self._on_locale_changed
+        )
         self._dictionary = DictionaryPage(state, on_saved=self._on_saved)
         self._typo = TypoPage(state, self._toasts, on_saved=self._on_saved)
         self._history = HistoryPage(state, self._toasts)
         self._advanced = AdvancedPage(state, on_saved=self._on_saved)
         self._help = HelpPage(on_start_tour=self.start_tour)
 
-        self._stack.add_titled(_scrollable(self._home), "home", "Главная")
-        self._stack.add_titled(self._settings, "settings", "Настройки")
-        self._stack.add_titled(self._dictionary, "dictionary", "Словарь")
-        self._stack.add_titled(self._typo, "typo", "Т9")
-        self._stack.add_titled(_scrollable(self._history), "history", "История")
+        self._stack.add_titled(_scrollable(self._home), "home", _("Главная"))
+        self._stack.add_titled(self._settings, "settings", _("Настройки"))
+        self._stack.add_titled(self._dictionary, "dictionary", _("Словарь"))
+        self._stack.add_titled(self._typo, "typo", _("Т9"))
+        self._stack.add_titled(_scrollable(self._history), "history", _("История"))
         # The advanced page is created once, here, so the stack is never
         # restructured at runtime (adding a page later changed the homogeneous
         # width and made the switcher bar churn). It is simply hidden from the
         # switcher until the user reveals it, keeping the basic settings clean.
-        self._advanced_page = self._stack.add_titled(self._advanced, "advanced", "Продвинутые")
+        self._advanced_page = self._stack.add_titled(self._advanced, "advanced", _("Продвинутые"))
         self._advanced_page.set_visible(False)
         # Help is reached from the header menu, not the switcher: it is not a
         # setting, and an extra tab would crowd the narrow-window bar.
-        self._help_page = self._stack.add_titled(self._help, "help", "Помощь")
+        self._help_page = self._stack.add_titled(self._help, "help", _("Помощь"))
         self._help_page.set_visible(False)
         # Give every tab a real icon. Adwaita names verified against the theme;
         # a name the theme lacks is skipped rather than shown as a placeholder.
@@ -245,15 +249,17 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
     def _offer_tour(self) -> bool:
         """Show the first-run tour offer; return ``False`` to run once."""
         self._offer = Adw.AlertDialog(
-            heading="Познакомиться с Klyrshift?",
+            heading=_("Познакомиться с Klyrshift?"),
             body=(
-                "Короткий тур из нескольких шагов покажет главный экран, выбор "
-                "языков, режим работы и проверку окружения. Его можно пропустить "
-                "и повторить позже на странице «Помощь»."
+                _(
+                    "Короткий тур из нескольких шагов покажет главный экран, выбор "
+                    "языков, режим работы и проверку окружения. Его можно пропустить "
+                    "и повторить позже на странице «Помощь»."
+                )
             ),
         )
-        self._offer.add_response("skip", "Пропустить")
-        self._offer.add_response("start", "Начать тур")
+        self._offer.add_response("skip", _("Пропустить"))
+        self._offer.add_response("start", _("Начать тур"))
         self._offer.set_response_appearance("start", Adw.ResponseAppearance.SUGGESTED)
         self._offer.set_default_response("start")
         self._offer.connect("response", self._on_offer_response)
@@ -342,7 +348,7 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
 
     def _make_advanced_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup()
-        button = Gtk.Button(label="Показать продвинутые настройки")
+        button = Gtk.Button(label=_("Показать продвинутые настройки"))
         button.set_halign(Gtk.Align.CENTER)
         button.add_css_class("pill")
         button.connect("clicked", lambda _b: self._on_show_advanced(None, None))
@@ -366,10 +372,20 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
 
             subprocess.run(["xdg-open", str(config_path())], check=False, timeout=5)
         except (OSError, subprocess.SubprocessError):  # pragma: no cover - desktop only
-            self._toasts.add_toast(Adw.Toast(title="Не удалось открыть config.toml"))
+            self._toasts.add_toast(Adw.Toast(title=_("Не удалось открыть config.toml")))
 
     def _on_saved(self, message: str) -> None:
         self._toasts.add_toast(Adw.Toast(title=message, timeout=2))
+
+    def _on_locale_changed(self) -> None:
+        """Rebuild the window so the new interface language is rendered.
+
+        The application owns the window lifecycle; it is looked up by attribute
+        rather than imported to keep ``app`` <-> ``window`` acyclic.
+        """
+        reload_ui = getattr(self.get_application(), "reload_ui", None)
+        if callable(reload_ui):
+            GLib.idle_add(reload_ui)
 
     @property
     def stack(self) -> Adw.ViewStack:

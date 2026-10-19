@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import Config, config_path, load_config
+from .i18n import _
 from .injector import TextInjector
 from .switcher import LayoutSwitcher
 
@@ -145,23 +146,25 @@ def check_device_access() -> CheckResult:
     in_group = _input_group_membership()
     if uaccess:
         return CheckResult(
-            "Правило доступа",
+            _("Правило доступа"),
             OK,
-            "udev-правило с uaccess установлено",
+            _("udev-правило с uaccess установлено"),
         )
     if in_group:
         return CheckResult(
-            "Правило доступа",
+            _("Правило доступа"),
             OK,
-            "пользователь в группе input (dev-путь)",
+            _("пользователь в группе input (dev-путь)"),
         )
     return CheckResult(
-        "Правило доступа",
+        _("Правило доступа"),
         FAIL,
-        "нет udev-правила с uaccess и нет группы input",
-        "установите пакет .deb (udev-правило ставится автоматически) "
-        "или на dev-пути скопируйте data/71-klyrshift.rules в "
-        "/etc/udev/rules.d/ и перелогиньтесь; подробнее — docs/TROUBLESHOOTING.md",
+        _("нет udev-правила с uaccess и нет группы input"),
+        _(
+            "установите пакет .deb (udev-правило ставится автоматически) "
+            "или на dev-пути скопируйте data/71-klyrshift.rules в "
+            "/etc/udev/rules.d/ и перелогиньтесь; подробнее — docs/TROUBLESHOOTING.md"
+        ),
     )
 
 
@@ -170,23 +173,25 @@ def check_event_devices() -> CheckResult:
     readable, total = _readable_event_devices()
     if total == 0:
         return CheckResult(
-            "Устройства /dev/input/event*",
+            _("Устройства /dev/input/event*"),
             WARN,
-            "устройства не найдены",
-            "проверьте, что вы в графической сессии и есть клавиатура",
+            _("устройства не найдены"),
+            _("проверьте, что вы в графической сессии и есть клавиатура"),
         )
     if readable == 0:
         return CheckResult(
-            "Устройства /dev/input/event*",
+            _("Устройства /dev/input/event*"),
             FAIL,
-            f"0 из {total} доступны для чтения",
-            "перезагрузите udev-правило: sudo udevadm control --reload-rules && "
-            "sudo udevadm trigger; проверьте getfacl (см. docs/TROUBLESHOOTING.md)",
+            _("0 из {0} доступны для чтения").format(total),
+            _(
+                "перезагрузите udev-правило: sudo udevadm control --reload-rules && "
+                "sudo udevadm trigger; проверьте getfacl (см. docs/TROUBLESHOOTING.md)"
+            ),
         )
     return CheckResult(
-        "Устройства /dev/input/event*",
+        _("Устройства /dev/input/event*"),
         OK,
-        f"{readable} из {total} доступны для чтения",
+        _("{0} из {1} доступны для чтения").format(readable, total),
     )
 
 
@@ -195,19 +200,21 @@ def check_uinput() -> CheckResult:
     path = Path("/dev/uinput")
     if not path.exists():
         return CheckResult(
-            "Устройство /dev/uinput",
+            _("Устройство /dev/uinput"),
             WARN,
-            "не найдено",
-            "sudo modprobe uinput; бэкенд uinput будет недоступен",
+            _("не найдено"),
+            _("sudo modprobe uinput; бэкенд uinput будет недоступен"),
         )
     if os.access(path, os.W_OK):
-        return CheckResult("Устройство /dev/uinput", OK, "доступно для записи")
+        return CheckResult(_("Устройство /dev/uinput"), OK, _("доступно для записи"))
     return CheckResult(
-        "Устройство /dev/uinput",
+        _("Устройство /dev/uinput"),
         FAIL,
-        "нет прав на запись",
-        "перезагрузите udev-правило: sudo udevadm control --reload-rules && "
-        "sudo udevadm trigger; проверьте getfacl (см. docs/TROUBLESHOOTING.md)",
+        _("нет прав на запись"),
+        _(
+            "перезагрузите udev-правило: sudo udevadm control --reload-rules && "
+            "sudo udevadm trigger; проверьте getfacl (см. docs/TROUBLESHOOTING.md)"
+        ),
     )
 
 
@@ -220,24 +227,24 @@ def check_tools() -> CheckResult:
             found.append(tool)
         else:
             missing.append(tool)
-    detail = "найдены: " + (", ".join(found) if found else "нет")
+    detail = _("найдены: ") + (", ".join(found) if found else _("нет"))
     if missing:
-        detail += "; нет: " + ", ".join(missing)
+        detail += _("; нет: ") + ", ".join(missing)
     if "g3kb-switch" not in found and "setxkbmap" not in found:
         return CheckResult(
-            "Внешние утилиты",
+            _("Внешние утилиты"),
             FAIL,
             detail,
-            "установите g3kb-switch (Wayland) или setxkbmap (X11)",
+            _("установите g3kb-switch (Wayland) или setxkbmap (X11)"),
         )
     if "wtype" not in found and "xdotool" not in found:
         return CheckResult(
-            "Внешние утилиты",
+            _("Внешние утилиты"),
             WARN,
             detail,
-            "нет wtype/xdotool; замена текста возможна только через uinput",
+            _("нет wtype/xdotool; замена текста возможна только через uinput"),
         )
-    return CheckResult("Внешние утилиты", OK, detail)
+    return CheckResult(_("Внешние утилиты"), OK, detail)
 
 
 def check_gui_libraries() -> CheckResult:
@@ -252,18 +259,18 @@ def check_gui_libraries() -> CheckResult:
     from .gui import cairo_available, gtk_available
 
     if gtk_available() and cairo_available():
-        return CheckResult("Графический интерфейс", OK, "GTK4, libadwaita и cairo доступны")
+        return CheckResult(_("Графический интерфейс"), OK, _("GTK4, libadwaita и cairo доступны"))
     if gtk_available():
         return CheckResult(
-            "Графический интерфейс",
+            _("Графический интерфейс"),
             WARN,
-            "нет cairo для PyGObject (тур и значок кнопки не отрисуются)",
+            _("нет cairo для PyGObject (тур и значок кнопки не отрисуются)"),
             "sudo apt install python3-gi-cairo",
         )
     return CheckResult(
-        "Графический интерфейс",
+        _("Графический интерфейс"),
         WARN,
-        "нет GTK4/libadwaita (GUI недоступен)",
+        _("нет GTK4/libadwaita (GUI недоступен)"),
         "sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1",
     )
 
@@ -273,20 +280,22 @@ def check_gnome_version() -> CheckResult:
     version = _gnome_major_version()
     if version is None:
         return CheckResult(
-            "Версия GNOME",
+            _("Версия GNOME"),
             WARN,
-            "не удалось определить (gnome-shell не найден)",
-            "переключение раскладки через g3kb-switch может не работать",
+            _("не удалось определить (gnome-shell не найден)"),
+            _("переключение раскладки через g3kb-switch может не работать"),
         )
     if GNOME_MIN <= version <= GNOME_MAX:
         return CheckResult(
-            "Версия GNOME", OK, f"{version} (поддерживается {GNOME_MIN}–{GNOME_MAX})"
+            _("Версия GNOME"),
+            OK,
+            _("{0} (поддерживается {1}–{2})").format(version, GNOME_MIN, GNOME_MAX),
         )
     return CheckResult(
-        "Версия GNOME",
+        _("Версия GNOME"),
         WARN,
-        f"{version} вне диапазона {GNOME_MIN}–{GNOME_MAX}",
-        "g3kb-switch может не работать; проверьте документацию расширения",
+        _("{0} вне диапазона {1}–{2}").format(version, GNOME_MIN, GNOME_MAX),
+        _("g3kb-switch может не работать; проверьте документацию расширения"),
     )
 
 
@@ -297,36 +306,38 @@ def check_backends(config: Config) -> list[CheckResult]:
     injector = TextInjector(backend=config.backend)
 
     switcher_result = CheckResult(
-        "Переключение раскладки",
+        _("Переключение раскладки"),
         OK if switcher.backend != "none" else FAIL,
         switcher.describe(),
-        "установите g3kb-switch или setxkbmap",
+        _("установите g3kb-switch или setxkbmap"),
     )
     injector_result = CheckResult(
-        "Замена текста",
+        _("Замена текста"),
         OK if injector.backend != "none" else FAIL,
         injector.describe(),
-        "установите wtype (Wayland), xdotool (X11) или python3-evdev",
+        _("установите wtype (Wayland), xdotool (X11) или python3-evdev"),
     )
     if session == "unknown":
         session_result = CheckResult(
-            "Тип сессии",
+            _("Тип сессии"),
             WARN,
-            "unknown (XDG_SESSION_TYPE не задан)",
-            "запустите doctor из графической сессии GNOME; из TTY/ssh "
-            "переключение раскладки и замена текста недоступны",
+            _("unknown (XDG_SESSION_TYPE не задан)"),
+            _(
+                "запустите doctor из графической сессии GNOME; из TTY/ssh "
+                "переключение раскладки и замена текста недоступны"
+            ),
         )
     else:
-        session_result = CheckResult("Тип сессии", OK, session)
+        session_result = CheckResult(_("Тип сессии"), OK, session)
     return [session_result, switcher_result, injector_result]
 
 
 def check_config(config: Config) -> CheckResult:
     """Report the configuration file location and layout list."""
     return CheckResult(
-        "Конфигурация",
+        _("Конфигурация"),
         OK,
-        f"{config_path()} (раскладки: {', '.join(config.layouts)})",
+        _("{0} (раскладки: {1})").format(config_path(), ", ".join(config.layouts)),
     )
 
 
@@ -344,22 +355,24 @@ def check_package_integrity() -> CheckResult:
     report = verify_package()
     if report.manifest is None:
         return CheckResult(
-            "Целостность пакета",
+            _("Целостность пакета"),
             OK,
-            "не установлен из .deb — проверка не требуется",
+            _("не установлен из .deb — проверка не требуется"),
         )
     if report.ok:
         return CheckResult(
-            "Целостность пакета",
+            _("Целостность пакета"),
             OK,
-            f"{len(report.files)} файлов совпадают с манифестом",
+            _("{0} файлов совпадают с манифестом").format(len(report.files)),
         )
     return CheckResult(
-        "Целостность пакета",
+        _("Целостность пакета"),
         FAIL,
-        f"{len(report.missing)} отсутствуют, {len(report.modified)} изменены",
-        "переустановите пакет: sudo apt install --reinstall klyrshift; "
-        "подробности — klyrshift verify",
+        _("{0} отсутствуют, {1} изменены").format(len(report.missing), len(report.modified)),
+        _(
+            "переустановите пакет: sudo apt install --reinstall klyrshift; "
+            "подробности — klyrshift verify"
+        ),
     )
 
 
@@ -382,23 +395,23 @@ def check_detector_model(config: Config) -> CheckResult:
             thematic_categories=config.installed_dict_categories,
         )
     except Exception as exc:  # pragma: no cover - defensive
-        return CheckResult("Модель детектора", WARN, f"не загрузилась: {exc}")
+        return CheckResult(_("Модель детектора"), WARN, _("не загрузилась: {0}").format(exc))
 
     loaded = sorted(detector.loaded_languages)
     if not loaded:
         return CheckResult(
-            "Модель детектора",
+            _("Модель детектора"),
             FAIL,
-            "ни один язык не загружен",
-            "проверьте config.languages и установленные словари",
+            _("ни один язык не загружен"),
+            _("проверьте config.languages и установленные словари"),
         )
     # A known wrong-layout word is the sanity probe: the model must both decide
     # to convert it and report a high calibrated confidence.
     confidence = detector.analyze("ghbdtn", "us")
     return CheckResult(
-        "Модель детектора",
+        _("Модель детектора"),
         OK,
-        f"языки: {', '.join(loaded)}; уверенность модели: {confidence.value:.0%}",
+        _("языки: {0}; уверенность модели: {1:.0%}").format(", ".join(loaded), confidence.value),
     )
 
 
@@ -467,7 +480,7 @@ def run_doctor(config: Config | None = None) -> int:
     print(render(results))
     print()
     if has_failures(results):
-        print("Итог: есть проблемы, см. подсказки выше.")
+        print(_("Итог: есть проблемы, см. подсказки выше."))
         return 1
-    print("Итог: критических проблем не найдено.")
+    print(_("Итог: критических проблем не найдено."))
     return 0

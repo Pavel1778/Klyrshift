@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import gi
 
+from ..i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402
@@ -49,12 +51,12 @@ class HomePage(Gtk.Box):
         self._pause.set_visible(False)
         self.append(self._pause)
 
-        self.append(self._section_label("Режим работы"))
+        self.append(self._section_label(_("Режим работы")))
         self._mode = ModeSwitcher(on_change=self._on_mode_changed)
         self._mode.set_mode(state.config.mode)
         self.append(self._mode)
 
-        self._undo_button = Gtk.Button(label="Отменить последнее исправление")
+        self._undo_button = Gtk.Button(label=_("Отменить последнее исправление"))
         self._undo_button.add_css_class("pill")
         self._undo_button.set_halign(Gtk.Align.CENTER)
         self._undo_button.connect("clicked", self._on_undo_clicked)
@@ -62,8 +64,8 @@ class HomePage(Gtk.Box):
 
         self.append(Gtk.Separator())
         self._autostart = Adw.SwitchRow(
-            title="Запускать при входе в систему",
-            subtitle="Демон будет активироваться автоматически",
+            title=_("Запускать при входе в систему"),
+            subtitle=_("Демон будет активироваться автоматически"),
         )
         self._autostart.connect("notify::active", self._on_autostart_toggled)
         group = Adw.PreferencesGroup()
@@ -112,9 +114,9 @@ class HomePage(Gtk.Box):
         if not ok:
             reason = self._state.last_error()
             message = (
-                f"Не удалось переключить демон: {reason}"
+                _("Не удалось переключить демон: {0}").format(reason)
                 if reason
-                else "Не удалось переключить демон"
+                else _("Не удалось переключить демон")
             )
             self._toast(message, ok=False)
 
@@ -142,14 +144,14 @@ class HomePage(Gtk.Box):
 
     def _on_mode_changed(self, mode: str) -> None:
         self._state.set_mode(mode)
-        self._toast(f"Режим изменён на {MODE_LABELS.get(mode, mode)}")
+        self._toast(_("Режим изменён на {0}").format(MODE_LABELS.get(mode, mode)))
 
     def _on_undo_clicked(self, _button: Gtk.Button) -> None:
         """Ask the daemon to undo its last fix without touching app history."""
         if self._state.undo_last_fix():
-            self._toast("Последнее исправление отменено")
+            self._toast(_("Последнее исправление отменено"))
         else:
-            self._toast("Демон не запущен", ok=False)
+            self._toast(_("Демон не запущен"), ok=False)
 
     def _on_autostart_toggled(self, row: Adw.SwitchRow, _param: object) -> None:
         enabled = row.get_active()
@@ -157,12 +159,12 @@ class HomePage(Gtk.Box):
             return
         ok = self._state.set_autostart(enabled)
         self._toast(
-            "Автозагрузка включена" if enabled else "Автозагрузка выключена",
+            _("Автозагрузка включена") if enabled else _("Автозагрузка выключена"),
             ok=ok,
         )
 
     def _toast(self, text: str, *, ok: bool = True) -> None:
-        message = text if ok else f"{text} (не удалось)"
+        message = text if ok else _("{0} (не удалось)").format(text)
         self._toasts.add_toast(Adw.Toast(title=message, timeout=2))
 
     # --- refresh ----------------------------------------------------------
@@ -236,10 +238,10 @@ class HomePage(Gtk.Box):
         reporting those as paused would be a false alarm.
         """
         if quiet:
-            return "Автопереключение приостановлено: тихие часы"
+            return _("Автопереключение приостановлено: тихие часы")
         name = app if isinstance(app, str) else None
         if name and state.is_app_excepted(name):
-            return f"Автопереключение приостановлено (приложение «{name}»)"
+            return _("Автопереключение приостановлено (приложение «{0}»)").format(name)
         return ""
 
     @property

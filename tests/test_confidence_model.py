@@ -24,7 +24,7 @@ from klyrshift.detector import (
 
 
 def _detector(**kwargs: object) -> LanguageDetector:
-    return LanguageDetector(converter=LayoutConverter(), stop_words=[], **kwargs)  # type: ignore[arg-type]
+    return LanguageDetector(converter=LayoutConverter(), stop_words=[], **kwargs)
 
 
 # --- The value is a probability -------------------------------------------

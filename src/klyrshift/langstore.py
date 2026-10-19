@@ -28,6 +28,7 @@ from .dictionary import (
     download_extended_dictionary,
     extended_dictionary_path,
 )
+from .i18n import _
 from .thematic import (
     CATEGORIES,
     disable_category,
@@ -65,9 +66,13 @@ class LanguageStatus:
 
     @property
     def state_text(self) -> str:
-        """A short Russian status for a GTK row subtitle."""
-        base = f"Установлен · слов: {self.word_count}" if self.installed else "Не установлен"
-        return f"Включён · {base}" if self.enabled else f"Выключен · {base}"
+        """A short status for a GTK row subtitle, translated for the locale."""
+        base = (
+            _("Установлен · слов: {0}").format(self.word_count)
+            if self.installed
+            else _("Не установлен")
+        )
+        return _("Включён · {0}").format(base) if self.enabled else _("Выключен · {0}").format(base)
 
 
 @dataclass(frozen=True)
@@ -82,9 +87,15 @@ class CategoryStatus:
 
     @property
     def state_text(self) -> str:
-        """A short Russian status for a GTK row subtitle."""
-        base = f"Установлена · слов: {self.word_count}" if self.installed else "Не установлена"
-        return f"Включена · {base}" if self.enabled else f"Выключена · {base}"
+        """A short status for a GTK row subtitle, translated for the locale."""
+        base = (
+            _("Установлена · слов: {0}").format(self.word_count)
+            if self.installed
+            else _("Не установлена")
+        )
+        return (
+            _("Включена · {0}").format(base) if self.enabled else _("Выключена · {0}").format(base)
+        )
 
 
 def extended_dir(config: Config) -> Path:
@@ -179,7 +190,7 @@ def remove_language(config: Config, language: str) -> LanguageStatus:
 def category_status(config: Config, slug: str, language: str = "ru") -> CategoryStatus:
     """Return the install/enable state of one thematic category."""
     cat = next((c for c in CATEGORIES if c.slug == slug), None)
-    title = cat.title_ru if cat is not None else slug
+    title = cat.title() if cat is not None else slug
     count = _count_words(thematic_path(slug, language, str(extended_dir(config))))
     return CategoryStatus(
         slug=slug,

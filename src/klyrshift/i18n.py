@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Iterator, Mapping
 from importlib import resources
 from pathlib import Path
 from typing import Any, Final
@@ -176,3 +177,31 @@ def tr(source: str, *args: object, count: int | None = None, **kwargs: object) -
 
 # Alias kept short for the many call sites in the GUI modules.
 _ = tr
+
+
+class LazyLabels(Mapping[str, str]):
+    """A read-only mapping whose values are translated on lookup.
+
+    Module-level label dicts (``THEME_LABELS``, ``MODE_LABELS``) are built at
+    import time, before the user's locale is known. Translating their values
+    eagerly would freeze whichever locale happened to be active first, so the
+    mapping stores the Russian source and translates in ``__getitem__`` instead.
+    ``[]``, ``.get()``, ``in`` and iteration all keep working.
+    """
+
+    __slots__ = ("_source",)
+
+    def __init__(self, source: Mapping[str, str]) -> None:
+        self._source = dict(source)
+
+    def __getitem__(self, key: str) -> str:
+        return tr(self._source[key])
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._source)
+
+    def __len__(self) -> int:
+        return len(self._source)
+
+    def __repr__(self) -> str:
+        return f"LazyLabels({self._source!r})"

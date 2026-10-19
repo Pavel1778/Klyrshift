@@ -13,6 +13,8 @@ from pathlib import Path
 
 import gi
 
+from ...i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -50,10 +52,10 @@ class DictionaryList(Adw.PreferencesGroup):
         self._filter = ""
         self._rows: list[Adw.ActionRow] = []
 
-        entry = Adw.EntryRow(title="Добавить слово (бренд, имя, техножаргон)")
+        entry = Adw.EntryRow(title=_("Добавить слово (бренд, имя, техножаргон)"))
         add_button = Gtk.Button(icon_name="list-add-symbolic")
         add_button.add_css_class("flat")
-        add_button.set_tooltip_text("Добавить")
+        add_button.set_tooltip_text(_("Добавить"))
         add_button.connect("clicked", self._on_add, entry)
         entry.add_suffix(add_button)
         entry.connect("entry-activated", self._on_entry_activated, entry)
@@ -61,16 +63,16 @@ class DictionaryList(Adw.PreferencesGroup):
         self.add(entry)
 
         search = Gtk.SearchEntry()
-        search.set_placeholder_text("Поиск по словарю")
+        search.set_placeholder_text(_("Поиск по словарю"))
         search.connect("search-changed", self._on_search_changed)
         self._search = search
         self.add(search)
 
         buttons = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        import_button = Gtk.Button(label="Загрузить из файла")
+        import_button = Gtk.Button(label=_("Загрузить из файла"))
         import_button.add_css_class("flat")
         import_button.connect("clicked", self._on_import_clicked)
-        export_button = Gtk.Button(label="Экспорт")
+        export_button = Gtk.Button(label=_("Экспорт"))
         export_button.add_css_class("flat")
         export_button.connect("clicked", self._on_export_clicked)
         buttons.append(import_button)
@@ -93,7 +95,7 @@ class DictionaryList(Adw.PreferencesGroup):
             row = Adw.ActionRow(title=word)
             remove = Gtk.Button(icon_name="user-trash-symbolic")
             remove.add_css_class("flat")
-            remove.set_tooltip_text("Удалить")
+            remove.set_tooltip_text(_("Удалить"))
             remove.connect("clicked", self._on_remove, word)
             row.add_suffix(remove)
             self._list_group.add(row)
@@ -150,7 +152,7 @@ class DictionaryList(Adw.PreferencesGroup):
         return True
 
     def _on_import_clicked(self, _button: Gtk.Button) -> None:
-        dialog = Gtk.FileDialog(title="Загрузить словарь")
+        dialog = Gtk.FileDialog(title=_("Загрузить словарь"))
         dialog.open(None, None, self._on_import_done)
 
     def _on_import_done(self, dialog: Gtk.FileDialog, result: object) -> None:
@@ -163,7 +165,7 @@ class DictionaryList(Adw.PreferencesGroup):
             self.import_words(path)
 
     def _on_export_clicked(self, _button: Gtk.Button) -> None:
-        dialog = Gtk.FileDialog(title="Экспорт словаря", initial_name="dictionary.txt")
+        dialog = Gtk.FileDialog(title=_("Экспорт словаря"), initial_name="dictionary.txt")
         dialog.save(None, None, self._on_export_done)
 
     def _on_export_done(self, dialog: Gtk.FileDialog, result: object) -> None:

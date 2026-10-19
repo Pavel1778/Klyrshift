@@ -30,6 +30,7 @@ from typing import Final
 
 from .config import cache_dir
 from .daemon import HISTORY_FILE_NAME
+from .i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -287,28 +288,30 @@ def start(dry_run: bool = False) -> bool:
         result = _systemctl(["start", SERVICE])
         if result is not None and result.returncode != 0:
             detail = (result.stderr or result.stdout or "").strip().splitlines()
-            _set_start_error(detail[0] if detail else "systemd не смог запустить сервис")
+            _set_start_error(detail[0] if detail else _("systemd не смог запустить сервис"))
             logger.warning("systemctl start failed: %s", detail)
         if _wait_until(lambda: read_pid() is not None or systemd_active(), START_TIMEOUT):
             return True
         if _last_start_error is None:
-            _set_start_error("сервис не стал активным (проверьте journalctl --user -u klyrshift)")
+            _set_start_error(
+                _("сервис не стал активным (проверьте journalctl --user -u klyrshift)")
+            )
     if not spawn_detached(dry_run=dry_run):
         # Keep an earlier systemd reason if there is one: it is more specific
         # than "could not spawn" and points the user at the real failure.
         if _last_start_error is None:
-            _set_start_error("не удалось запустить процесс демона")
+            _set_start_error(_("не удалось запустить процесс демона"))
         return False
     if not _wait_until(lambda: read_pid() is not None, START_TIMEOUT):
         if _last_start_error is None:
-            _set_start_error("демон не записал PID (проверьте ~/.local/state/klyrshift/)")
+            _set_start_error(_("демон не записал PID (проверьте ~/.local/state/klyrshift/)"))
         return False
     # The lock appears before the daemon checks for devices, so confirm it is
     # still alive a moment later; otherwise a daemon that died instantly (no
     # keyboard devices) would be reported as a successful start.
     time.sleep(0.3)
     if read_pid() is None:
-        _set_start_error("демон завершился сразу после старта (нет доступа к клавиатуре?)")
+        _set_start_error(_("демон завершился сразу после старта (нет доступа к клавиатуре?)"))
         return False
     # The fallback spawn succeeded after a failed systemd start: drop the
     # now-irrelevant systemd reason so it is not shown as a live error.

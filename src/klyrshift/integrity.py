@@ -25,6 +25,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from .i18n import _
+
 logger = logging.getLogger(__name__)
 
 PACKAGE = "klyrshift"
@@ -208,23 +210,23 @@ def format_report(report: VerifyReport) -> str:
         A short human-readable summary.
     """
     if report.manifest is None:
-        return (
+        return _(
             "Пакет klyrshift не установлен из .deb — проверять нечего.\n"
             "Если вы ставили из исходников, целостность файлов гарантирует "
             "система контроля версий, а не dpkg."
         )
-    lines = [f"Манифест: {report.manifest}"]
+    lines = [_("Манифест: {0}").format(report.manifest)]
     if report.ok:
-        lines.append(f"Итог: все {len(report.files)} файлов совпадают с манифестом.")
+        lines.append(_("Итог: все {0} файлов совпадают с манифестом.").format(len(report.files)))
         return "\n".join(lines)
     for path in report.missing:
-        lines.append(f"❌  отсутствует: {path}")
+        lines.append(_("❌  отсутствует: {0}").format(path))
     for path in report.modified:
-        lines.append(f"❌  изменён: {path}")
+        lines.append(_("❌  изменён: {0}").format(path))
     lines.append(
-        f"Итог: {len(report.missing)} отсутствуют, {len(report.modified)} изменены "
-        f"из {len(report.files)}. Переустановите пакет: "
-        "sudo apt install --reinstall klyrshift"
+        _(
+            "Итог: {0} отсутствуют, {1} изменены из {2}. Переустановите пакет: sudo apt install --reinstall klyrshift"
+        ).format(len(report.missing), len(report.modified), len(report.files))
     )
     return "\n".join(lines)
 
@@ -239,7 +241,7 @@ def run_verify(package: str = PACKAGE) -> int:
         ``0`` when every file matches, ``1`` otherwise.
     """
     report = verify_package(package)
-    print("Klyrshift: проверка целостности пакета")
+    print(_("Klyrshift: проверка целостности пакета"))
     print("=" * 40)
     print(format_report(report))
     return 0 if report.ok else 1

@@ -8,6 +8,8 @@ from typing import Final
 
 import gi
 
+from ...i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("Adw", "1")
@@ -124,11 +126,11 @@ class HotkeyRow(Adw.ActionRow):
         self._value = value
         self._last_modifier_tap: tuple[str, float] | None = None
 
-        self._label = Gtk.Label(label=value or "Не задано")
+        self._label = Gtk.Label(label=value or _("Не задано"))
         self._label.add_css_class("dim-label")
         self.add_suffix(self._label)
 
-        button = Gtk.Button(label="Изменить")
+        button = Gtk.Button(label=_("Изменить"))
         button.add_css_class("flat")
         button.connect("clicked", self._start_recording)
         self.add_suffix(button)
@@ -145,7 +147,7 @@ class HotkeyRow(Adw.ActionRow):
     def _start_recording(self, _button: Gtk.Button) -> None:
         self._recording = True
         self._last_modifier_tap = None
-        self._label.set_label("Нажмите комбинацию…")
+        self._label.set_label(_("Нажмите комбинацию…"))
 
     def _on_key_pressed(
         self, _controller: Gtk.EventControllerKey, keyval: int, _keycode: int, state: int
@@ -155,7 +157,7 @@ class HotkeyRow(Adw.ActionRow):
         name = Gdk.keyval_name(keyval)
         if name and name.upper() == "ESCAPE":
             self._recording = False
-            self._label.set_label(self._value or "Не задано")
+            self._label.set_label(self._value or _("Не задано"))
             return True
 
         # A modifier tapped twice in a row is a double-tap hotkey (SHIFT+SHIFT).
@@ -174,7 +176,7 @@ class HotkeyRow(Adw.ActionRow):
                 self._apply(f"{family}+{family}")
             else:
                 self._last_modifier_tap = (family, now)
-                self._label.set_label(f"{family}… нажмите ещё раз")
+                self._label.set_label(_("{0}… нажмите ещё раз").format(family))
             return True
 
         result = keyval_to_hotkey(keyval, state)
@@ -190,7 +192,7 @@ class HotkeyRow(Adw.ActionRow):
         self._recording = False
         self._last_modifier_tap = None
         self._value = value
-        self._label.set_label(value or "Не задано")
+        self._label.set_label(value or _("Не задано"))
         if self._on_change is not None:
             self._on_change(value)
 
@@ -199,7 +201,7 @@ class HotkeyRow(Adw.ActionRow):
         self._recording = False
         self._last_modifier_tap = None
         self._value = value
-        self._label.set_label(value or "Не задано")
+        self._label.set_label(value or _("Не задано"))
 
     @staticmethod
     def forbidden_keys() -> frozenset[str]:

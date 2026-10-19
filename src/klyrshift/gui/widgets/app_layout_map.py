@@ -6,6 +6,8 @@ from collections.abc import Callable
 
 import gi
 
+from ...i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -32,18 +34,18 @@ class AppLayoutMap(Adw.PreferencesGroup):
         self._on_detect = on_detect
         self._rows: list[Adw.ActionRow] = []
 
-        self._app_entry = Adw.EntryRow(title="Имя процесса")
+        self._app_entry = Adw.EntryRow(title=_("Имя процесса"))
         if on_detect is not None:
-            detect_button = Gtk.Button(label="Определить")
+            detect_button = Gtk.Button(label=_("Определить"))
             detect_button.add_css_class("flat")
             detect_button.connect("clicked", self._on_detect_clicked)
             self._app_entry.add_suffix(detect_button)
         self.add(self._app_entry)
 
-        self._layout_entry = Adw.EntryRow(title="Раскладка (например us или ru)")
+        self._layout_entry = Adw.EntryRow(title=_("Раскладка (например us или ru)"))
         add_button = Gtk.Button(icon_name="list-add-symbolic")
         add_button.add_css_class("flat")
-        add_button.set_tooltip_text("Добавить")
+        add_button.set_tooltip_text(_("Добавить"))
         add_button.connect("clicked", self._on_add)
         self._layout_entry.add_suffix(add_button)
         self._layout_entry.connect("entry-activated", lambda _row: self._on_add(None))

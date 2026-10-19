@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import logging
 
+from ..i18n import _
+
 logger = logging.getLogger(__name__)
 
 MISSING_STACK_MESSAGE = (
@@ -71,10 +73,10 @@ def main(argv: list[str] | None = None) -> int:
         The process exit code. ``1`` when the GTK stack is unavailable.
     """
     if not gtk_available():
-        print(MISSING_STACK_MESSAGE)
+        print(_(MISSING_STACK_MESSAGE))
         return 1
     if not cairo_available():
-        print(MISSING_CAIRO_MESSAGE)
+        print(_(MISSING_CAIRO_MESSAGE))
         return 1
 
     # The GUI is its own process: give it a logger (a dedicated gui.log) so a

@@ -8,6 +8,8 @@ from typing import Any
 
 import gi
 
+from ...i18n import _
+
 gi.require_version("Gtk", "4.0")
 from gi.repository import GLib, Gtk  # noqa: E402
 
@@ -119,11 +121,11 @@ class BigToggle(Gtk.Box):
         self._button.set_child(self._icon)
         self.append(self._button)
 
-        self._caption = Gtk.Label(label="Не активно")
+        self._caption = Gtk.Label(label=_("Не активно"))
         self._caption.add_css_class("title-2")
         self.append(self._caption)
 
-        self._hint = Gtk.Label(label="Нажмите, чтобы включить Klyrshift")
+        self._hint = Gtk.Label(label=_("Нажмите, чтобы включить Klyrshift"))
         self._hint.add_css_class("dim-label")
         self.append(self._hint)
 
@@ -179,21 +181,23 @@ class BigToggle(Gtk.Box):
         if state == STATE_ON:
             self._button.set_child(self._icon)
             self._button.add_css_class("active-state")
-            self._caption.set_label(f"Активно · раскладка: {layout}" if layout else "Активно")
-            self._hint.set_label("Нажмите, чтобы выключить Klyrshift")
-            self._set_accessible_label("Выключить Klyrshift")
+            self._caption.set_label(
+                _("Активно · раскладка: {0}").format(layout) if layout else _("Активно")
+            )
+            self._hint.set_label(_("Нажмите, чтобы выключить Klyrshift"))
+            self._set_accessible_label(_("Выключить Klyrshift"))
         elif state == STATE_BUSY:
             self._button.set_child(self._spinner)
             self._button.add_css_class("busy-state")
             self._spinner.start()
-            self._caption.set_label("Переключаю…")
-            self._hint.set_label("Подождите")
-            self._set_accessible_label("Klyrshift переключается")
+            self._caption.set_label(_("Переключаю…"))
+            self._hint.set_label(_("Подождите"))
+            self._set_accessible_label(_("Klyrshift переключается"))
         else:
             self._button.set_child(self._icon)
-            self._caption.set_label("Не активно")
-            self._hint.set_label("Нажмите, чтобы включить Klyrshift")
-            self._set_accessible_label("Включить Klyrshift")
+            self._caption.set_label(_("Не активно"))
+            self._hint.set_label(_("Нажмите, чтобы включить Klyrshift"))
+            self._set_accessible_label(_("Включить Klyrshift"))
 
     def set_busy(self) -> None:
         """Show the in-progress spinner state."""

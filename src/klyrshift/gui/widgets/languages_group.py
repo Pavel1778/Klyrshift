@@ -18,6 +18,8 @@ from collections.abc import Callable
 
 import gi
 
+from ...i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -47,14 +49,14 @@ class LanguageRow(Adw.ActionRow):
         self._toggle_handler = self._switch.connect("notify::active", self._on_switch_changed)
         self.add_prefix(self._switch)
 
-        self._install_button = Gtk.Button(label="Установить")
+        self._install_button = Gtk.Button(label=_("Установить"))
         self._install_button.add_css_class("flat")
         self._install_button.connect("clicked", self._on_install_clicked)
         self.add_suffix(self._install_button)
 
         self._remove_button = Gtk.Button(icon_name="user-trash-symbolic")
         self._remove_button.add_css_class("flat")
-        self._remove_button.set_tooltip_text("Удалить словарь с диска")
+        self._remove_button.set_tooltip_text(_("Удалить словарь с диска"))
         self._remove_button.connect("clicked", self._on_remove_clicked)
         self.add_suffix(self._remove_button)
 
@@ -121,8 +123,8 @@ class LanguagesGroup(Adw.PreferencesGroup):
         on_toggle: Callable[[str, bool], None],
         on_install: Callable[[str], None],
         on_remove: Callable[[str], None],
-        title: str = "Языки",
-        description: str = "Какие раскладки Klyrshift должен распознавать",
+        title: str = _("Языки"),
+        description: str = _("Какие раскладки Klyrshift должен распознавать"),
     ) -> None:
         super().__init__(title=title, description=description)
         self._rows: dict[str, LanguageRow] = {}

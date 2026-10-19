@@ -13,6 +13,8 @@ from typing import Any
 
 import gi
 
+from ..i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -63,7 +65,7 @@ class BoundPreferencesPage(Adw.PreferencesPage):
 
     def _on_switch(self, row: Adw.SwitchRow, _param: object, field: str) -> None:
         setattr(self._config, field, row.get_active())
-        self._save("Настройки сохранены")
+        self._save(_("Настройки сохранены"))
 
     def add_spin(
         self,
@@ -93,7 +95,7 @@ class BoundPreferencesPage(Adw.PreferencesPage):
         value: Any = row.get_value()
         current = getattr(self._config, field)
         setattr(self._config, field, int(value) if isinstance(current, int) else float(value))
-        self._save("Настройки сохранены")
+        self._save(_("Настройки сохранены"))
 
     def add_combo(
         self,
@@ -155,4 +157,4 @@ class BoundPreferencesPage(Adw.PreferencesPage):
         if on_changed is not None and not on_changed(value):
             return
         setattr(self._config, field, value)
-        self._save("Настройки сохранены")
+        self._save(_("Настройки сохранены"))

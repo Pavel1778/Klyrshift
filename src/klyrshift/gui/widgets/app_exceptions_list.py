@@ -6,6 +6,8 @@ from collections.abc import Callable
 
 import gi
 
+from ...i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -33,14 +35,14 @@ class AppExceptionsList(Adw.PreferencesGroup):
         self._on_detect = on_detect
         self._rows: list[Adw.ActionRow] = []
 
-        entry = Adw.EntryRow(title="Имя процесса")
+        entry = Adw.EntryRow(title=_("Имя процесса"))
         add_button = Gtk.Button(icon_name="list-add-symbolic")
         add_button.add_css_class("flat")
-        add_button.set_tooltip_text("Добавить")
+        add_button.set_tooltip_text(_("Добавить"))
         add_button.connect("clicked", self._on_add, entry)
         entry.add_suffix(add_button)
         if on_detect is not None:
-            detect_button = Gtk.Button(label=detect_label or "Определить текущее приложение")
+            detect_button = Gtk.Button(label=detect_label or _("Определить текущее приложение"))
             detect_button.add_css_class("flat")
             detect_button.connect("clicked", self._on_detect_clicked, entry)
             entry.add_suffix(detect_button)

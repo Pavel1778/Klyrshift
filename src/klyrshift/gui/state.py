@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import subprocess
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Final
 
@@ -27,6 +28,7 @@ from ..daemon_control import (
     stop as daemon_stop,
     undo_last_fix as daemon_undo_last_fix,
 )
+from ..i18n import LazyLabels, _
 from ..langstore import LANGUAGE_LABELS
 
 __all__ = ["LANGUAGE_LABELS", "MODE_LABELS", "GuiState"]
@@ -34,11 +36,13 @@ __all__ = ["LANGUAGE_LABELS", "MODE_LABELS", "GuiState"]
 logger = logging.getLogger(__name__)
 
 STATUS_TIMEOUT: Final[float] = 3.0
-MODE_LABELS: Final[dict[str, str]] = {
-    "auto": "Авто",
-    "manual": "Ручной",
-    "hybrid": "Гибрид",
-}
+MODE_LABELS: Final[Mapping[str, str]] = LazyLabels(
+    {
+        "auto": "Авто",
+        "manual": "Ручной",
+        "hybrid": "Гибрид",
+    }
+)
 
 
 @dataclass
@@ -186,4 +190,4 @@ class GuiState:
         """Return a short human-readable status line."""
         layout = self.current_layout() or "—"
         mode = MODE_LABELS.get(self.config.mode, self.config.mode)
-        return f"Раскладка: {layout} · Режим: {mode}"
+        return _("Раскладка: {0} · Режим: {1}").format(layout, mode)

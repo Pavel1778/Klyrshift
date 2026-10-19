@@ -60,7 +60,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-klyrshift = ["data/*.json", "data/*.txt", "data/*.svg", "data/*.desktop"]
+klyrshift = ["data/*.json", "data/*.txt", "data/*.svg", "data/*.desktop", "data/locales/*.json"]
 "klyrshift.gui" = ["*.css"]
 
 [tool.black]

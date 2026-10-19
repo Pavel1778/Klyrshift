@@ -6,6 +6,8 @@ from collections.abc import Callable
 
 import gi
 
+from ...i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -20,8 +22,8 @@ class BackupGroup(Adw.PreferencesGroup):
 
     def __init__(
         self,
-        title: str = "Резервная копия",
-        description: str = "Настройки, словарь и сниппеты одним файлом",
+        title: str = _("Резервная копия"),
+        description: str = _("Настройки, словарь и сниппеты одним файлом"),
         on_export: Callable[[str], bool] | None = None,
         on_import: Callable[[str], bool] | None = None,
         on_notify: Callable[[str], None] | None = None,
@@ -31,11 +33,11 @@ class BackupGroup(Adw.PreferencesGroup):
         self._on_import = on_import
         self._on_notify = on_notify
 
-        row = Adw.ActionRow(title="Экспорт / импорт настроек")
-        export_button = Gtk.Button(label="Экспорт")
+        row = Adw.ActionRow(title=_("Экспорт / импорт настроек"))
+        export_button = Gtk.Button(label=_("Экспорт"))
         export_button.add_css_class("flat")
         export_button.connect("clicked", self._on_export_clicked)
-        import_button = Gtk.Button(label="Импорт")
+        import_button = Gtk.Button(label=_("Импорт"))
         import_button.add_css_class("flat")
         import_button.connect("clicked", self._on_import_clicked)
         row.add_suffix(export_button)
@@ -47,7 +49,9 @@ class BackupGroup(Adw.PreferencesGroup):
             self._on_notify(message)
 
     def _on_export_clicked(self, _button: Gtk.Button) -> None:
-        dialog = Gtk.FileDialog(title="Сохранить настройки", initial_name="klyrshift-backup.json")
+        dialog = Gtk.FileDialog(
+            title=_("Сохранить настройки"), initial_name="klyrshift-backup.json"
+        )
         dialog.save(None, None, self._on_export_done)
 
     def _on_export_done(self, dialog: Gtk.FileDialog, result: object) -> None:
@@ -58,10 +62,12 @@ class BackupGroup(Adw.PreferencesGroup):
         path = file.get_path() if file is not None else None
         if not path or self._on_export is None:
             return
-        self._notify("Настройки сохранены" if self._on_export(path) else "Не удалось сохранить")
+        self._notify(
+            _("Настройки сохранены") if self._on_export(path) else _("Не удалось сохранить")
+        )
 
     def _on_import_clicked(self, _button: Gtk.Button) -> None:
-        dialog = Gtk.FileDialog(title="Восстановить настройки")
+        dialog = Gtk.FileDialog(title=_("Восстановить настройки"))
         dialog.open(None, None, self._on_import_done)
 
     def _on_import_done(self, dialog: Gtk.FileDialog, result: object) -> None:
@@ -73,5 +79,5 @@ class BackupGroup(Adw.PreferencesGroup):
         if not path or self._on_import is None:
             return
         self._notify(
-            "Настройки восстановлены" if self._on_import(path) else "Не удалось восстановить"
+            _("Настройки восстановлены") if self._on_import(path) else _("Не удалось восстановить")
         )

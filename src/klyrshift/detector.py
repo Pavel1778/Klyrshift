@@ -23,6 +23,7 @@ from importlib import resources
 from typing import Any, Final
 
 from .converter import LayoutConverter
+from .i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -132,16 +133,16 @@ class Confidence:
         return self.evidence in (EVIDENCE_TAUGHT, EVIDENCE_VOCABULARY, EVIDENCE_MIXED_SCRIPT)
 
     def describe(self) -> str:
-        """Return a short human-readable explanation (Russian, for the GUI)."""
+        """Return a short human-readable explanation, translated for the UI."""
         percent = round(self.value * 100)
         reasons = {
-            EVIDENCE_TAUGHT: "слово из словаря пользователя",
-            EVIDENCE_VOCABULARY: "перевод даёт известные слова",
-            EVIDENCE_MIXED_SCRIPT: "смешанный алфавит в буфере",
-            EVIDENCE_MODEL: "по языковой модели",
+            EVIDENCE_TAUGHT: _("слово из словаря пользователя"),
+            EVIDENCE_VOCABULARY: _("перевод даёт известные слова"),
+            EVIDENCE_MIXED_SCRIPT: _("смешанный алфавит в буфере"),
+            EVIDENCE_MODEL: _("по языковой модели"),
         }
         reason = reasons.get(self.evidence, self.evidence)
-        return f"уверенность {percent}% ({reason})"
+        return _("уверенность {0}% ({1})").format(percent, reason)
 
 
 def _has_cyrillic(text: str) -> bool:

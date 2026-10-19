@@ -6,6 +6,8 @@ from collections.abc import Callable
 
 import gi
 
+from ..i18n import LazyLabels, _, set_locale
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -27,13 +29,32 @@ MODE_ORDER = ("auto", "manual", "hybrid")
 
 # The colour-scheme choices offered in the settings window, in display order.
 THEME_ORDER = ("system", "light", "dark")
-THEME_LABELS = {"system": "Как в системе", "light": "Светлая", "dark": "Тёмная"}
+THEME_LABELS = LazyLabels({"system": "Как в системе", "light": "Светлая", "dark": "Тёмная"})
+
+# Interface language. ``auto`` follows the environment; the rest are explicit.
+UI_LOCALE_ORDER = ("auto", "ru", "en")
+_UI_LOCALE_LABELS_SOURCE = {
+    "auto": "Как в системе",
+    "ru": "Русский",
+    "en": "English",
+}
+
+
+def ui_locale_labels() -> list[str]:
+    """Translated labels for the interface-language combo, in display order."""
+    return [_(_UI_LOCALE_LABELS_SOURCE[value]) for value in UI_LOCALE_ORDER]
 
 
 class SettingsPage(BoundPreferencesPage):
     """The default settings tab: mode, hotkeys, languages and notifications."""
 
-    def __init__(self, state: GuiState, on_saved: Callable[[str], None] | None = None) -> None:
+    def __init__(
+        self,
+        state: GuiState,
+        on_saved: Callable[[str], None] | None = None,
+        on_locale_changed: Callable[[], None] | None = None,
+    ) -> None:
+        self._on_locale_changed = on_locale_changed
         super().__init__(state, on_saved)
         self._build_mode_group()
         self._build_appearance_group()
@@ -43,10 +64,10 @@ class SettingsPage(BoundPreferencesPage):
 
     # --- groups -----------------------------------------------------------
     def _build_mode_group(self) -> None:
-        group = self.attach_help(Adw.PreferencesGroup(title="Основные"), "mode")
+        group = self.attach_help(Adw.PreferencesGroup(title=_("Основные")), "mode")
         self._mode_row = self.add_combo(
             group,
-            "Режим работы",
+            _("Режим работы"),
             list(MODE_ORDER),
             [MODE_LABELS[m] for m in MODE_ORDER],
             self._config.mode,
@@ -55,26 +76,37 @@ class SettingsPage(BoundPreferencesPage):
             # (T9, punctuation) are layout-neutral and still run unless their
             # own switches are off, so a "fully quiet" manual needs those off.
             subtitle=(
-                "Авто исправляет сразу, ручной — только по хоткею "
-                "(опечатки и пунктуация — по своим переключателям)"
+                _(
+                    "Авто исправляет сразу, ручной — только по хоткею "
+                    "(опечатки и пунктуация — по своим переключателям)"
+                )
             ),
         )
         self.add(group)
 
     def _on_mode_selected(self, mode: str) -> None:
         self._config.mode = mode
-        self._save(f"Режим изменён на {MODE_LABELS.get(mode, mode)}")
+        self._save(_("Режим изменён на {0}").format(MODE_LABELS.get(mode, mode)))
 
     def _build_appearance_group(self) -> None:
-        group = self.attach_help(Adw.PreferencesGroup(title="Оформление"), "theme")
+        group = self.attach_help(Adw.PreferencesGroup(title=_("Оформление")), "theme")
         self._theme_row = self.add_combo(
             group,
-            "Тема окна",
+            _("Тема окна"),
             list(THEME_ORDER),
             [THEME_LABELS[t] for t in THEME_ORDER],
             self._config.theme,
             self._on_theme_selected,
-            subtitle="Только окно настроек; на исправление текста не влияет",
+            subtitle=_("Только окно настроек; на исправление текста не влияет"),
+        )
+        self._locale_row = self.add_combo(
+            group,
+            _("Язык интерфейса"),
+            list(UI_LOCALE_ORDER),
+            ui_locale_labels(),
+            self._config.ui_locale,
+            self._on_locale_selected,
+            subtitle=_("Применяется сразу; «Как в системе» — по языку окружения"),
         )
         self.add(group)
 
@@ -83,10 +115,22 @@ class SettingsPage(BoundPreferencesPage):
         """Expose the theme combo (also a tour target)."""
         return self._theme_row
 
+    @property
+    def locale_row(self) -> Adw.ComboRow:
+        """Expose the interface-language combo."""
+        return self._locale_row
+
     def _on_theme_selected(self, theme: str) -> None:
         self._config.theme = theme
         apply_theme(theme)
-        self._save(f"Тема: {THEME_LABELS.get(theme, theme)}")
+        self._save(_("Тема: {0}").format(THEME_LABELS.get(theme, theme)))
+
+    def _on_locale_selected(self, locale: str) -> None:
+        self._config.ui_locale = locale
+        set_locale(locale)
+        self._save(_("Язык интерфейса сохранён"))
+        if self._on_locale_changed is not None:
+            self._on_locale_changed()
 
     def reload(self) -> None:
         """Re-read the config into the rows without emitting change signals.
@@ -103,31 +147,35 @@ class SettingsPage(BoundPreferencesPage):
     def _build_hotkeys_group(self) -> None:
         group = self.attach_help(
             Adw.PreferencesGroup(
-                title="Хоткеи",
-                description="Нажмите «Изменить», затем нужную комбинацию. Esc — отмена.",
+                title=_("Хоткеи"),
+                description=_("Нажмите «Изменить», затем нужную комбинацию. Esc — отмена."),
             ),
             "hotkeys",
         )
-        self.add_switch(group, "Хоткеи включены", "hotkeys_enabled")
+        self.add_switch(group, _("Хоткеи включены"), "hotkeys_enabled")
         self._hotkey_fix = HotkeyRow(
-            "Исправить последнее слово",
-            "Двойной Shift по умолчанию. Нажмите «Изменить» и дважды нажмите "
-            "нужный модификатор (Shift/Ctrl/Alt) или задайте комбинацию.",
+            _("Исправить последнее слово"),
+            _(
+                "Двойной Shift по умолчанию. Нажмите «Изменить» и дважды нажмите "
+                "нужный модификатор (Shift/Ctrl/Alt) или задайте комбинацию."
+            ),
             self._config.hotkey_fix_last_word,
             on_change=self._make_hotkey_handler("hotkey_fix_last_word"),
         )
         group.add(self._hotkey_fix)
         self._hotkey_undo = HotkeyRow(
-            "Отменить последнее исправление",
-            "Работает только в режиме «Гибрид»",
+            _("Отменить последнее исправление"),
+            _("Работает только в режиме «Гибрид»"),
             self._config.hotkey_undo_last_fix,
             on_change=self._make_hotkey_handler("hotkey_undo_last_fix"),
         )
         group.add(self._hotkey_undo)
         self._hotkey_toggle_layout = HotkeyRow(
-            "Сменить раскладку последнего слова",
-            "Разворачивает последнее слово в другую раскладку (привет → ghbdtn), "
-            "даже если слово выглядит правильным. Пустое значение — выключено.",
+            _("Сменить раскладку последнего слова"),
+            _(
+                "Разворачивает последнее слово в другую раскладку (привет → ghbdtn), "
+                "даже если слово выглядит правильным. Пустое значение — выключено."
+            ),
             self._config.hotkey_toggle_layout_last_word,
             on_change=self._make_hotkey_handler("hotkey_toggle_layout_last_word"),
         )
@@ -137,7 +185,7 @@ class SettingsPage(BoundPreferencesPage):
     def _make_hotkey_handler(self, field: str) -> Callable[[str], None]:
         def handler(value: str) -> None:
             setattr(self._config, field, value)
-            self._save("Хоткей сохранён")
+            self._save(_("Хоткей сохранён"))
 
         return handler
 
@@ -175,7 +223,7 @@ class SettingsPage(BoundPreferencesPage):
             return
         self._state.save()
         if self._on_saved is not None:
-            self._on_saved("Языки сохранены")
+            self._on_saved(_("Языки сохранены"))
 
     def _on_language_install(self, lang: str) -> None:
         """Download a language dictionary off the main thread, then refresh."""
@@ -185,7 +233,7 @@ class SettingsPage(BoundPreferencesPage):
             self._languages.set_busy(lang, False)
             self._languages.refresh(all_language_status(self._config))
             if self._on_saved is not None:
-                self._on_saved(f"Словарь {LANGUAGE_LABELS.get(lang, lang)} установлен")
+                self._on_saved(_("Словарь {0} установлен").format(LANGUAGE_LABELS.get(lang, lang)))
 
         run_in_background(install_language, done, self._config, lang)
 
@@ -195,22 +243,22 @@ class SettingsPage(BoundPreferencesPage):
             remove_language(self._config, lang)
         except ValueError:
             if self._on_saved is not None:
-                self._on_saved("Нельзя удалить единственный включённый язык")
+                self._on_saved(_("Нельзя удалить единственный включённый язык"))
             return
         except OSError:
             if self._on_saved is not None:
-                self._on_saved("Не удалось удалить словарь")
+                self._on_saved(_("Не удалось удалить словарь"))
             return
         self._languages.refresh(all_language_status(self._config))
         if self._on_saved is not None:
-            self._on_saved(f"Словарь {LANGUAGE_LABELS.get(lang, lang)} удалён")
+            self._on_saved(_("Словарь {0} удалён").format(LANGUAGE_LABELS.get(lang, lang)))
 
     def _build_notifications_group(self) -> None:
-        group = self.attach_help(Adw.PreferencesGroup(title="Уведомления и тайминги"), "timing")
-        self.add_switch(group, "Уведомления при исправлении", "notify_on_fix")
+        group = self.attach_help(Adw.PreferencesGroup(title=_("Уведомления и тайминги")), "timing")
+        self.add_switch(group, _("Уведомления при исправлении"), "notify_on_fix")
         self.add_spin(
             group,
-            "Таймаут анализа, с",
+            _("Таймаут анализа, с"),
             "analysis_timeout",
             lower=0.3,
             upper=3.0,

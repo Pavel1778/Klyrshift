@@ -25,6 +25,8 @@ from collections.abc import Callable
 
 import gi
 
+from ...i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gdk, GLib, Gtk  # noqa: E402
@@ -156,7 +158,7 @@ class TourOverlay(Gtk.Overlay):
         self._short.set_justify(Gtk.Justification.LEFT)
         card.append(self._short)
 
-        self._details_toggle = Gtk.ToggleButton(label="Подробнее")
+        self._details_toggle = Gtk.ToggleButton(label=_("Подробнее"))
         self._details_toggle.add_css_class("flat")
         self._details_toggle.set_halign(Gtk.Align.START)
         self._details_toggle.connect("toggled", self._on_details_toggled)
@@ -171,12 +173,12 @@ class TourOverlay(Gtk.Overlay):
 
         buttons = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         buttons.set_halign(Gtk.Align.END)
-        self._skip_button = Gtk.Button(label="Пропустить")
+        self._skip_button = Gtk.Button(label=_("Пропустить"))
         self._skip_button.add_css_class("flat")
         self._skip_button.connect("clicked", lambda _b: self.skip())
-        self._back_button = Gtk.Button(label="Назад")
+        self._back_button = Gtk.Button(label=_("Назад"))
         self._back_button.connect("clicked", lambda _b: self.previous_step())
-        self._next_button = Gtk.Button(label="Далее")
+        self._next_button = Gtk.Button(label=_("Далее"))
         self._next_button.add_css_class("suggested-action")
         self._next_button.connect("clicked", lambda _b: self.next_step())
         for button in (self._skip_button, self._back_button, self._next_button):
@@ -285,16 +287,16 @@ class TourOverlay(Gtk.Overlay):
             self._show_step(step)
         if self._on_step_shown is not None:
             self._on_step_shown(self._index)
-        self._progress.set_label(f"Шаг {self._index + 1} из {len(self._steps)}")
-        self._title.set_label(step.title)
-        self._short.set_label(step.short)
-        self._details.set_label(step.details)
+        self._progress.set_label(_("Шаг {0} из {1}").format(self._index + 1, len(self._steps)))
+        self._title.set_label(_(step.title))
+        self._short.set_label(_(step.short))
+        self._details.set_label(_(step.details))
         self._details.set_visible(False)
         self._details_toggle.set_active(False)
         self._back_button.set_sensitive(self._index > 0)
         # The closing card has no target, so it is displayable wherever it sits.
         is_last = not any(self._is_displayable(s) for s in self._steps[self._index + 1 :])
-        self._next_button.set_label("Завершить" if is_last else "Далее")
+        self._next_button.set_label(_("Завершить") if is_last else _("Далее"))
         self._reposition()
 
     def _on_details_toggled(self, button: Gtk.ToggleButton) -> None:

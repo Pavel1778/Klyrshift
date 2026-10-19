@@ -13,6 +13,8 @@ from collections.abc import Callable
 
 import gi
 
+from ..i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -37,38 +39,40 @@ class DictionaryPage(BoundPreferencesPage):
         self._path = str(user_dictionary_path(self._config.dictionary_custom_path))
 
         self._dictionary = DictionaryList(
-            "Мои слова",
-            "Эти слова никогда не исправляются, а их конвертация считается верной "
-            "(например, «муксуд» → «vercel»).",
+            _("Мои слова"),
+            _(
+                "Эти слова никогда не исправляются, а их конвертация считается верной "
+                "(например, «муксуд» → «vercel»)."
+            ),
             load_user_dictionary(self._config.dictionary_custom_path),
             on_change=self._on_words_changed,
         )
         self.add(self._dictionary)
 
         group = Adw.PreferencesGroup()
-        self._status = Gtk.Label(label=f"Файл: {self._path}")
+        self._status = Gtk.Label(label=_("Файл: {0}").format(self._path))
         self._status.set_xalign(0.0)
         self._status.add_css_class("dim-label")
         group.add(self._status)
 
-        apply_button = Gtk.Button(label="Применить к демону")
+        apply_button = Gtk.Button(label=_("Применить к демону"))
         apply_button.add_css_class("pill")
         apply_button.set_halign(Gtk.Align.START)
-        apply_button.set_tooltip_text("Перечитать словарь без перезапуска службы")
+        apply_button.set_tooltip_text(_("Перечитать словарь без перезапуска службы"))
         apply_button.connect("clicked", self._on_apply)
         group.add(apply_button)
         self.add(group)
 
     def _on_words_changed(self, words: list[str]) -> None:
         save_user_dictionary(words, self._config.dictionary_custom_path)
-        self._status.set_label(f"Слов: {len(words)} · Файл: {self._path}")
+        self._status.set_label(_("Слов: {0} · Файл: {1}").format(len(words), self._path))
 
     def _on_apply(self, _button: Gtk.Button) -> None:
         if self._state.reload_config():
             if self._on_saved is not None:
-                self._on_saved("Словарь применён")
+                self._on_saved(_("Словарь применён"))
         elif self._on_saved is not None:
-            self._on_saved("Не удалось перечитать демон")
+            self._on_saved(_("Не удалось перечитать демон"))
 
     @property
     def dictionary(self) -> DictionaryList:

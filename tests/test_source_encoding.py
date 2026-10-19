@@ -110,4 +110,6 @@ def test_notification_strings_are_recoverable(name: str) -> None:
     """
     text = (REPO_ROOT / name).read_text(encoding="utf-8")
     assert "Раскладка исправлена" in text
-    assert "Доступна версия {latest}" in text
+    # The version label is translated, so it is a ``_()`` template with a
+    # positional field rather than an f-string.
+    assert "Доступна версия {0}" in text

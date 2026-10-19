@@ -24,6 +24,8 @@ from collections.abc import Callable
 
 import gi
 
+from ...i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
@@ -62,7 +64,7 @@ class FirstRunWizard(Adw.Dialog):
         self._finished = False
         self._index = 0
 
-        self.set_title("Настройка Klyrshift")
+        self.set_title(_("Настройка Klyrshift"))
         self.set_content_width(460)
         self.set_content_height(420)
 
@@ -74,12 +76,12 @@ class FirstRunWizard(Adw.Dialog):
 
         dots = Adw.CarouselIndicatorDots(carousel=self._carousel)
 
-        self._back = Gtk.Button(label="Назад")
+        self._back = Gtk.Button(label=_("Назад"))
         self._back.connect("clicked", lambda _b: self._go(-1))
-        self._next = Gtk.Button(label="Далее")
+        self._next = Gtk.Button(label=_("Далее"))
         self._next.add_css_class("suggested-action")
         self._next.connect("clicked", lambda _b: self._go(1))
-        self._skip = Gtk.Button(label="Пропустить")
+        self._skip = Gtk.Button(label=_("Пропустить"))
         self._skip.add_css_class("flat")
         self._skip.connect("clicked", lambda _b: self._skip_wizard())
 
@@ -113,9 +115,11 @@ class FirstRunWizard(Adw.Dialog):
 
     def _build_languages_page(self) -> Gtk.Widget:
         page = self._page(
-            "Языки",
-            "Отметьте раскладки, которые Klyrshift должен распознавать. "
-            "Раскладки уже должны быть добавлены в системе.",
+            _("Языки"),
+            _(
+                "Отметьте раскладки, которые Klyrshift должен распознавать. "
+                "Раскладки уже должны быть добавлены в системе."
+            ),
         )
         group = Adw.PreferencesGroup()
         self._language_rows: dict[str, Adw.SwitchRow] = {}
@@ -130,9 +134,11 @@ class FirstRunWizard(Adw.Dialog):
 
     def _build_mode_page(self) -> Gtk.Widget:
         page = self._page(
-            "Режим работы",
-            "«Авто» исправляет сразу, «Ручной» — только по горячей клавише, "
-            "«Гибрид» решает по уверенности.",
+            _("Режим работы"),
+            _(
+                "«Авто» исправляет сразу, «Ручной» — только по горячей клавише, "
+                "«Гибрид» решает по уверенности."
+            ),
         )
         self._mode = ModeSwitcher(on_change=self._on_mode)
         self._mode.set_mode(self._state.config.mode)
@@ -141,14 +147,16 @@ class FirstRunWizard(Adw.Dialog):
 
     def _build_autostart_page(self) -> Gtk.Widget:
         page = self._page(
-            "Автозапуск",
-            "С автозапуском Klyrshift включается сам после входа в систему, и "
-            "кнопку на главном экране нажимать не нужно.",
+            _("Автозапуск"),
+            _(
+                "С автозапуском Klyrshift включается сам после входа в систему, и "
+                "кнопку на главном экране нажимать не нужно."
+            ),
         )
         group = Adw.PreferencesGroup()
         self._autostart = Adw.SwitchRow(
-            title="Запускать при входе в систему",
-            subtitle="Демон будет активироваться автоматически",
+            title=_("Запускать при входе в систему"),
+            subtitle=_("Демон будет активироваться автоматически"),
         )
         self._autostart.set_active(self._state.is_autostart_enabled())
         group.add(self._autostart)
@@ -198,7 +206,7 @@ class FirstRunWizard(Adw.Dialog):
 
     def _sync_buttons(self) -> None:
         self._back.set_visible(self._index > 0)
-        self._next.set_label("Готово" if self._is_last_page() else "Далее")
+        self._next.set_label(_("Готово") if self._is_last_page() else _("Далее"))
 
     def _is_last_page(self) -> bool:
         """Return whether the current page is the last one.

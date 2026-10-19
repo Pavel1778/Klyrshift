@@ -62,8 +62,8 @@ The main goal is that a correction is always safe to reverse.
 | Remember rejected corrections (`Ctrl+Z`) | done |
 | Session vocabulary promotion | done |
 | Manual add / remove of learned words | done — `klyrshift learn list/promote/forget` edits the running daemon's in-memory vocabulary |
-| Separate dictionaries per domain (names, code, general) | planned |
-| Local confidence model | partial — bigram + vocabulary scoring exists |
+| Separate dictionaries per domain (names, code, general) | done — `names` and `code` categories ship for ru+en and install offline |
+| Local confidence model | done — `Confidence` maps the margin onto `[0, 1]` and records its evidence; `klyrshift explain` shows it |
 | Suggestions instead of auto-change at low confidence | done — `hybrid` withholds and offers the fix through the tray entry, the accept hotkey and an optional notification |
 
 ## Stage 4 — UX / UI redesign — **partial**
@@ -78,7 +78,7 @@ The main goal is that a correction is always safe to reverse.
 | First-run wizard | done — languages, mode and autostart, then the tour |
 | Per-application profiles | partial — exceptions and layout map exist |
 | Full keyboard navigation and scaling audit | planned |
-| Interface localisation | partial — Russian strings are inline, not a catalogue |
+| Interface localisation | done — strings live in `klyrshift.i18n`, an English catalogue ships in `data/locales/en.json`, `--lang` switches the CLI and `Config.ui_locale` the GUI; a missing entry falls back to the Russian source |
 
 ## Stage 5 — Install and maintenance — **partial**
 

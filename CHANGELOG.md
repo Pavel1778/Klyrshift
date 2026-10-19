@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The interface can switch language.** Every user-facing string now goes
+  through `klyrshift.i18n`: the Russian text stays in the source as the key, and
+  an English catalogue lives in `data/locales/en.json`. `klyrshift --lang en
+  <command>` localises the CLI, and the settings page gains an
+  "Interface language" combo (`auto`, Russian, English) that is stored as
+  `Config.ui_locale` and applied at startup without a code change. A missing
+  translation falls back to the Russian source, so a gap is a cosmetic defect,
+  never a crash; `tests/test_i18n.py` fails the build when a string has no
+  entry, when a catalogue entry is orphaned, or when the plural helper
+  mis-selects a form.
+
 - **Domain dictionaries for names and code.** Two new thematic categories,
   `names` and `code`, ship for Russian and English. `klyrshift dict install
   names` (or `code`) widens the detector's vocabulary so a personal name or a

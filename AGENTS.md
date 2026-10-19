@@ -245,6 +245,34 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   now pins the size, a non-blank render, and (via `tesseract`, skipped when
   absent) that the card shows `Klyrshift` and not `LinguaFix`.
 
+## Interface localisation (i18n)
+
+- **The Russian string is the key.** `klyrshift.i18n` keeps the source text as
+  the lookup key and reads `data/locales/<locale>.json`; there is no message-id
+  indirection to keep in step. A missing entry returns the Russian source, so a
+  gap is cosmetic, never a crash.
+- **`--lang` is pre-scanned.** `cli._locale_from_argv` runs *before*
+  `build_parser()` so the argparse help strings are built in the requested
+  language; `main()` then calls `set_locale()` again after the full parse. A
+  module-level `MSG_*` constant is translated where it is printed, not at
+  import time, because the module is imported before the flag is known.
+- **Module-level label dicts must stay lazy.** `THEME_LABELS`/`MODE_LABELS` are
+  built at import, before the locale is known, so they are `LazyLabels` (a
+  read-only `Mapping` that translates in `__getitem__`). Translating eagerly
+  would freeze whichever locale happened to be active first.
+- **Data-driven text is translated at the render site.** Tour steps, help
+  topics and thematic category titles keep their Russian source in the data
+  structure; the widget calls `_(step.title)` when it sets the label. Do not
+  translate a data structure at import time for the same reason as the labels.
+- **A locale change rebuilds the window.** GTK labels are set once at
+  construction and there is no rebind pass, so `app.reload_ui()` destroys and
+  recreates the window (state and config survive). `Config.ui_locale` stores the
+  choice (`auto` follows the environment).
+- `tests/test_i18n.py` walks the AST for every Cyrillic literal outside a
+  docstring and fails on a missing *or* an orphaned catalogue entry, so adding a
+  string means adding its translation in the same change. It also pins the
+  plural helper and the `--lang` pre-scan.
+
 ## Editing files with non-ASCII text
 
 `file_editor` re-encodes UTF-8 on save and corrupts non-ASCII characters

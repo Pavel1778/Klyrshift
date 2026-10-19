@@ -13,6 +13,8 @@ import time
 
 import gi
 
+from ..i18n import _
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402
@@ -28,12 +30,12 @@ def format_age(seconds: float) -> str:
     """Return a short Russian "N ago" label for ``seconds``."""
     seconds = max(0, int(seconds))
     if seconds < 60:
-        return f"{seconds} с назад"
+        return _("{0} с назад").format(seconds)
     minutes = seconds // 60
     if minutes < 60:
-        return f"{minutes} мин назад"
+        return _("{0} мин назад").format(minutes)
     hours = minutes // 60
-    return f"{hours} ч назад"
+    return _("{0} ч назад").format(hours)
 
 
 class HistoryPage(Gtk.Box):
@@ -51,13 +53,15 @@ class HistoryPage(Gtk.Box):
         self._refreshing = False
         self._refresh_pending = False
 
-        heading = Gtk.Label(label="История исправлений", xalign=0.0)
+        heading = Gtk.Label(label=_("История исправлений"), xalign=0.0)
         heading.add_css_class("title-2")
         self.append(heading)
 
         privacy = Gtk.Label(
-            label="Хранятся только метаданные: длина слова, языки и время. "
-            "Сам набранный текст не сохраняется нигде.",
+            label=_(
+                "Хранятся только метаданные: длина слова, языки и время. "
+                "Сам набранный текст не сохраняется нигде."
+            ),
             xalign=0.0,
             wrap=True,
         )
@@ -69,7 +73,7 @@ class HistoryPage(Gtk.Box):
         self._list.add_css_class("boxed-list")
         self.append(self._list)
 
-        self._empty = Gtk.Label(label="Пока нет исправлений.", xalign=0.5)
+        self._empty = Gtk.Label(label=_("Пока нет исправлений."), xalign=0.5)
         self._empty.add_css_class("dim-label")
         self.append(self._empty)
 
@@ -131,15 +135,15 @@ class HistoryPage(Gtk.Box):
         at = entry.get("at")
         age = format_age(now - float(at)) if isinstance(at, (int, float)) else "—"
 
-        layouts = f"{source} → {target}" if source and target else "смена раскладки"
-        title = f"{length} симв. · {layouts}"
+        layouts = f"{source} → {target}" if source and target else _("смена раскладки")
+        title = _("{0} симв. · {1}").format(length, layouts)
         if undone:
             title = f"↩ {title}"
 
         row = Adw.ActionRow(title=title, subtitle=age)
         row.set_activatable(False)
         if is_latest and not undone:
-            button = Gtk.Button(label="Отменить")
+            button = Gtk.Button(label=_("Отменить"))
             button.add_css_class("flat")
             button.set_valign(Gtk.Align.CENTER)
             button.connect("clicked", self._on_undo_clicked, entry.get("id"))
@@ -148,9 +152,9 @@ class HistoryPage(Gtk.Box):
 
     def _on_undo_clicked(self, _button: Gtk.Button, entry_id: object) -> None:
         ok = self._state.undo_last_fix(int(entry_id) if isinstance(entry_id, int) else None)
-        self._toast("Последнее исправление отменено" if ok else "Отменить не удалось", ok=ok)
+        self._toast(_("Последнее исправление отменено") if ok else _("Отменить не удалось"), ok=ok)
         self.refresh()
 
     def _toast(self, text: str, *, ok: bool = True) -> None:
-        message = text if ok else f"{text} (не удалось)"
+        message = text if ok else _("{0} (не удалось)").format(text)
         self._toasts.add_toast(Adw.Toast(title=message, timeout=2))

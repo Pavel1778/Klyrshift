@@ -527,6 +527,29 @@ def test_settings_page_language_toggle(gui_state: Any, monkeypatch: pytest.Monke
     assert isinstance(gui_state.config.languages, list)
 
 
+def test_settings_page_locale_switch(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Choosing a language relabels the page and persists ``ui_locale``."""
+    saved: list[str] = []
+    monkeypatch.setattr(gui_state, "save", lambda: saved.append("save"))
+
+    from klyrshift.gui.settings_page import SettingsPage
+    from klyrshift.i18n import get_locale, set_locale
+
+    try:
+        page = SettingsPage(gui_state, on_saved=saved.append)
+        assert page.locale_row.get_selected() == 0  # ``auto`` is first
+        page._on_locale_selected("en")
+        assert gui_state.config.ui_locale == "en"
+        assert get_locale() == "en"
+        # The window is rebuilt on a locale change (GTK labels are set once at
+        # construction), so a fresh page must come up in the new language.
+        rebuilt = SettingsPage(gui_state, on_saved=saved.append)
+        assert rebuilt.locale_row.get_model().get_string(1) == "Russian"
+        assert rebuilt.locale_row.get_model().get_string(2) == "English"
+    finally:
+        set_locale("")
+
+
 def test_advanced_page_handlers(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     saved: list[str] = []
     monkeypatch.setattr(gui_state, "save", lambda: saved.append("save"))
