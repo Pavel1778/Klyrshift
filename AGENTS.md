@@ -430,3 +430,14 @@ exercise the evdev → uinput correction path end to end. See `docs/TESTING.md`.
 - **New docs must be linked from the README.** `tests/test_version_consistency.py`
   fails if a `docs/*.md` file is unlinked or if the README links to a missing
   file.
+- **A clean textual merge is not a clean merge.** The settings page's language
+  rows were reworked by two branches at once: `feat/gui-language-install`
+  replaced `self._language_rows` / `_on_language` with a `LanguagesGroup`
+  widget, while `feat/first-run-wizard` added `SettingsPage.reload()` that still
+  read `self._language_rows`. Git merged both without a conflict marker, and the
+  result raised `AttributeError` only when a GUI test ran under `xvfb` — the
+  headless run skips those tests. `reload()` now calls
+  `self._languages.refresh(all_language_status(...))`, and `LanguageRow.refresh`
+  blocks its own `notify::active` handler so a reload never writes the config
+  back. When two branches touch the same widget, always re-run the GUI tests
+  under `xvfb-run -a`, not just the headless suite.
