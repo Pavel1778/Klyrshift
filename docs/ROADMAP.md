@@ -42,7 +42,7 @@ The main goal is that a correction is always safe to reverse.
 | Atomic replacement on `wtype` / `xdotool` fallbacks | **blocked** — those tools have no atomic primitive |
 | Confirmed on real editors, browser, terminal | **blocked** — needs a real desktop |
 
-## Stage 2 — Offline language platform — **partial**
+## Stage 2 — Offline language platform — **done**
 
 | Item | Status |
 |---|---|
@@ -54,7 +54,7 @@ The main goal is that a correction is always safe to reverse.
 | Package rollback on a failed update | done — `langpack.install_package` restores on failure |
 | Integrity check before install | done — SHA-256 per member, verified before any write |
 
-## Stage 3 — Learning and text intelligence — **partial**
+## Stage 3 — Learning and text intelligence — **done**
 
 | Item | Status |
 |---|---|
@@ -66,7 +66,7 @@ The main goal is that a correction is always safe to reverse.
 | Local confidence model | done — `Confidence` maps the margin onto `[0, 1]` and records its evidence; `klyrshift explain` shows it |
 | Suggestions instead of auto-change at low confidence | done — `hybrid` withholds and offers the fix through the tray entry, the accept hotkey and an optional notification |
 
-## Stage 4 — UX / UI redesign — **partial**
+## Stage 4 — UX / UI redesign — **done**
 
 | Item | Status |
 |---|---|
@@ -97,7 +97,7 @@ The detector core is platform-independent and worth reusing. The input adapters
 are not. Nothing here is started; see
 [PLATFORM_SUPPORT.md](PLATFORM_SUPPORT.md) for what each platform would need.
 
-## Stage 7 — Quality and competitiveness — **partial**
+## Stage 7 — Quality and competitiveness — **done**
 
 | Item | Status |
 |---|---|
@@ -108,10 +108,14 @@ are not. Nothing here is started; see
 
 ## Order of work
 
-1. Finish Stage 1 on a real desktop (the only blocker is hardware).
-2. Close the Stage 3 gaps that do not need new architecture (suggestions).
-3. Build the versioned language-package format (Stage 2).
-4. The UX wizard and theme switch (Stage 4).
+Stages 2, 3, 4 and 7 are complete. What is left is blocked on something outside
+the code:
 
-Cross-platform (Stage 6) and alternative packaging (Stage 5) come last: they
-need the Linux path to be finished first.
+1. **Stage 1** — the atomic-replacement and real-editor items need a real
+   desktop session (Wayland/GNOME) and the `wtype`/`xdotool` tools, which have
+   no atomic primitive. Everything testable headlessly is done.
+2. **Stage 5** — Flatpak/AppImage needs a portal input path, which does not
+   exist yet for this kind of synthetic input.
+3. **Stage 6** — cross-platform needs the input adapters rewritten per platform
+   (see [PLATFORM_SUPPORT.md](PLATFORM_SUPPORT.md)); the detector core is
+   already platform-independent and would be reused as is.
