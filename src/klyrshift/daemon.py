@@ -36,7 +36,7 @@ import time
 import traceback
 from collections import deque
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from .app_focus import get_active_app, get_focused_role
 from .app_layouts import AppLayoutManager
@@ -50,6 +50,7 @@ from .config import (
     in_quiet_hours,
     snippets_path,
 )
+from .control import ControlServer
 from .converter import LayoutConverter
 from .detector import LanguageDetector
 from .dictionary import load_user_dictionary
@@ -425,6 +426,10 @@ class KlyrshiftDaemon:
         # Focused-role probe (AT-SPI). Injectable so tests can simulate a
         # password field without an accessibility bus.
         self._focused_role_probe: Callable[[], str | None] = get_focused_role
+        # Local control socket. The learned words live in memory only, so the
+        # one-shot CLI cannot read or edit them from a file; it asks the daemon
+        # over this AF_UNIX socket instead (see ``control.py``).
+        self._control: ControlServer | None = None
 
     # ------------------------------------------------------------------
     # Device discovery
@@ -1522,8 +1527,9 @@ class KlyrshiftDaemon:
     def _refresh_learned_vocabulary(self) -> None:
         """Add the promoted words to the detector's vocabulary."""
         words = self.learning.learned_words()
-        if not words:
-            return
+        # ``set_learned_words`` is also the *removal* path: passing an empty list
+        # after the last word was forgotten clears the detector's vocabulary, so
+        # the early return that used to guard an empty list is gone on purpose.
         self.detector.set_learned_words(words)
         logger.info("Learning: %d word(s) learned so far", len(words))
 
@@ -1548,6 +1554,49 @@ class KlyrshiftDaemon:
             "suppressed": self.learning.suppressed_count(),
             "promote_threshold": self.learning.promote_threshold,
         }
+
+    # ------------------------------------------------------------------
+    # Control socket
+    # ------------------------------------------------------------------
+    def _start_control(self) -> None:
+        """Start the local control socket, if it can be created."""
+        server = ControlServer(self._handle_control_request)
+        if server.start():
+            self._control = server
+
+    def _stop_control(self) -> None:
+        """Stop the control socket and remove its file."""
+        if self._control is not None:
+            self._control.stop()
+            self._control = None
+
+    def _handle_control_request(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Serve one control-socket request on the event-loop thread.
+
+        ``LearningEngine`` guards its own state with a lock, so this is safe to
+        call from the loop thread while the detector reads the vocabulary. A word
+        the user promotes or forgets is deliberate dictionary input — the same
+        data ``dict add`` already stores — and is never logged.
+        """
+        command = request.get("cmd")
+        if command == "learn.list":
+            return {"words": self.learning.learned_words()}
+        word = request.get("word")
+        if not isinstance(word, str) or not word:
+            return {"error": "missing word"}
+        if command == "learn.promote":
+            changed = self.learning.promote(word)
+            if changed:
+                self._refresh_learned_vocabulary()
+            return {"ok": True, "changed": changed}
+        if command == "learn.forget":
+            changed = self.learning.forget(word)
+            if changed:
+                # Rebuild the detector vocabulary from what is left, so the
+                # forgotten word is corrected again immediately.
+                self._refresh_learned_vocabulary()
+            return {"ok": True, "changed": changed}
+        return {"error": "unknown command"}
 
     def _key_to_char(self, code: int) -> str | None:
         """Translate a keycode into the character for the active layout."""
@@ -2024,6 +2073,17 @@ class KlyrshiftDaemon:
             except (OSError, ValueError) as exc:
                 logger.debug("Cannot register %s: %s", device, exc)
 
+        # The control socket is served by the same selector: a request arrives
+        # as a readable event, so the CLI can read/edit the in-memory learned
+        # words without the daemon ever polling for it.
+        self._start_control()
+        if self._control is not None:
+            try:
+                selector.register(self._control.fileno, selectors.EVENT_READ, self._control)
+            except (OSError, ValueError) as exc:
+                logger.debug("Cannot register the control socket: %s", exc)
+                self._stop_control()
+
         logger.info(
             "Klyrshift started (%d device(s), %s, %s%s)",
             len(devices),
@@ -2048,6 +2108,7 @@ class KlyrshiftDaemon:
                 with contextlib.suppress(OSError):
                     device.close()
             self._stop_tray()
+            self._stop_control()
             self.learning.persist(force=True)
             self.release_lock()
         logger.info("Klyrshift stopped")
@@ -2089,7 +2150,12 @@ class KlyrshiftDaemon:
 
     def _loop(self, selector: selectors.BaseSelector) -> None:
         """Run the event loop until ``self._running`` becomes false."""
-        registered = len(selector.get_map())
+        # Count *keyboards* only: the control socket is also in the selector, and
+        # counting it would stop the "no keyboards left" rescan below from ever
+        # firing (the socket keeps the count above zero forever).
+        registered = sum(
+            1 for key in selector.get_map().values() if not isinstance(key.data, ControlServer)
+        )
         while self._running:
             if self._reload_requested:
                 self._reload_requested = False
@@ -2129,6 +2195,9 @@ class KlyrshiftDaemon:
                 break
 
             for key, _mask in ready:
+                if isinstance(key.data, ControlServer):
+                    key.data.handle()
+                    continue
                 device = key.data
                 try:
                     for event in device.read():

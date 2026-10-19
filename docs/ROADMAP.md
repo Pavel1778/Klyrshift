@@ -61,7 +61,7 @@ The main goal is that a correction is always safe to reverse.
 | Remember confirmed corrections | done |
 | Remember rejected corrections (`Ctrl+Z`) | done |
 | Session vocabulary promotion | done |
-| Manual add / remove of learned words | partial — `--reset` and `--off` exist, per-word edit does not |
+| Manual add / remove of learned words | done — `klyrshift learn list/promote/forget` edits the running daemon's in-memory vocabulary |
 | Separate dictionaries per domain (names, code, general) | planned |
 | Local confidence model | partial — bigram + vocabulary scoring exists |
 | Suggestions instead of auto-change at low confidence | partial — `hybrid` withholds; no inline suggestion UI |
@@ -109,8 +109,7 @@ are not. Nothing here is started; see
 ## Order of work
 
 1. Finish Stage 1 on a real desktop (the only blocker is hardware).
-2. Close the Stage 3 gaps that do not need new architecture (per-word learning
-   edit, suggestions).
+2. Close the Stage 3 gaps that do not need new architecture (suggestions).
 3. Build the versioned language-package format (Stage 2).
 4. The UX wizard and theme switch (Stage 4).
 

@@ -146,6 +146,9 @@ bash install.sh          # добавьте --yes для неинтеракти�
 klyrshift doctor                       # самодиагностика окружения (таблица ✅/❌)
 klyrshift status                       # проверить, что демон запущен
 klyrshift learn                        # статистика обучения (вкл/выкл, сброс)
+klyrshift learn list                   # выученные слова текущей сессии
+klyrshift learn promote vercel         # закрепить слово: больше не исправлять
+klyrshift learn forget vercel          # забыть слово: снова исправлять
 klyrshift fix --text ghbdtn            # предпросмотр исправления
 klyrshift fix --text ghbdtn --apply    # применить исправление
 klyrshift fix --text ghbdtn --apply --dry-run   # показать, но не применять
@@ -447,6 +450,11 @@ Klyrshift включён «в режиме обучения» всегда: он
   пишутся на диск. Сохраняются лишь счётчики (сколько слов увидено,
   исправлено, отклонено). Посмотреть их: `klyrshift learn`; выключить
   обучение: `klyrshift learn --off`; сбросить счётчики: `klyrshift learn --reset`.
+* **Ручная правка слов.** `klyrshift learn list` покажет, что демон выучил за
+  сессию; `klyrshift learn promote <слово>` закрепит слово сразу, а
+  `klyrshift learn forget <слово>` снова разрешит его исправлять. Команды
+  работают через локальный управляющий сокет (права `0600`), потому что сами
+  слова живут только в памяти демона.
 
 ### История исправлений
 
@@ -553,6 +561,7 @@ make build-deb                # собрать .deb в dist/
 Договор об отмене исправления: [docs/UNDO_CONTRACT.md](docs/UNDO_CONTRACT.md).
 Поддержка платформ (X11/Wayland, что проверено): [docs/PLATFORM_SUPPORT.md](docs/PLATFORM_SUPPORT.md).
 Офлайн-работа и приватность: [docs/OFFLINE_AND_PRIVACY.md](docs/OFFLINE_AND_PRIVACY.md).
+Управляющий сокет демона: [docs/CONTROL_SOCKET.md](docs/CONTROL_SOCKET.md).
 Стратегия тестирования и метрики детектора: [docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md).
 План развития: [docs/ROADMAP.md](docs/ROADMAP.md).
 Ручной план тестирования на реальной системе: [docs/TESTING.md](docs/TESTING.md).

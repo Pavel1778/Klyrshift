@@ -257,6 +257,64 @@ class LearningEngine:
         with self._lock:
             return list(self._promoted)
 
+    def is_promoted(self, word: str) -> bool:
+        """Return ``True`` when ``word`` is in the session vocabulary."""
+        normalised = self._normalise(word)
+        if normalised is None:
+            return False
+        with self._lock:
+            return normalised in self._promoted
+
+    def promote(self, word: str) -> bool:
+        """Force ``word`` into the session vocabulary now.
+
+        This is the manual counterpart of the automatic promotion: the user
+        tells Klyrshift "leave this word alone" without waiting for it to be
+        kept ``promote_threshold`` times. The word still lives in memory only.
+
+        Returns:
+            ``True`` when the word was added (``False`` when it was already
+            promoted, empty, or not a plain word).
+        """
+        normalised = self._normalise(word)
+        if normalised is None:
+            return False
+        with self._lock:
+            if normalised in self._promoted:
+                return False
+            if len(self._promoted) >= self.max_words:
+                oldest = min(self._promoted, key=lambda w: self._counts.get(w, 0))
+                self._promoted.remove(oldest)
+            self._promoted.append(normalised)
+            # A word the user explicitly promotes is no longer "rejected".
+            self._suppressed.pop(normalised, None)
+            self._stats.promoted += 1
+            self._dirty = True
+        return True
+
+    def forget(self, word: str) -> bool:
+        """Drop ``word`` from the session vocabulary and the suppressed set.
+
+        The manual counterpart of a reset, per word: the user removes a word
+        they promoted (or a word that was suppressed) without clearing the whole
+        session. Nothing is written anywhere, because the word was never on disk.
+
+        Returns:
+            ``True`` when the word was present and has been removed.
+        """
+        normalised = self._normalise(word)
+        if normalised is None:
+            return False
+        with self._lock:
+            present = normalised in self._promoted or normalised in self._suppressed
+            if normalised in self._promoted:
+                self._promoted.remove(normalised)
+            self._suppressed.pop(normalised, None)
+            self._counts.pop(normalised, None)
+            if present:
+                self._dirty = True
+        return present
+
     @property
     def stats(self) -> LearningStats:
         """Return a copy of the aggregate counters."""
