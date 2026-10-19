@@ -94,3 +94,25 @@ def test_runtime_dependency_floors_agree() -> None:
         "pyproject.toml and requirements.txt disagree on the minimum version "
         f"(name: pyproject, requirements): {mismatched}"
     )
+
+
+# Docs that are linked from the README are the entry point a reader follows. A
+# link to a file that does not exist is a dead end, and adding a doc without
+# linking it leaves it unfindable. Both are checked here.
+_MD_LINK = re.compile(r"\]\((docs/[A-Za-z0-9_./-]+\.md)\)")
+
+
+def test_readme_doc_links_resolve() -> None:
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    missing = sorted(
+        {target for target in _MD_LINK.findall(readme) if not (REPO_ROOT / target).is_file()}
+    )
+    assert not missing, "README.md links to docs that do not exist:\n" + "\n".join(missing)
+
+
+def test_every_doc_is_linked_from_the_readme() -> None:
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    linked = set(_MD_LINK.findall(readme))
+    docs = {f"docs/{path.name}" for path in (REPO_ROOT / "docs").glob("*.md")}
+    orphans = sorted(docs - linked)
+    assert not orphans, "These docs are not linked from README.md:\n" + "\n".join(orphans)
