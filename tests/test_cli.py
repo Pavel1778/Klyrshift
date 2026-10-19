@@ -620,3 +620,101 @@ def test_install_autostart_uses_dedicated_autostart_file(
     monkeypatch.setattr(cli, "_bundled_data_file", fake)
     assert cli.main(["install-autostart"]) == 0
     assert "klyrshift-autostart.desktop" in requested
+
+
+def test_dict_pack_verify_install_roundtrip(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """``dict pack`` -> ``verify`` -> ``install-file`` round-trips a package."""
+    monkeypatch.setenv("XDG_DATA_HOME", str(isolated_env / "data"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(isolated_env / "config"))
+    source = tmp_path / "ru-50k.txt"
+    source.write_text("привет\nмир\n", encoding="utf-8")
+    archive = tmp_path / "ru-50k.tar.gz"
+
+    assert (
+        cli.main(
+            [
+                "dict",
+                "pack",
+                str(source),
+                "--name",
+                "ru-50k",
+                "--lang",
+                "ru",
+                "--output",
+                str(archive),
+                "--license",
+                "MIT",
+            ]
+        )
+        == 0
+    )
+    assert "Собран пакет" in capsys.readouterr().out
+    assert archive.is_file()
+
+    assert cli.main(["dict", "verify", str(archive)]) == 0
+    assert "в порядке" in capsys.readouterr().out
+
+    assert cli.main(["dict", "install-file", str(archive)]) == 0
+    assert "Установлен пакет" in capsys.readouterr().out
+    installed = isolated_env / "data" / "klyrshift" / "dictionaries" / "ru-50k.txt"
+    assert installed.is_file()
+
+    assert cli.main(["dict", "uninstall-file", str(archive)]) == 0
+    assert not installed.exists()
+
+
+def test_dict_verify_rejects_a_tampered_package(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """``dict verify`` exits non-zero on a package whose bytes changed."""
+    import io
+    import tarfile
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(isolated_env / "data"))
+    source = tmp_path / "ru-50k.txt"
+    source.write_text("привет\n", encoding="utf-8")
+    archive = tmp_path / "ru-50k.tar.gz"
+    assert (
+        cli.main(
+            [
+                "dict",
+                "pack",
+                str(source),
+                "--name",
+                "ru-50k",
+                "--lang",
+                "ru",
+                "--output",
+                str(archive),
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    tampered = tmp_path / "tampered.tar.gz"
+    with tarfile.open(archive, "r:gz") as src, tarfile.open(tampered, "w:gz") as dst:
+        for member in src.getmembers():
+            payload = src.extractfile(member).read() if member.isfile() else b""
+            if member.name == "ru-50k.txt":
+                payload = b"evil\n"
+            info = tarfile.TarInfo(member.name)
+            info.size = len(payload)
+            info.mtime = 0
+            dst.addfile(info, io.BytesIO(payload))
+
+    assert cli.main(["dict", "verify", str(tampered)]) == 1
+    assert "не прошёл проверку" in capsys.readouterr().out
+
+
+def test_dict_pack_without_files(isolated_env: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["dict", "pack"]) == 2
+    assert "Укажите файлы" in capsys.readouterr().out

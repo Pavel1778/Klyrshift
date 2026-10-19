@@ -49,10 +49,10 @@ The main goal is that a correction is always safe to reverse.
 | Bundled dictionaries for five languages | done |
 | Thematic dictionaries with offline fallback | done |
 | User dictionary add / remove / import / export | done |
-| A versioned, checksummed language-package format | planned |
+| A versioned, checksummed language-package format | done — `langpack.py`, `dict pack/verify/install-file` |
 | Install / remove languages from the GUI | partial — enable/disable exists, install does not |
-| Package rollback on a failed update | planned |
-| Integrity check before install | planned |
+| Package rollback on a failed update | done — `langpack.install_package` restores on failure |
+| Integrity check before install | done — SHA-256 per member, verified before any write |
 
 ## Stage 3 — Learning and text intelligence — **partial**
 

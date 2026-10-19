@@ -314,6 +314,9 @@ def cmd_dict(args: argparse.Namespace) -> int:
     if action in ("categories", "install", "list-installed", "remove-category"):
         return _cmd_dict_thematic(action, args, default_extended_dictionary_dir)
 
+    if action in ("pack", "verify", "install-file", "uninstall-file"):
+        return _cmd_dict_langpack(action, args, default_extended_dictionary_dir)
+
     path = config_path_for_dict()
     if action == "list":
         words = load_user_dictionary(str(path))
@@ -350,7 +353,11 @@ def cmd_dict(args: argparse.Namespace) -> int:
         "  klyrshift dict categories\n"
         "  klyrshift dict install <категория> [--lang ru]\n"
         "  klyrshift dict list-installed\n"
-        "  klyrshift dict remove-category <категория>"
+        "  klyrshift dict remove-category <категория>\n"
+        "  klyrshift dict pack <файл> --name <имя> --lang <язык> [--kind frequency]\n"
+        "  klyrshift dict verify <пакет.tar.gz>\n"
+        "  klyrshift dict install-file <пакет.tar.gz>\n"
+        "  klyrshift dict uninstall-file <пакет.tar.gz>"
     )
     return 2
 
@@ -491,6 +498,135 @@ def config_path_for_dict() -> Path:
     from .dictionary import user_dictionary_path
 
     return user_dictionary_path(load_config().dictionary_custom_path)
+
+
+def _cmd_dict_langpack(
+    action: str, args: argparse.Namespace, default_dir: Callable[[], Path]
+) -> int:
+    """Handle the versioned language-package actions (pack/verify/install-file/...)."""
+    from .config import load_config, save_config
+    from .langpack import (
+        PackageError,
+        build_package,
+        install_package,
+        read_manifest,
+        uninstall_package,
+        verify_package,
+    )
+
+    config = load_config()
+    directory = config.extended_dictionary_dir or str(default_dir())
+
+    if action == "pack":
+        requested = ([args.word] if args.word else []) + list(getattr(args, "file", []) or [])
+        if not requested:
+            print(
+                "Укажите файлы: klyrshift dict pack <файл> [--file <файл> ...] --name ru-50k --lang ru"
+            )
+            return 2
+        sources = [Path(p).expanduser() for p in requested]
+        missing = [str(p) for p in sources if not p.is_file()]
+        if missing:
+            print("Файлы не найдены: " + ", ".join(missing))
+            return 1
+        name = args.name or sources[0].stem
+        language = (args.lang or "").strip().lower()
+        if not language:
+            # Infer from the name prefix, the same convention import-file uses.
+            language = sources[0].name.split("-")[0].split(".")[0].lower()
+        destination = Path(args.output).expanduser() if args.output else Path(f"{name}.tar.gz")
+        try:
+            manifest = build_package(
+                sources,
+                destination,
+                name=name,
+                language=language,
+                kind=args.kind,
+                version=args.package_version,
+                license=args.license,
+                source="klyrshift dict pack",
+            )
+        except (PackageError, OSError) as exc:
+            print(f"Не удалось собрать пакет: {exc}")
+            return 1
+        print(f"Собран пакет {destination} ({manifest.kind}/{manifest.language}, {name}).")
+        for entry in manifest.files:
+            print(f"  {entry.name}: {entry.words} слов, sha256 {entry.sha256[:12]}…")
+        return 0
+
+    if action == "verify":
+        if not args.word:
+            print("Укажите пакет: klyrshift dict verify <пакет.tar.gz>")
+            return 2
+        archive = Path(args.word).expanduser()
+        if not archive.is_file():
+            print(f"Файл не найден: {archive}")
+            return 1
+        try:
+            manifest = read_manifest(archive)
+        except PackageError as exc:
+            print(f"Пакет недействителен: {exc}")
+            return 1
+        problems = verify_package(archive, manifest)
+        if problems:
+            print(f"Пакет {archive} не прошёл проверку:")
+            for problem in problems:
+                print(f"  - {problem}")
+            return 1
+        print(f"Пакет {archive} в порядке.")
+        print(
+            f"  {manifest.kind}/{manifest.language}, версия {manifest.version}, "
+            f"формат {manifest.format}, файлов {len(manifest.files)}"
+        )
+        if manifest.license:
+            print(f"  лицензия: {manifest.license}")
+        return 0
+
+    if action == "install-file":
+        if not args.word:
+            print("Укажите пакет: klyrshift dict install-file <пакет.tar.gz>")
+            return 2
+        archive = Path(args.word).expanduser()
+        if not archive.is_file():
+            print(f"Файл не найден: {archive}")
+            return 1
+        try:
+            result = install_package(archive, Path(directory))
+        except PackageError as exc:
+            print(f"Установка отклонена: {exc}")
+            return 1
+        except OSError as exc:
+            print(f"Не удалось установить пакет: {exc}")
+            return 1
+        _remember_extended_dir(config, directory, save_config)
+        print(
+            f"Установлен пакет {result.manifest.name} "
+            f"({result.manifest.kind}/{result.manifest.language}): "
+            f"{len(result.installed)} файл(ов) в {directory}."
+        )
+        if result.replaced:
+            print(f"Заменено файлов: {len(result.replaced)} (старые версии сохранены как резерв).")
+        print("Перезапустите демон или нажмите хоткей перезагрузки конфигурации.")
+        return 0
+
+    # action == "uninstall-file"
+    if not args.word:
+        print("Укажите пакет: klyrshift dict uninstall-file <пакет.tar.gz>")
+        return 2
+    archive = Path(args.word).expanduser()
+    if not archive.is_file():
+        print(f"Файл не найден: {archive}")
+        return 1
+    try:
+        manifest = read_manifest(archive)
+    except PackageError as exc:
+        print(f"Пакет недействителен: {exc}")
+        return 1
+    removed = uninstall_package(
+        manifest.kind, manifest.language, [f.name for f in manifest.files], Path(directory)
+    )
+    print(f"Удалено файлов: {len(removed)}.")
+    return 0
 
 
 def cmd_config(args: argparse.Namespace) -> int:
@@ -860,19 +996,37 @@ def build_parser() -> argparse.ArgumentParser:
             "install",
             "list-installed",
             "remove-category",
+            "pack",
+            "verify",
+            "install-file",
+            "uninstall-file",
         ],
         help=(
             "list/add/remove — словарь пользователя; download/import-file — базовые "
             "расширенные словари; categories/install/list-installed/remove-category — "
-            "тематические словари"
+            "тематические словари; pack/verify/install-file/uninstall-file — "
+            "версионированные пакеты языков (manifest + sha256)"
         ),
     )
     dict_parser.add_argument(
         "word", nargs="?", help="слово (add/remove) или язык/путь (download/import-file)"
     )
     dict_parser.add_argument(
-        "--lang", default="", help="язык для import-file, если его нет в имени файла"
+        "--lang", default="", help="язык для import-file/pack, если его нет в имени файла"
     )
+    dict_parser.add_argument(
+        "--file", action="append", default=[], help="дополнительный файл для dict pack"
+    )
+    dict_parser.add_argument("--name", default="", help="имя пакета для dict pack")
+    dict_parser.add_argument(
+        "--kind",
+        default="frequency",
+        choices=["frequency", "thematic", "ngrams"],
+        help="тип пакета для dict pack",
+    )
+    dict_parser.add_argument("--output", default="", help="куда записать пакет (dict pack)")
+    dict_parser.add_argument("--package-version", default="1.0.0", help="версия пакета (dict pack)")
+    dict_parser.add_argument("--license", default="", help="лицензия пакета (dict pack)")
     dict_parser.set_defaults(func=cmd_dict)
 
     config = subparsers.add_parser("config", help="работа с конфигурацией")
