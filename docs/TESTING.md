@@ -63,7 +63,7 @@ watching the log. It is safe to paste as one piece. It exercises the
 
 ```bash
 # 1. Install the package. No usermod, no manual enable.
-sudo apt install ./klyrshift_0.2.8.4_all.deb
+sudo apt install ./klyrshift_0.2.9_all.deb
 
 # 2. Verify that nothing else is required.
 systemctl --user is-enabled klyrshift.service   # -> enabled
@@ -110,7 +110,7 @@ GDM).
 
 `.deb` path (primary):
 
-1. `sudo apt install ./klyrshift_0.2.8.4_all.deb` — note every prompt and any failure.
+1. `sudo apt install ./klyrshift_0.2.9_all.deb` — note every prompt and any failure.
 2. Confirm the udev rule: `cat /usr/lib/udev/rules.d/71-klyrshift.rules` — uses
    `TAG+="uaccess"`, no `GROUP="input"`.
 3. `systemctl --user is-enabled klyrshift.service` — prints `enabled`, without

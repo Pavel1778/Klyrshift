@@ -8,7 +8,7 @@ Wayland. Python 3.10 or newer is required.
 This is the path for regular users. Nothing has to be configured by hand:
 
 ```bash
-sudo apt install ./klyrshift_0.2.8.4_all.deb
+sudo apt install ./klyrshift_0.2.9_all.deb
 ```
 
 That is the whole procedure. The package:
@@ -47,7 +47,7 @@ Debian package with it (`linguafix` → `klyrshift`). Install the new package th
 same way:
 
 ```bash
-sudo apt install ./klyrshift_0.2.8.4_all.deb
+sudo apt install ./klyrshift_0.2.9_all.deb
 ```
 
 apt sees `Conflicts: linguafix, lingvix` and `Replaces: linguafix, lingvix` in the

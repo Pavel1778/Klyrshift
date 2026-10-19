@@ -402,6 +402,47 @@ when the live buffer is empty because a Space boundary already consumed the
 word. A word already corrected by the boundary is remembered in
 `_last_flushed_corrected`, so a later double Shift does not revert it.
 
+## Target architecture: the system-integration boundary
+
+The daemon is layered so that the platform-specific parts sit behind narrow
+interfaces and the decision logic has no OS dependency. That boundary is what
+makes a Debian 13 + GNOME target concrete rather than aspirational: everything
+above the line below is testable headless, everything below it is what a real
+session must confirm.
+
+```
+  platform-independent (tested headless, no GTK / evdev / session)
+  ┌────────────────────────────────────────────────────────────┐
+  │  detector.py · converter.py · typo.py · dictionary.py       │
+  │  thematic.py · learning.py · text_expander.py · config.py   │
+  └────────────────────────────────────────────────────────────┘
+                              ▲
+                    narrow interfaces
+                              ▼
+  platform-specific (needs a real session)
+  ┌────────────────────────────────────────────────────────────┐
+  │  injector.py   TextInjector   uinput / wtype / xdotool      │
+  │  switcher.py   LayoutSwitcher g3kb-switch / setxkbmap       │
+  │  app_focus.py  focused app    compositor-dependent          │
+  │  tray.py       AppIndicator   optional                      │
+  │  gui/          GTK4 + libadwaita                            │
+  └────────────────────────────────────────────────────────────┘
+```
+
+Integration points a Debian 13 + GNOME install depends on:
+
+| Point | Mechanism | Failure if missing |
+|---|---|---|
+| Reading keystrokes | `evdev` on `/dev/input/event*` | No detection at all |
+| Device permission | udev `uaccess` tag (not the `input` group) | `doctor` reports no device access |
+| Typing the replacement | `/dev/uinput` (module loaded by the package) | No automatic replacement |
+| Switching layout (Wayland) | `g3kb-switch` over D-Bus | Manual mode only |
+| Switching layout (X11) | `setxkbmap` | Manual mode only |
+| Autostart | systemd user service | Daemon does not start at login |
+
+Each row is a check in `klyrshift doctor`. See
+[PLATFORM_SUPPORT.md](PLATFORM_SUPPORT.md) for which rows are verified.
+
 ## Extension points
 
 - `LanguageDetector` — add a language by dropping `ngrams_<lang>.json` and a

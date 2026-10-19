@@ -62,3 +62,57 @@ def test_install_docs_use_current_version() -> None:
             if match.group(1) != __version__:
                 stale.append(f"{name}: {match.group(0)}")
     assert not stale, "Install docs reference an old package version:\n" + "\n".join(stale)
+
+
+# ``pyproject.toml`` is what ``install.sh`` installs from; ``requirements.txt``
+# documents the same set for the bundled virtualenv. A dependabot bump once
+# raised the floor in ``requirements.txt`` only, so the two disagreed and the
+# installed package kept the older ``tomli``. Both must name the same floor.
+_REQUIREMENT = re.compile(r"^([A-Za-z0-9_.-]+)>=([0-9][^\s;]*)")
+
+
+def _floors(text: str) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for line in text.splitlines():
+        line = line.split("#", 1)[0].strip()
+        match = _REQUIREMENT.match(line)
+        if match:
+            found[match.group(1).lower()] = match.group(2)
+    return found
+
+
+def test_runtime_dependency_floors_agree() -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    declared = _floors("\n".join(pyproject["project"]["dependencies"]))
+    pinned = _floors((REPO_ROOT / "requirements.txt").read_text(encoding="utf-8"))
+    mismatched = {
+        name: (declared[name], floor)
+        for name, floor in pinned.items()
+        if name in declared and declared[name] != floor
+    }
+    assert not mismatched, (
+        "pyproject.toml and requirements.txt disagree on the minimum version "
+        f"(name: pyproject, requirements): {mismatched}"
+    )
+
+
+# Docs that are linked from the README are the entry point a reader follows. A
+# link to a file that does not exist is a dead end, and adding a doc without
+# linking it leaves it unfindable. Both are checked here.
+_MD_LINK = re.compile(r"\]\((docs/[A-Za-z0-9_./-]+\.md)\)")
+
+
+def test_readme_doc_links_resolve() -> None:
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    missing = sorted(
+        {target for target in _MD_LINK.findall(readme) if not (REPO_ROOT / target).is_file()}
+    )
+    assert not missing, "README.md links to docs that do not exist:\n" + "\n".join(missing)
+
+
+def test_every_doc_is_linked_from_the_readme() -> None:
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    linked = set(_MD_LINK.findall(readme))
+    docs = {f"docs/{path.name}" for path in (REPO_ROOT / "docs").glob("*.md")}
+    orphans = sorted(docs - linked)
+    assert not orphans, "These docs are not linked from README.md:\n" + "\n".join(orphans)

@@ -388,3 +388,35 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 
 The daemon works on a real GNOME desktop only; the CI and smoke tests do not
 exercise the evdev → uinput correction path end to end. See `docs/TESTING.md`.
+
+## Lessons that must not be re-learned
+
+- **The undo history must be dropped when the caret moves.** A recorded fix can
+  only be restored while its corrected word is still under the caret: undo
+  deletes a fixed character count and retypes the original. The time window and
+  depth bounds cannot see that the user moved on, so `_invalidate_undo_history()`
+  is called for every key that is neither a hotkey action nor the observed
+  Ctrl+Z (an ordinary key, and a command chord such as Alt+Tab or Ctrl+V). A
+  refused undo is safer than a corrupted word. Guarded by
+  `tests/test_undo_suppression.py`.
+- **`g3kb-switch` is not in the Debian repositories** (verified against
+  sources.debian.org and packages.debian.org for trixie), so it stays a
+  `Recommends`, never a `Depends` -- apt would refuse the package otherwise. On
+  a default Debian install the layout backend falls back to `setxkbmap`
+  (`x11-xkb-utils`, which is in Debian and is recommended), so text replacement
+  works but the active layout does not switch under pure Wayland. Do not "fix"
+  this by promoting it to a dependency.
+- **Dependency floors live in two files and must agree.** `pyproject.toml` is
+  what `install.sh` installs from; `requirements.txt` documents the same set.
+  A dependabot bump once raised the floor in `requirements.txt` only, so the
+  installed package kept the older `tomli`. `tests/test_version_consistency.py`
+  fails on the next drift.
+- **Debian 13 is the target, and the `.deb` is tested on it, not only Debian
+  12.** `scripts/smoke_test.sh`, `scripts/upgrade_test.sh` and
+  `scripts/deb_selfsufficiency_test.sh` all pass against a real `debian:13`
+  container (Docker). The udev rule is named `71-*` on purpose so it runs before
+  `73-seat-late.rules` (systemd 257); renaming it to `99-*` would silently stop
+  the uaccess ACL from being applied.
+- **New docs must be linked from the README.** `tests/test_version_consistency.py`
+  fails if a `docs/*.md` file is unlinked or if the README links to a missing
+  file.

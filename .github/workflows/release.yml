@@ -38,6 +38,12 @@ jobs:
       - name: Smoke-test the .deb in a clean Debian container
         run: bash scripts/smoke_test.sh
 
+      # Debian 13 is the current stable and the target the package is written
+      # for (udev 73-seat-late.rules, systemd 257). Testing only on the older
+      # Debian 12 would let a trixie-only regression ship, so both are run.
+      - name: Smoke-test the .deb on Debian 13 (the target release)
+        run: SMOKE_IMAGE=debian:13 bash scripts/smoke_test.sh
+
       - name: Prove the .deb installs with no manual step (zero-config)
         run: bash scripts/deb_selfsufficiency_test.sh
 
