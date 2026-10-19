@@ -775,6 +775,39 @@ def test_window_menu_actions(gui_state: Any) -> None:
     assert window.stack.get_visible_child_name() == "help"
 
 
+def test_window_keyboard_navigation(gui_state: Any) -> None:
+    """The window is operable from the keyboard, and says which keys do what."""
+    import gi
+
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw
+
+    from klyrshift.gui.window import KlyrshiftWindow
+
+    app = Adw.Application(application_id="io.github.pavel1778.KlyrshiftTestKeys")
+    window = KlyrshiftWindow(gui_state, app)
+    assert window.stack.get_visible_child_name() == "home"
+    # Cycling skips the hidden pages (advanced, help) and wraps at the ends.
+    seen = []
+    for _ in range(5):
+        window._cycle_page(1)
+        seen.append(window.stack.get_visible_child_name())
+    assert seen == ["settings", "dictionary", "typo", "history", "home"]
+    window._cycle_page(-1)
+    assert window.stack.get_visible_child_name() == "history"
+    # The accelerators are bound, not just the actions: a keyboard user has to
+    # reach the same actions the menu exposes.
+    accels = app.get_accels_for_action("win.next-page")
+    assert "<Control>Page_Down" in accels
+    assert "<Control>Page_Up" in app.get_accels_for_action("win.previous-page")
+    assert app.get_accels_for_action("win.show-shortcuts")
+    # The reference dialog builds against the live config without a display.
+    from klyrshift.gui.widgets.shortcuts_dialog import build_shortcuts_dialog
+
+    dialog = build_shortcuts_dialog(gui_state.config)
+    assert dialog.get_title() != ""
+
+
 def test_window_resizes_without_breaking(gui_state: Any) -> None:
     """The window must survive resize and tab switches at several widths."""
     import gi
@@ -790,7 +823,9 @@ def test_window_resizes_without_breaking(gui_state: Any) -> None:
     # shrink instead of being pinned to the tallest page.
     assert window.stack.get_hhomogeneous() is True
     assert window.stack.get_vhomogeneous() is False
-    for width, height in ((600, 720), (800, 760), (1200, 900)):
+    # 360x480 is the window's declared minimum; a page that cannot lay out
+    # there would push the natural size back up and break the shrink.
+    for width, height in ((360, 480), (600, 720), (800, 760), (1200, 900)):
         window.set_default_size(width, height)
         for page in window.stack.get_pages():
             window.stack.set_visible_child_name(page.get_name())

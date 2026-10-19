@@ -28,6 +28,7 @@ from .settings_page import SettingsPage  # noqa: E402
 from .state import GuiState  # noqa: E402
 from .typo_page import TypoPage  # noqa: E402
 from .widgets.first_run_wizard import FirstRunWizard  # noqa: E402
+from .widgets.shortcuts_dialog import build_shortcuts_dialog  # noqa: E402
 from .widgets.tour_overlay import TourOverlay, bounds_rect  # noqa: E402
 
 
@@ -114,6 +115,7 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         header.set_title_widget(self._switcher_title)
 
         menu = Gio.Menu()
+        menu.append(_("Клавиши"), "win.show-shortcuts")
         menu.append(_("Помощь и обучение"), "win.show-help")
         menu.append(_("Пройти тур заново"), "win.start-tour")
         menu.append(_("О программе"), "win.about")
@@ -188,6 +190,28 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         tour = Gio.SimpleAction.new("start-tour", None)
         tour.connect("activate", lambda _a, _p: self.start_tour())
         self.add_action(tour)
+
+        shortcuts = Gio.SimpleAction.new("show-shortcuts", None)
+        shortcuts.connect("activate", self._on_show_shortcuts)
+        self.add_action(shortcuts)
+
+        # Keyboard navigation between tabs. Ctrl+Page_Down/Up is the convention
+        # (GNOME Terminal, gedit) and stays out of the way of plain Tab, which
+        # must keep moving focus inside a page. ``Ctrl+?`` is the GTK spelling
+        # of Ctrl+Shift+slash, the standard "show shortcuts" chord.
+        app = self.get_application()
+        if app is not None:
+            app.set_accels_for_action("win.show-shortcuts", ["<Control>question"])
+            app.set_accels_for_action("win.next-page", ["<Control>Page_Down"])
+            app.set_accels_for_action("win.previous-page", ["<Control>Page_Up"])
+
+        next_page = Gio.SimpleAction.new("next-page", None)
+        next_page.connect("activate", lambda _a, _p: self._cycle_page(1))
+        self.add_action(next_page)
+
+        previous_page = Gio.SimpleAction.new("previous-page", None)
+        previous_page.connect("activate", lambda _a, _p: self._cycle_page(-1))
+        self.add_action(previous_page)
 
     def _install_tour(self) -> None:
         """Create the tour overlay above the whole window and offer it once.
@@ -341,6 +365,27 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         """
         bounds = target.compute_bounds(self._root_overlay)
         return bounds_rect(bounds)
+
+    def _cycle_page(self, step: int) -> None:
+        """Move to the next/previous *visible* tab, wrapping around.
+
+        Hidden pages (advanced, help) are skipped: they are reachable from the
+        header menu and are not part of the switcher, so including them would
+        make Ctrl+Page_Down jump somewhere the user cannot see in the tab bar.
+        """
+        names = [
+            name
+            for name in ("home", "settings", "dictionary", "typo", "history")
+            if self._stack.get_page(self._stack.get_child_by_name(name)).get_visible()
+        ]
+        if not names:
+            return
+        current = self._stack.get_visible_child_name()
+        index = names.index(current) if current in names else -1
+        self._stack.set_visible_child_name(names[(index + step) % len(names)])
+
+    def _on_show_shortcuts(self, _action: object, _param: object) -> None:
+        build_shortcuts_dialog(self._state.config).present(self)
 
     def _on_show_help(self, _action: object, _param: object) -> None:
         self._help_page.set_visible(True)

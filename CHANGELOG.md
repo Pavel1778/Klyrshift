@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A keyboard reference, and keyboard tab navigation.** Every page was
+  already reachable with Tab, but nothing listed the window shortcuts and there
+  was no way to move between tabs without the mouse. `Ctrl+Page_Down`/`Up`
+  now cycle the visible tabs (hidden pages are skipped, so the focus never lands
+  somewhere the tab bar does not show) and `Ctrl+?` opens a reference that
+  pairs the window accelerators with the daemon hotkeys read from the live
+  config. The menu gains the same entry, so the dialog is reachable without
+  knowing the chord.
+
 - **The interface can switch language.** Every user-facing string now goes
   through `klyrshift.i18n`: the Russian text stays in the source as the key, and
   an English catalogue lives in `data/locales/en.json`. `klyrshift --lang en
