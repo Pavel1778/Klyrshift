@@ -13,6 +13,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import pytest
 
@@ -214,6 +215,49 @@ def test_run_returns_zero_when_device_disappears(
     thread.join(timeout=5)
 
     assert not thread.is_alive()
+
+
+def test_shutdown_cleanup_survives_the_control_socket(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The control socket in the selector must not abort the shutdown cleanup.
+
+    The cleanup iterates every object the selector holds and calls ``close()``
+    on it. The control socket is registered there too, and ``ControlServer``
+    exposes ``stop()``, not ``close()``, so the ``AttributeError`` used to
+    escape the ``finally`` block and skip the rest of the cleanup: the tray and
+    the socket leaked, and the learned words were not persisted. Only the OS
+    boundary is faked here; the real ``ControlServer`` and the real cleanup
+    path run.
+    """
+    device = FakeDevice()
+    daemon = _make_daemon(devices=[device])
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "run"))
+    monkeypatch.setattr(daemon, "acquire_lock", lambda: True)
+    monkeypatch.setattr(daemon, "_install_signal_handlers", lambda: None)
+    monkeypatch.setattr(daemon, "discover_devices", lambda: [])
+    monkeypatch.setattr(daemon_module, "DEVICE_RESCAN_DELAY", 0.0)
+
+    released: list[bool] = []
+    persisted: list[bool] = []
+    monkeypatch.setattr(daemon, "release_lock", lambda: released.append(True))
+    monkeypatch.setattr(daemon.learning, "persist", lambda **kwargs: persisted.append(True))
+
+    thread = threading.Thread(target=daemon.run)
+    thread.start()
+    time.sleep(0.1)
+    assert daemon._control is not None, "the control socket must be listening"
+    daemon.stop()
+    thread.join(timeout=5)
+
+    assert not thread.is_alive()
+    # The cleanup after the device loop must have run to completion. ``persist``
+    # may also fire from the loop, so it is checked for "at least once"; the
+    # lock release and the socket stop happen only in the cleanup.
+    assert persisted, "learned words must be persisted on shutdown"
+    assert released == [True], "the instance lock must be released on shutdown"
+    assert daemon._control is None, "the control socket must be stopped"
 
 
 # --- 5. several keyboards ---------------------------------------------------

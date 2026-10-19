@@ -2250,9 +2250,18 @@ class KlyrshiftDaemon:
             self._loop(selector)
         finally:
             # Close the initial devices and any picked up by a re-discovery pass,
-            # so a keyboard reconnected during the run is not leaked.
+            # so a keyboard reconnected during the run is not leaked. The control
+            # socket shares the selector but is not a device: it has ``stop()``,
+            # not ``close()``, and is torn down by ``_stop_control`` below. Left
+            # in this loop its missing ``close()`` would raise ``AttributeError``
+            # past the ``suppress`` (which only covers ``OSError``) and skip the
+            # rest of the cleanup: the tray and the socket (and its file) would
+            # leak, and the final ``persist(force=True)`` and ``release_lock``
+            # would be skipped.
             open_devices = {id(device): device for device in devices}
             for key in selector.get_map().values():
+                if isinstance(key.data, ControlServer):
+                    continue
                 open_devices[id(key.data)] = key.data
             selector.close()
             for device in open_devices.values():

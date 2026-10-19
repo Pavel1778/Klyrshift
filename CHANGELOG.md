@@ -98,11 +98,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Shutdown no longer aborts when the control socket is in the selector.** The
+  daemon's cleanup closed every object the selector held, but the control socket
+  is a `ControlServer` with `stop()`, not `close()`. The resulting
+  `AttributeError` escaped the `finally` block (only `OSError` was suppressed)
+  and skipped the rest of the cleanup, so the tray and the socket file leaked
+  and the learned words were not persisted on exit. The control socket is now
+  excluded from the device loop; `tests/test_daemon_robustness.py` drives the
+  real cleanup path and fails if it is skipped again.
+
 - **The withheld-conversion log line leaked the typed word.** The hybrid-mode
   DEBUG message used `%r` on the buffer, so `log_level=DEBUG` wrote the user's
   text to `klyrshift.log` -- the same class of leak the T9 path had already
   fixed. It now logs the confidence and the word length only.
-
 
 ## [0.2.9] - 2026-10-19
 
