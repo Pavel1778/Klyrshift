@@ -469,6 +469,18 @@ exercise the evdev → uinput correction path end to end. See `docs/TESTING.md`.
   blocks its own `notify::active` handler so a reload never writes the config
   back. When two branches touch the same widget, always re-run the GUI tests
   under `xvfb-run -a`, not just the headless suite.
+- **The selector holds a `ControlServer` next to the keyboards.** The daemon's
+  shutdown cleanup walks `selector.get_map()` and calls `close()` on each
+  entry, but the control socket is a `ControlServer` with `stop()`, not
+  `close()`. The `AttributeError` escaped the `finally` (only `OSError` was
+  suppressed) and skipped the rest of the cleanup: the tray and the socket file
+  leaked and the learned words were not persisted. Guard `key.data` with
+  `isinstance(..., ControlServer)` before treating it as a device (the loop
+  counter in `_loop` already does). Guarded by
+  `tests/test_daemon_robustness.py::test_shutdown_cleanup_survives_the_control_socket`,
+  which drives the real cleanup path. The headless suite caught this only as a
+  `PytestUnhandledThreadExceptionWarning` -- read the warnings summary, not just
+  the pass count.
 
 ## Repository hygiene
 
