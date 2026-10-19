@@ -12,6 +12,7 @@ from gi.repository import Adw, Gio  # noqa: E402
 
 from .state import GuiState  # noqa: E402
 from .style import load_stylesheet  # noqa: E402
+from .theme import apply_theme  # noqa: E402
 from .window import KlyrshiftWindow  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class KlyrshiftApplication(Adw.Application):
         """Present the window, creating it on first activation."""
         if self._window is None:
             load_stylesheet()
+            apply_theme(self._state.config.theme)
             self._window = KlyrshiftWindow(self._state, self)
         self._window.present()
 

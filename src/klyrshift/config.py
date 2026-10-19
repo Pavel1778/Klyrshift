@@ -194,6 +194,8 @@ VALID_BACKENDS: Final[tuple[str, ...]] = ("auto", "uinput", "wtype", "xdotool")
 VALID_SWITCH_METHODS: Final[tuple[str, ...]] = ("auto", "g3kb-switch", "setxkbmap")
 VALID_LOG_LEVELS: Final[tuple[str, ...]] = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 VALID_MODES: Final[tuple[str, ...]] = ("auto", "manual", "hybrid")
+# The GUI colour scheme: follow the desktop, or force light/dark.
+VALID_THEMES: Final[tuple[str, ...]] = ("system", "light", "dark")
 VALID_DICTIONARY_SIZES: Final[tuple[int, ...]] = (1000, 5000, 10000)
 # The languages Klyrshift ships layouts and dictionaries for.
 SUPPORTED_LANGUAGES: Final[tuple[str, ...]] = ("en", "ru", "uk", "de", "fr")
@@ -520,6 +522,10 @@ class Config:
     notify_on_error: bool = False
     sound_on_fix: bool = False
     tray_enabled: bool = True
+    # The GUI colour scheme. ``system`` follows the desktop (the default and the
+    # historical behaviour); ``light``/``dark`` force one scheme for the window.
+    # The daemon ignores this: it only affects the settings window.
+    theme: str = "system"
     hotkey: str = DEFAULT_FIX_HOTKEY
     log_level: str = "INFO"
     log_rotation_mb: int = DEFAULT_LOG_ROTATION_MB
@@ -682,6 +688,10 @@ class Config:
         self.log_level = str(self.log_level).upper()
         if self.log_level not in VALID_LOG_LEVELS:
             raise ValueError(f"log_level must be one of {VALID_LOG_LEVELS}")
+
+        self.theme = str(self.theme).lower()
+        if self.theme not in VALID_THEMES:
+            raise ValueError(f"theme must be one of {VALID_THEMES}")
 
         self.log_rotation_mb = int(self.log_rotation_mb)
         if not 1 <= self.log_rotation_mb <= 50:

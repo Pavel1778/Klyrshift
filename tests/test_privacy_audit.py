@@ -42,6 +42,7 @@ _ALLOWED_CONFIG_KEYS = {
     "switch_method",
     "notify_on_fix",
     "tray_enabled",
+    "theme",
     "hotkey",
     "log_level",
     "on_space",

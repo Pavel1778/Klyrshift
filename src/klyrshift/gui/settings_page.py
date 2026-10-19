@@ -19,10 +19,15 @@ from ..langstore import (  # noqa: E402
 from .async_utils import run_in_background  # noqa: E402
 from .prefs_base import BoundPreferencesPage  # noqa: E402
 from .state import MODE_LABELS, GuiState  # noqa: E402
+from .theme import apply_theme  # noqa: E402
 from .widgets.hotkey_row import HotkeyRow  # noqa: E402
 from .widgets.languages_group import LanguagesGroup  # noqa: E402
 
 MODE_ORDER = ("auto", "manual", "hybrid")
+
+# The colour-scheme choices offered in the settings window, in display order.
+THEME_ORDER = ("system", "light", "dark")
+THEME_LABELS = {"system": "Как в системе", "light": "Светлая", "dark": "Тёмная"}
 
 
 class SettingsPage(BoundPreferencesPage):
@@ -31,6 +36,7 @@ class SettingsPage(BoundPreferencesPage):
     def __init__(self, state: GuiState, on_saved: Callable[[str], None] | None = None) -> None:
         super().__init__(state, on_saved)
         self._build_mode_group()
+        self._build_appearance_group()
         self._build_hotkeys_group()
         self._build_languages_group()
         self._build_notifications_group()
@@ -58,6 +64,29 @@ class SettingsPage(BoundPreferencesPage):
     def _on_mode_selected(self, mode: str) -> None:
         self._config.mode = mode
         self._save(f"Режим изменён на {MODE_LABELS.get(mode, mode)}")
+
+    def _build_appearance_group(self) -> None:
+        group = self.attach_help(Adw.PreferencesGroup(title="Оформление"), "theme")
+        self._theme_row = self.add_combo(
+            group,
+            "Тема окна",
+            list(THEME_ORDER),
+            [THEME_LABELS[t] for t in THEME_ORDER],
+            self._config.theme,
+            self._on_theme_selected,
+            subtitle="Только окно настроек; на исправление текста не влияет",
+        )
+        self.add(group)
+
+    @property
+    def theme_row(self) -> Adw.ComboRow:
+        """Expose the theme combo (also a tour target)."""
+        return self._theme_row
+
+    def _on_theme_selected(self, theme: str) -> None:
+        self._config.theme = theme
+        apply_theme(theme)
+        self._save(f"Тема: {THEME_LABELS.get(theme, theme)}")
 
     def _build_hotkeys_group(self) -> None:
         group = self.attach_help(
