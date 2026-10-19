@@ -64,7 +64,7 @@ The main goal is that a correction is always safe to reverse.
 | Manual add / remove of learned words | done — `klyrshift learn list/promote/forget` edits the running daemon's in-memory vocabulary |
 | Separate dictionaries per domain (names, code, general) | planned |
 | Local confidence model | partial — bigram + vocabulary scoring exists |
-| Suggestions instead of auto-change at low confidence | partial — `hybrid` withholds; no inline suggestion UI |
+| Suggestions instead of auto-change at low confidence | done — `hybrid` withholds and offers the fix through the tray entry, the accept hotkey and an optional notification |
 
 ## Stage 4 — UX / UI redesign — **partial**
 

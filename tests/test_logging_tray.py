@@ -95,7 +95,51 @@ def test_tray_build_menu_uses_module() -> None:
     tray = TrayIcon(on_fix=lambda: None, on_quit=lambda: None)
     tray._build_menu(FakeGtk)
     assert "Исправить сейчас" in created
+    assert "Применить предложение" in created
     assert "Выход" in created
+
+
+def test_tray_suggestion_entry_starts_disabled_and_follows_the_daemon() -> None:
+    """The entry is a no-op until the daemon says a suggestion is waiting."""
+    sensitivity: list[bool] = []
+
+    class FakeMenuItem:
+        def __init__(self, label: str = "") -> None:
+            self.label = label
+
+        def connect(self, *_args: object) -> None:
+            return None
+
+        def set_sensitive(self, value: bool) -> None:
+            sensitivity.append(value)
+
+    class FakeMenu:
+        def append(self, item: object) -> None:
+            return None
+
+        def show_all(self) -> None:
+            return None
+
+    class FakeGtk:
+        Menu = FakeMenu
+        MenuItem = FakeMenuItem
+
+    tray = TrayIcon(
+        on_status=lambda: "s",
+        on_fix=lambda: None,
+        on_settings=lambda: None,
+        on_quit=lambda: None,
+        on_accept_suggestion=lambda: None,
+    )
+    tray._build_menu(FakeGtk)
+    assert sensitivity == [False]
+    tray.set_suggestion_available(True)
+    assert sensitivity == [False, True]
+
+
+def test_tray_suggestion_toggle_before_menu_is_safe() -> None:
+    """``set_suggestion_available`` runs before ``_build_menu`` at startup."""
+    TrayIcon().set_suggestion_available(True)  # must not raise
 
 
 def test_tray_stop_without_start() -> None:

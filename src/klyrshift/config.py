@@ -151,6 +151,10 @@ VALID_FEATURE_MODES: Final[tuple[str, ...]] = ("auto", "manual", "hybrid", "off"
 # Default hotkeys for the manual T9 / punctuation actions.
 DEFAULT_TYPO_HOTKEY: Final[str] = "CTRL+SHIFT+F"
 DEFAULT_PUNCTUATION_HOTKEY: Final[str] = "CTRL+SHIFT+P"
+# Accept the suggestion hybrid mode withheld for the last word. Empty by
+# default: the double-Shift fix hotkey already applies it, so a second binding
+# would surprise a user who never asked for one.
+DEFAULT_ACCEPT_SUGGESTION_HOTKEY: Final[str] = ""
 # The pre-0.2.8 T9 mode migrates from the legacy ``typo_correction`` boolean
 # (and, in ``manual``, from the now-removed ``typo_in_manual`` opt-in).
 #
@@ -547,6 +551,13 @@ class Config:
     # Manual reverse conversion: force the last word (even a correct one) into
     # the other layout, e.g. ``привет`` -> ``ghbdtn``. No detector involved.
     hotkey_toggle_layout_last_word: str = DEFAULT_TOGGLE_LAYOUT_HOTKEY
+    # Apply the layout suggestion hybrid mode withheld for the last word. The
+    # double-Shift fix hotkey already does this; this binding exists for a user
+    # who wants a dedicated key, so it is empty by default.
+    hotkey_accept_suggestion: str = DEFAULT_ACCEPT_SUGGESTION_HOTKEY
+    # Notify when a suggestion is offered. Off by default for the same reason
+    # ``notify_on_fix`` is: a notification on every uncertain word is noise.
+    suggest_on_withhold: bool = False
     hotkey_swallow: bool = True
     hotkey_double_tap_ms: int = DEFAULT_DOUBLE_TAP_MS
     undo_window_seconds: int = DEFAULT_UNDO_WINDOW_SECONDS
@@ -754,6 +765,7 @@ class Config:
         self.hotkey_toggle_mode = normalise_hotkey(self.hotkey_toggle_mode)
         self.hotkey_reload_config = normalise_hotkey(self.hotkey_reload_config)
         self.hotkey_toggle_layout_last_word = normalise_hotkey(self.hotkey_toggle_layout_last_word)
+        self.hotkey_accept_suggestion = normalise_hotkey(self.hotkey_accept_suggestion)
 
         self.hotkey_double_tap_ms = int(self.hotkey_double_tap_ms)
         # The pre-0.2.8 default of 300 ms is too short to reliably catch a

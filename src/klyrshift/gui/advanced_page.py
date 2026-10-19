@@ -13,6 +13,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from ..config import (  # noqa: E402
+    DEFAULT_ACCEPT_SUGGESTION_HOTKEY,
     DEFAULT_FIX_HOTKEY,
     DEFAULT_TOGGLE_LAYOUT_HOTKEY,
     DEFAULT_UNDO_HOTKEY,
@@ -351,6 +352,13 @@ class AdvancedPage(BoundPreferencesPage):
             on_change=self._make_hotkey_handler("selection_fix_hotkey"),
         )
         group.add(self._selection_row)
+        self._accept_row = HotkeyRow(
+            "Применить предложение",
+            "",
+            self._config.hotkey_accept_suggestion,
+            on_change=self._make_hotkey_handler("hotkey_accept_suggestion"),
+        )
+        group.add(self._accept_row)
         self.add_switch(group, "Не передавать хоткей в приложение", "hotkey_swallow")
         self.add_switch(group, "Исправлять выделенный текст", "selection_fix_enabled")
         reset = Gtk.Button(label="Сбросить к дефолтным")
@@ -373,6 +381,7 @@ class AdvancedPage(BoundPreferencesPage):
         self._config.hotkey_fix_last_word = DEFAULT_FIX_HOTKEY
         self._config.hotkey_undo_last_fix = DEFAULT_UNDO_HOTKEY
         self._config.hotkey_toggle_layout_last_word = DEFAULT_TOGGLE_LAYOUT_HOTKEY
+        self._config.hotkey_accept_suggestion = DEFAULT_ACCEPT_SUGGESTION_HOTKEY
         self._config.hotkey_toggle_mode = ""
         self._config.hotkey_reload_config = "CTRL+SHIFT+R"
         self._config.hotkey = DEFAULT_FIX_HOTKEY
@@ -380,6 +389,7 @@ class AdvancedPage(BoundPreferencesPage):
         self._toggle_row.set_value("")
         self._reload_row.set_value("CTRL+SHIFT+R")
         self._selection_row.set_value("CTRL+SHIFT+L")
+        self._accept_row.set_value("")
         self._save("Хоткеи сброшены")
 
     # --- notifications ----------------------------------------------------
@@ -387,6 +397,12 @@ class AdvancedPage(BoundPreferencesPage):
         group = self.attach_help(Adw.PreferencesGroup(title="Уведомления"), "notifications")
         self.add_switch(group, "Уведомлять об исправлении", "notify_on_fix")
         self.add_switch(group, "Уведомлять об ошибке", "notify_on_error")
+        self.add_switch(
+            group,
+            "Уведомлять о предложении",
+            "suggest_on_withhold",
+            subtitle="В гибридном режиме, когда исправление отложено",
+        )
         self.add_switch(group, "Звук при исправлении", "sound_on_fix")
         self.add_switch(group, "Иконка в трее", "tray_enabled")
         self.add_switch(

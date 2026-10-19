@@ -17,6 +17,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   order of magnitude (a corpus reloaded per word, an accidental O(n²)), not a
   few percent. `--budget-ms`/`--budget-mib` also make the script usable as a
   local check.
+- **Hybrid mode now offers the fix it will not apply.** Hybrid mode has always
+  withheld a low-confidence conversion instead of rewriting the word, but the
+  offer was only reachable through the fix hotkey. The withheld suggestion is
+  now kept explicitly and can be applied deliberately: the tray gains an
+  "Apply suggestion" entry (disabled until an offer is waiting), a new
+  `hotkey_accept_suggestion` binding does the same from the keyboard, and
+  `suggest_on_withhold` (off by default) shows a notification when an offer
+  appears. The offer is dropped as soon as the next word is flushed, so a
+  stale suggestion is never applied to text the user has moved past. The typed
+  text stays in memory: the offer is never logged and the notification body is
+  a fixed label, preserving the "no typed text on disk or in argv" invariant.
+
+### Fixed
+
+- **The withheld-conversion log line leaked the typed word.** The hybrid-mode
+  DEBUG message used `%r` on the buffer, so `log_level=DEBUG` wrote the user's
+  text to `klyrshift.log` -- the same class of leak the T9 path had already
+  fixed. It now logs the confidence and the word length only.
 
 ## [0.2.9] - 2026-10-19
 
