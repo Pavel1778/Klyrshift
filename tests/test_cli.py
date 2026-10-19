@@ -735,6 +735,8 @@ def test_dict_verify_rejects_a_tampered_package(
 def test_dict_pack_without_files(isolated_env: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(["dict", "pack"]) == 2
     assert "Укажите файлы" in capsys.readouterr().out
+
+
 def test_learn_list_without_a_daemon(
     isolated_env: Path,
     capsys: pytest.CaptureFixture[str],

@@ -1307,6 +1307,8 @@ def test_settings_page_language_remove_ok(
     page.languages_group.rows["de"].remove_button.emit("clicked")
     assert removed == ["de"]
     assert any("Deutsch" in message for message in saved)
+
+
 def test_apply_theme_maps_values(gui_state: Any) -> None:
     """``apply_theme`` maps every valid value and falls back on garbage."""
     import gi
