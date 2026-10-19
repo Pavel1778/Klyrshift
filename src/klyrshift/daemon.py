@@ -301,6 +301,7 @@ class KlyrshiftDaemon:
             "toggle_layout": self._parse_hotkey(config.hotkey_toggle_layout_last_word),
             "typo_fix": self._parse_hotkey(config.typo_hotkey),
             "punctuation_fix": self._parse_hotkey(config.punctuation_hotkey),
+            "accept_suggestion": self._parse_hotkey(config.hotkey_accept_suggestion),
         }
         # Modifier families currently held down, used to match hotkeys.
         self._held_modifiers: set[str] = set()
@@ -417,6 +418,11 @@ class KlyrshiftDaemon:
         # keys instead of processing them against a half-deleted screen.
         self._processing_buffer = False
         self._tray: TrayIcon | None = None
+        # The layout suggestion hybrid mode withheld for the last word, if any:
+        # ``(typed_text, target_layout, confidence)``. It is what "accept the
+        # suggestion" applies and what the tray entry is enabled by. Held in
+        # memory only and never logged, like the rest of the typed text.
+        self._pending_suggestion: tuple[str, str, float | None] | None = None
         # Guards ``buffer``/``last_key_time``/``_shift`` against the tray thread,
         # which may call ``_process_buffer`` (via ``_tray_fix``) concurrently with
         # the event loop. ``_lock`` serialises buffer processing so the same text
@@ -970,12 +976,18 @@ class KlyrshiftDaemon:
             return layout
         if confidence is None or confidence < self.config.hybrid_confidence:
             logger.debug(
-                "Hybrid mode: %r -> %s withheld (confidence %.3f < %.3f)",
-                buffer,
-                layout,
+                "Hybrid mode: conversion withheld (confidence %.3f < %.3f, len=%d)",
                 -1.0 if confidence is None else confidence,
                 self.config.hybrid_confidence,
+                len(buffer),
             )
+            # Remember what was withheld so the user can apply it later. The
+            # text stays in memory only; the tray entry and the accept hotkey
+            # are the two ways to reach it.
+            self._pending_suggestion = (buffer, layout, confidence)
+            self._refresh_suggestion_menu()
+            if self.config.suggest_on_withhold:
+                self._notify_suggestion()
             return None
         return layout
 
@@ -1053,6 +1065,93 @@ class KlyrshiftDaemon:
             self._force_typo_fix()
         elif action == "punctuation_fix":
             self._force_punctuation_fix()
+        elif action == "accept_suggestion":
+            self._accept_suggestion()
+
+    def _accept_suggestion(self) -> bool:
+        """Apply the layout suggestion hybrid mode withheld for the last word.
+
+        This is the other half of hybrid mode: the automatic pass declines an
+        uncertain conversion, and the user applies it deliberately. The text is
+        retyped through the same replacement path as every other fix, so undo,
+        history and the learned-word bookkeeping behave identically.
+
+        Returns:
+            ``True`` when a suggestion was applied (or the dry run would have).
+        """
+        suggestion = self._pending_suggestion
+        if suggestion is None:
+            logger.debug("Accept-suggestion requested but nothing is pending")
+            return False
+        word, target, _confidence = suggestion
+        current = self.switcher.get_current_layout()
+        if target == current:
+            # The user switched layout by hand since the offer; applying it now
+            # would retype the word in the layout it is already in.
+            logger.debug("Accept-suggestion dropped: layout already changed")
+            self._clear_suggestion()
+            return False
+        converted = self.converter.convert(word, current, target)
+        if converted == word:
+            logger.debug("Accept-suggestion dropped: conversion is a no-op")
+            self._clear_suggestion()
+            return False
+        logger.info(
+            "Applying the withheld suggestion (len=%d, %s -> %s)", len(word), current, target
+        )
+        if self.dry_run:
+            logger.info("Dry run: skipping layout switch and text replacement")
+            return True
+        if self._shutdown_requested:
+            logger.info("Shutdown requested; skipping replacement")
+            return False
+        backspace_count = len(word)
+        self.switcher.switch_to(target)
+        time.sleep(0.05)
+        if not self.injector.replace_text(backspace_count, converted, target):
+            logger.warning("Applying the withheld suggestion failed to replace text")
+            return False
+        self._last_fixed_from = word
+        self._record_undo(word, current, backspace_count, source=current, target=target)
+        with self._lock:
+            self._last_flushed_word = converted
+            self._last_flushed_corrected = True
+        self._clear_suggestion()
+        return True
+
+    def _clear_suggestion(self) -> None:
+        """Forget the pending suggestion and disable the tray entry for it."""
+        if self._pending_suggestion is None:
+            return
+        self._pending_suggestion = None
+        self._refresh_suggestion_menu()
+
+    def _refresh_suggestion_menu(self) -> None:
+        """Enable or disable the tray's "apply suggestion" entry."""
+        if self._tray is not None:
+            self._tray.set_suggestion_available(self._pending_suggestion is not None)
+
+    def _notify_suggestion(self) -> None:
+        """Tell the user a suggestion is waiting, without revealing the word.
+
+        The body is a fixed label for the same reason the fix notification is:
+        the typed text must never reach a subprocess argv, where ``ps`` and
+        ``/proc`` would expose it.
+        """
+        try:
+            subprocess.run(
+                [
+                    "notify-send",
+                    "--app-name=Klyrshift",
+                    "Klyrshift",
+                    "Есть предложение по раскладке — нажмите двойной Shift",
+                ],
+                check=False,
+                capture_output=True,
+                timeout=NOTIFY_TIMEOUT,
+            )
+        except (OSError, subprocess.SubprocessError):
+            logger.debug("notify-send failed", exc_info=True)
 
     def _force_fix_memory_word(self) -> None:
         """Force a fix of the most recently flushed word.
@@ -1689,6 +1788,10 @@ class KlyrshiftDaemon:
         # non-empty buffer, so an empty hotkey flush does not erase the memory.
         self._last_flushed_word = buffer
         self._last_flushed_corrected = False
+        # A new word supersedes any offer made for the previous one. Clearing
+        # here (not after a successful fix) means a stale suggestion can never
+        # be applied to text the user has since moved past.
+        self._clear_suggestion()
         # The explicit hotkey may resolve a taught short token (``ы`` -> ``s``),
         # which the length guard below would otherwise drop before the detector
         # ever sees it. ``forced_taught_layout`` only matches a conversion the
@@ -1962,6 +2065,7 @@ class KlyrshiftDaemon:
             "toggle_layout": self._parse_hotkey(new_config.hotkey_toggle_layout_last_word),
             "typo_fix": self._parse_hotkey(new_config.typo_hotkey),
             "punctuation_fix": self._parse_hotkey(new_config.punctuation_hotkey),
+            "accept_suggestion": self._parse_hotkey(new_config.hotkey_accept_suggestion),
         }
         self._double_tap_hotkeys = self._build_double_tap_hotkeys(new_config)
         self._last_modifier_tap.clear()
@@ -2061,9 +2165,14 @@ class KlyrshiftDaemon:
             on_status=self.status_text,
             on_fix=self._tray_fix,
             on_quit=self.stop,
+            on_accept_suggestion=self._tray_accept_suggestion,
         )
         if tray.start():
             self._tray = tray
+
+    def _tray_accept_suggestion(self) -> None:
+        """Tray callback: apply the withheld suggestion, discarding the result."""
+        self._accept_suggestion()
 
     def _stop_tray(self) -> None:
         """Stop the tray icon if it is running."""

@@ -402,6 +402,16 @@ when the live buffer is empty because a Space boundary already consumed the
 word. A word already corrected by the boundary is remembered in
 `_last_flushed_corrected`, so a later double Shift does not revert it.
 
+**Hybrid mode offers what it will not apply.** The confidence gate in
+`_layout_target` withholds a conversion below `hybrid_confidence` instead of
+rewriting the word. The withheld offer is kept in `_pending_suggestion` (typed
+text, target layout, confidence) and can be applied deliberately through the
+tray's "Apply suggestion" entry, the optional `hotkey_accept_suggestion`, or
+the same double Shift that fixes any last word. The offer is dropped when the
+next word is flushed, so a stale suggestion is never applied to text the user
+has moved past. The text is held in memory only: neither the offer nor the
+optional notification ever logs or passes it to a subprocess argv.
+
 ## Target architecture: the system-integration boundary
 
 The daemon is layered so that the platform-specific parts sit behind narrow

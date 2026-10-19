@@ -62,6 +62,8 @@ _ALLOWED_CONFIG_KEYS = {
     "hotkey_toggle_mode",
     "hotkey_reload_config",
     "hotkey_toggle_layout_last_word",
+    "hotkey_accept_suggestion",
+    "suggest_on_withhold",
     "extended_dictionary_dir",
     "installed_dict_categories",
     "hotkey_swallow",
