@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-10-19
+
+Adds always-on learning, and makes a correction safe to reverse even after
+the caret has moved.
+
 ### Added
 
 - **Always-on learning.** Klyrshift now watches how it is used and adapts. A
@@ -20,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   word, so the "no typed text on disk" invariant still holds. `klyrshift
   learn` shows the counters, `--off` disables learning, `--reset` clears
   them, and the GUI's Продвинутые page has a matching group.
+
+### Changed
+
+- **The release workflow smoke-tests Debian 13, not only Debian 12.** Debian
+  13 (trixie) is the current stable and the target this package is written
+  for (the udev rule is named `71-*` to run before `73-seat-late.rules`,
+  systemd 257), but the workflow installed the `.deb` only in a `debian:12`
+  container, so a trixie-only regression could ship. Both images are tested.
 
 ### Fixed
 
@@ -63,6 +76,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `README.md` badges and the dictionary link now name the live hosts, and
   `tests/test_repo_urls.py` pins them and fails if a `linguafix.*` host reappears
   in the site source, the README or `docs/`.
+
+- **A fix could be undone onto the wrong text.** The undo history was
+  bounded by time and depth only, so it did not notice that the user had
+  moved on. After a correction, typing anything else and then pressing the
+  undo hotkey deleted the recorded character count from the *new* text and
+  retyped the old word over it, corrupting what had just been written. The
+  history is now dropped as soon as the caret moves: any key that is neither
+  a hotkey action nor the observed `Ctrl+Z` clears it (an ordinary key
+  changes the text, a command chord such as `Alt+Tab` or `Ctrl+V` changes
+  focus or pastes). A Space that triggers a new correction records a fresh
+  entry, so that correction stays undoable; a refused undo is safer than a
+  corrupted word.
+- **`pyproject.toml` and `requirements.txt` disagreed on the `tomli` floor.**
+  A dependency bump raised the floor in `requirements.txt` only, so
+  `install.sh`, which installs from `pyproject.toml`, kept the older `tomli`.
+  Both now require `tomli>=2.5.0` below Python 3.11, and
+  `tests/test_version_consistency.py` fails on the next drift.
 
 ## [0.2.8.4] - 2026-10-18
 
@@ -834,6 +864,7 @@ Hotfix for three defects reported after the 0.2.8 live test.
 - The `uk`/`de`/`fr` corpora are opt-in and have not been calibrated against
   live input.
 
+[0.2.9]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.9
 [0.2.8.4]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.8.4
 [0.2.8.3]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.8.3
 [0.2.3]: https://github.com/Pavel1778/Klyrshift/releases/tag/v0.2.3

@@ -1,10 +1,11 @@
 # Releasing
 
 This is the checklist to run before publishing a release. It is written for
-`v0.2.8.4`, a fixes-only patch, but the same steps apply to any version.
+`v0.2.9`, which adds always-on learning and hardens undo, but the same steps
+apply to any version.
 
 Nothing here is executed automatically. A release is published by pushing a tag
-(`git push origin v0.2.8.4`), which triggers
+(`git push origin v0.2.9`), which triggers
 [`.github/workflows/release.yml`](../.github/workflows/release.yml). Read the
 whole list before pushing the tag: the tag is the point of no return.
 
@@ -20,8 +21,8 @@ whole list before pushing the tag: the tag is the point of no return.
   heading, or the tree claims a version the changelog does not describe.
 - [ ] The version is not already used. `git ls-remote --tags origin` must not
   list it. `0.2.8.2` has a **changelog heading from 2026-10-08** that was never
-  tagged; `0.2.8.3` is tagged and published. `0.2.8.4` is the next number and
-  does not reuse either.
+  tagged; `0.2.8.3` and `0.2.8.4` are tagged and published. `0.2.9` is the next
+  number and does not reuse either.
 
 ## 1. Local checks
 

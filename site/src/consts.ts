@@ -7,7 +7,7 @@
 // The origins below are written into ``<link rel="canonical">``, ``og:url`` and
 // the sitemap; the two origin constants in ``astro.config.mjs``/``lib/site.ts``
 // must agree with them.
-export const VERSION = "0.2.8.4";
+export const VERSION = "0.2.9";
 
 export const REPO_OWNER = "Pavel1778";
 export const REPO_NAME = "Klyrshift";
