@@ -44,7 +44,7 @@ class LanguageRow(Adw.ActionRow):
         self._switch = Gtk.Switch()
         self._switch.set_valign(Gtk.Align.CENTER)
         self._switch.set_active(status.enabled)
-        self._switch.connect("notify::active", self._on_switch_changed)
+        self._toggle_handler = self._switch.connect("notify::active", self._on_switch_changed)
         self.add_prefix(self._switch)
 
         self._install_button = Gtk.Button(label="Установить")
@@ -86,7 +86,9 @@ class LanguageRow(Adw.ActionRow):
     def refresh(self, status: LanguageStatus) -> None:
         """Re-render the row from ``status`` (called after install/remove)."""
         self.set_subtitle(status.state_text)
+        self._switch.handler_block(self._toggle_handler)
         self._switch.set_active(status.enabled)
+        self._switch.handler_unblock(self._toggle_handler)
         self._install_button.set_visible(status.can_install and not status.installed)
         self._remove_button.set_visible(status.installed)
 

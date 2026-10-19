@@ -27,6 +27,10 @@ logger = logging.getLogger(__name__)
 # routine start never re-opens the tour.
 TOUR_VERSION: Final[int] = 1
 
+# The wizard is versioned separately from the tour: the two are independent
+# offers, and changing one must not re-open the other.
+WIZARD_VERSION: Final[int] = 1
+
 ONBOARDING_FILE_NAME: Final[str] = "onboarding.json"
 
 
@@ -545,11 +549,15 @@ class OnboardingState:
         skipped_version: ``TOUR_VERSION`` the user skipped, or ``0``.
         last_step: Index of the last step shown, so an interrupted tour can be
             resumed instead of restarted.
+        wizard_completed_version: ``WIZARD_VERSION`` the user finished, or ``0``.
+        wizard_skipped_version: ``WIZARD_VERSION`` the user skipped, or ``0``.
     """
 
     completed_version: int = 0
     skipped_version: int = 0
     last_step: int = 0
+    wizard_completed_version: int = 0
+    wizard_skipped_version: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         """Return a plain ``dict`` for JSON serialisation."""
@@ -557,6 +565,8 @@ class OnboardingState:
             "completed_version": self.completed_version,
             "skipped_version": self.skipped_version,
             "last_step": self.last_step,
+            "wizard_completed_version": self.wizard_completed_version,
+            "wizard_skipped_version": self.wizard_skipped_version,
         }
 
 
@@ -582,6 +592,8 @@ def load_onboarding_state(path: Path | None = None) -> OnboardingState:
         completed_version=_as_int(raw.get("completed_version")),
         skipped_version=_as_int(raw.get("skipped_version")),
         last_step=_as_int(raw.get("last_step")),
+        wizard_completed_version=_as_int(raw.get("wizard_completed_version")),
+        wizard_skipped_version=_as_int(raw.get("wizard_skipped_version")),
     )
 
 
@@ -613,6 +625,18 @@ def should_offer_tour(state: OnboardingState) -> bool:
     return TOUR_VERSION not in (state.completed_version, state.skipped_version)
 
 
+def should_offer_wizard(state: OnboardingState) -> bool:
+    """Return whether the first-run wizard should be shown.
+
+    Like the tour offer, but tracked with its own version so the two do not
+    re-open each other.
+    """
+    return WIZARD_VERSION not in (
+        state.wizard_completed_version,
+        state.wizard_skipped_version,
+    )
+
+
 def _as_int(value: object) -> int:
     """Coerce ``value`` to ``int``, defaulting to ``0`` for anything else."""
     if isinstance(value, bool):
@@ -628,6 +652,7 @@ __all__ = [
     "ONBOARDING_FILE_NAME",
     "TOUR_STEPS",
     "TOUR_VERSION",
+    "WIZARD_VERSION",
     "HelpTopic",
     "OnboardingState",
     "TourStep",
@@ -636,4 +661,5 @@ __all__ = [
     "onboarding_path",
     "save_onboarding_state",
     "should_offer_tour",
+    "should_offer_wizard",
 ]

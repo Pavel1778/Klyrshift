@@ -17,12 +17,14 @@ from klyrshift.onboarding import (
     HELP_TOPICS,
     TOUR_STEPS,
     TOUR_VERSION,
+    WIZARD_VERSION,
     OnboardingState,
     help_for_field,
     load_onboarding_state,
     onboarding_path,
     save_onboarding_state,
     should_offer_tour,
+    should_offer_wizard,
 )
 
 
@@ -118,6 +120,38 @@ def test_skipping_the_tour_also_stops_the_offer() -> None:
 
 def test_an_older_completion_offers_the_new_tour() -> None:
     assert should_offer_tour(OnboardingState(completed_version=TOUR_VERSION - 1)) is True
+
+
+def test_wizard_is_offered_to_a_fresh_install() -> None:
+    assert should_offer_wizard(OnboardingState()) is True
+
+
+def test_finishing_the_wizard_stops_the_offer() -> None:
+    assert should_offer_wizard(OnboardingState(wizard_completed_version=WIZARD_VERSION)) is False
+
+
+def test_skipping_the_wizard_stops_the_offer() -> None:
+    assert should_offer_wizard(OnboardingState(wizard_skipped_version=WIZARD_VERSION)) is False
+
+
+def test_wizard_and_tour_are_offered_independently() -> None:
+    """Declining one must not hide the other: they track separate versions."""
+    tour_only = OnboardingState(completed_version=TOUR_VERSION)
+    assert should_offer_tour(tour_only) is False
+    assert should_offer_wizard(tour_only) is True
+
+    wizard_only = OnboardingState(wizard_completed_version=WIZARD_VERSION)
+    assert should_offer_wizard(wizard_only) is False
+    assert should_offer_tour(wizard_only) is True
+
+
+def test_state_file_without_wizard_keys_defaults_to_offering(tmp_path: Path) -> None:
+    """A file written before the wizard existed must still trigger the offer."""
+    path = tmp_path / "onboarding.json"
+    path.write_text(json.dumps({"completed_version": TOUR_VERSION}), encoding="utf-8")
+    state = load_onboarding_state(path)
+    assert state.wizard_completed_version == 0
+    assert should_offer_wizard(state) is True
 
 
 def test_save_is_atomic_and_leaves_no_temp_file(tmp_path: Path) -> None:
