@@ -9,6 +9,7 @@ graphical session or Docker.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 import subprocess
@@ -123,6 +124,46 @@ def test_deb_carries_css_and_unit(tmp_path: Path) -> None:
     assert "/gui/style.css" in listing
     assert "/systemd/user/klyrshift.service" in listing
     assert "/usr/bin/klyrshift" in listing
+
+
+@pytest.mark.skipif(shutil.which("dpkg-deb") is None, reason="dpkg-deb not available")
+def test_deb_ships_a_complete_md5sums_manifest(tmp_path: Path) -> None:
+    """The built .deb carries an md5sums manifest covering every file.
+
+    ``dpkg-deb --build`` does not write one, so without an explicit step
+    ``dpkg --verify klyrshift`` would pass vacuously. Build a throwaway package
+    and check the manifest lists exactly the packaged files, with digests that
+    match their contents.
+    """
+    build = subprocess.run(["bash", str(BUILD_DEB)], cwd=REPO_ROOT, capture_output=True, text=True)
+    assert build.returncode == 0, build.stderr
+    deb = REPO_ROOT / "dist" / f"klyrshift_{__version__}_all.deb"
+
+    control = subprocess.run(
+        ["dpkg-deb", "--ctrl-tarfile", str(deb)], capture_output=True, check=True
+    ).stdout
+    listing = subprocess.run(
+        ["dpkg-deb", "--fsys-tarfile", str(deb)], capture_output=True, check=True
+    ).stdout
+    extract = tmp_path / "extract"
+    extract.mkdir()
+    subprocess.run(["tar", "x", "-C", str(extract)], input=listing, check=True)
+    ctrl = tmp_path / "ctrl"
+    ctrl.mkdir()
+    subprocess.run(["tar", "x", "-C", str(ctrl)], input=control, check=True)
+    assert (ctrl / "md5sums").is_file(), "the .deb has no md5sums member"
+
+    entries = dict(
+        line.split("  ", 1)[::-1]
+        for line in (ctrl / "md5sums").read_text(encoding="utf-8").splitlines()
+        if line
+    )
+    packaged = {str(p.relative_to(extract)) for p in extract.rglob("*") if p.is_file()}
+    assert set(entries) == packaged, "manifest does not cover exactly the packaged files"
+
+    for path, digest in entries.items():
+        actual = hashlib.md5((extract / path).read_bytes()).hexdigest()
+        assert actual == digest, f"{path}: manifest digest does not match content"
 
 
 # --- release workflow -------------------------------------------------------

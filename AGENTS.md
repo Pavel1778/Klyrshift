@@ -357,6 +357,16 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   runs in filename order and only processes rules that guard the `remove` event,
   so a `99-*` rule without the guard is silently skipped and `/dev/input` stays
   unreadable. The shipped rule is `data/71-klyrshift.rules`.
+- **`dpkg-deb --build` does not write `DEBIAN/md5sums`** (verified against dpkg
+  1.22.22). Without it `dpkg --verify klyrshift` has nothing to check and passes
+  vacuously. `scripts/build_deb.sh` writes the manifest itself — one
+  `<md5>  <path>` line per regular file, paths relative to the root, sorted — and
+  `klyrshift verify` (`src/klyrshift/integrity.py`) re-implements the comparison
+  for the user-run case. The paths in the manifest are relative; a leading `/`
+  is added when parsing. `scripts/smoke_test.sh` asserts the manifest covers
+  *exactly* the files `dpkg -L` lists (directories excluded), so a partial
+  manifest cannot pass silently. Do not switch to `dpkg-deb`'s default and
+  assume a manifest appears.
 - `python3-evdev` ships in Debian and Ubuntu and is the only native runtime
   dependency; `install.sh` reuses it via `--system-site-packages` so no compiler
   is needed. `python-uinput` is **not** a dependency.

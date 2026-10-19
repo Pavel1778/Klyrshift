@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The `.deb` now ships an `md5sums` manifest, and `klyrshift verify` checks
+  it.** `dpkg-deb --build` does not generate the manifest, so a corrupted or
+  edited file had no way to be detected after installation. `scripts/build_deb.sh`
+  writes one entry per installed file; `klyrshift verify` (and the `doctor`
+  "Целостность пакета" row) compares the files on disk against it and reports
+  a missing file distinctly from a modified one, because the fix differs.
+  `dpkg --verify klyrshift` now works as well. A source checkout or a venv
+  install has no manifest and is reported as "not installed from a .deb",
+  not as a pass.
+
 ## [0.2.9] - 2026-10-19
 
 Adds always-on learning, and makes a correction safe to reverse even after

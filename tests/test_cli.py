@@ -46,6 +46,7 @@ def test_build_parser_has_all_commands() -> None:
         "export",
         "import",
         "restart",
+        "verify",
     ):
         assert command in actions
 
@@ -91,6 +92,21 @@ def test_doctor_command(
 ) -> None:
     monkeypatch.setattr(cli, "run_doctor", lambda: 0)
     assert cli.main(["doctor"]) == 0
+
+
+def test_verify_command(
+    isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``klyrshift verify`` delegates to the integrity check and passes its code."""
+    monkeypatch.setattr("klyrshift.integrity.run_verify", lambda: 0)
+    assert cli.main(["verify"]) == 0
+
+
+def test_verify_command_reports_damage(
+    isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("klyrshift.integrity.run_verify", lambda: 1)
+    assert cli.main(["verify"]) == 1
 
 
 def test_collect_logs_command(

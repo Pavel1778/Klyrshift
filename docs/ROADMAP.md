@@ -88,7 +88,7 @@ The main goal is that a correction is always safe to reverse.
 | Install / uninstall guide | done |
 | `doctor` diagnostics | done |
 | Config migration between versions | done |
-| Package integrity check | planned |
+| Package integrity check | done — the `.deb` ships an `md5sums` manifest; `klyrshift verify` and `dpkg --verify klyrshift` detect a corrupted file |
 | Flatpak / AppImage | planned — needs a portal input path |
 
 ## Stage 6 — Cross-platform — **planned**
