@@ -226,6 +226,14 @@ EOF
 chmod 0755 "${BUILD_DIR}/DEBIAN/postrm"
 
 # --- Build ------------------------------------------------------------------
+# Ship an md5sums manifest so ``dpkg --verify klyrshift`` (and our own
+# ``klyrshift verify``) can detect a file that was truncated, corrupted or
+# edited after installation. ``dpkg-deb --build`` does not generate one, so it
+# is written here: one ``<md5>  <path>`` line per regular file, paths relative
+# to the filesystem root, which is the format dpkg expects.
+( cd "${BUILD_DIR}" && find . -type f ! -path './DEBIAN/*' -printf '%P\0' \
+    | sort -z | xargs -0 md5sum ) > "${BUILD_DIR}/DEBIAN/md5sums"
+
 dpkg-deb --build --root-owner-group "${BUILD_DIR}" "${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"
 
 echo "[klyrshift] Package built: ${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"

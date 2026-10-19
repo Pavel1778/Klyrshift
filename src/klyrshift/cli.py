@@ -971,6 +971,13 @@ def cmd_doctor(_args: argparse.Namespace) -> int:
     return run_doctor()
 
 
+def cmd_verify(_args: argparse.Namespace) -> int:
+    """Verify the installed package files against the md5sums manifest."""
+    from .integrity import run_verify
+
+    return run_verify()
+
+
 def cmd_logs(args: argparse.Namespace) -> int:
     """Print (or follow) the daemon log."""
     from .logs import follow, log_file_path, read_tail
@@ -1119,6 +1126,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="самодиагностика окружения")
     doctor.set_defaults(func=cmd_doctor)
+
+    verify = subparsers.add_parser(
+        "verify", help="проверить целостность файлов установленного пакета"
+    )
+    verify.set_defaults(func=cmd_verify)
 
     collect = subparsers.add_parser("collect-logs", help="собрать диагностический архив для issue")
     collect.add_argument(

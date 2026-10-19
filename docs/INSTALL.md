@@ -189,6 +189,25 @@ The output is a table with a marker per check (`✅` pass, `⚠️` warning, `�
 failure) and a hint for every check that did not pass. The command exits
 non-zero when a check fails, so `install.sh` runs it as a final self-test.
 
+To check the installed files themselves, not the environment:
+
+```bash
+klyrshift verify
+```
+
+The `.deb` ships an `md5sums` manifest (one digest per installed file), and
+`verify` compares the files on disk against it. A file that is missing is
+reported separately from one that was modified, because the fix is the same
+either way — reinstall:
+
+```bash
+sudo apt install --reinstall klyrshift
+```
+
+`dpkg --verify klyrshift` performs the same comparison using dpkg's own copy of
+the manifest. A source checkout or a `pip install` has no manifest; `verify`
+says so instead of claiming a pass.
+
 ## Ubuntu notes
 
 Some package names differ between Debian and Ubuntu. `install.sh` installs the

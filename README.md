@@ -63,8 +63,9 @@ Caramba Switcher for Windows.
 - 🛡️ Стоп-слова для защиты паролей и логинов
 - ⚙️ Настраиваемые таймауты, языки и backend'ы
 - 🧩 CLI: `start`, `stop`, `restart`, `kill`, `status`, `config`, `fix`, `dict`,
-  `export`, `import`, `doctor`, `collect-logs`, `logs`
+  `export`, `import`, `doctor`, `verify`, `collect-logs`, `logs`
 - 🩺 `klyrshift doctor` — самодиагностика окружения с таблицей ✅/❌ и подсказками
+- 🔒 `klyrshift verify` — проверка целостности файлов пакета по манифесту `md5sums`
 - 📜 `klyrshift logs` — показать журнал демона (`-n`, `-f`, `--level`)
 - 📦 `klyrshift collect-logs` — один tarball со всей диагностикой для баг-репорта
 - 🔁 Горячая перезагрузка конфига по `SIGHUP`
@@ -145,6 +146,7 @@ bash install.sh          # добавьте --yes для неинтеракти�
 
 ```bash
 klyrshift doctor                       # самодиагностика окружения (таблица ✅/❌)
+klyrshift verify                       # целостность файлов пакета (md5sums)
 klyrshift status                       # проверить, что демон запущен
 klyrshift learn                        # статистика обучения (вкл/выкл, сброс)
 klyrshift learn list                   # выученные слова текущей сессии

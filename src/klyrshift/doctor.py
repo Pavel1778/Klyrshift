@@ -330,6 +330,39 @@ def check_config(config: Config) -> CheckResult:
     )
 
 
+def check_package_integrity() -> CheckResult:
+    """Check the installed files against the package's md5sums manifest.
+
+    A source checkout, a venv install and a container have no manifest, so the
+    check reports OK with an explicit "not installed from a .deb" detail rather
+    than a pass it cannot support. A real ``.deb`` install ships the manifest
+    (``scripts/build_deb.sh`` writes it), and any file that no longer matches is
+    a FAIL: the package was corrupted after installation.
+    """
+    from .integrity import verify_package
+
+    report = verify_package()
+    if report.manifest is None:
+        return CheckResult(
+            "Целостность пакета",
+            OK,
+            "не установлен из .deb — проверка не требуется",
+        )
+    if report.ok:
+        return CheckResult(
+            "Целостность пакета",
+            OK,
+            f"{len(report.files)} файлов совпадают с манифестом",
+        )
+    return CheckResult(
+        "Целостность пакета",
+        FAIL,
+        f"{len(report.missing)} отсутствуют, {len(report.modified)} изменены",
+        "переустановите пакет: sudo apt install --reinstall klyrshift; "
+        "подробности — klyrshift verify",
+    )
+
+
 def collect_checks(config: Config | None = None) -> list[CheckResult]:
     """Run all checks and return their results in display order.
 
@@ -347,6 +380,7 @@ def collect_checks(config: Config | None = None) -> list[CheckResult]:
         check_tools(),
         check_gui_libraries(),
         check_gnome_version(),
+        check_package_integrity(),
     ]
     results.extend(check_backends(cfg))
     results.append(check_config(cfg))

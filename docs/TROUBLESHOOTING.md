@@ -14,6 +14,32 @@ klyrshift doctor
 
 The exit code is non-zero when a check fails, so it is safe to use in scripts.
 
+`doctor` also carries a «Целостность пакета» row: for a `.deb` install it
+compares the installed files against the package's `md5sums` manifest, and for
+a source checkout it reports that there is nothing to check. To run just that
+check:
+
+```bash
+klyrshift verify
+```
+
+## A file of the installed package is missing or was modified
+
+`klyrshift verify` exits non-zero and names each file that no longer matches the
+`md5sums` manifest the `.deb` shipped. This is what a truncated download, a
+failed upgrade or an edit by hand looks like. The fix is the same for a missing
+and for a modified file:
+
+```bash
+sudo apt install --reinstall klyrshift
+klyrshift verify     # now exits 0
+```
+
+`dpkg --verify klyrshift` performs the same comparison from dpkg's own copy of
+the manifest; its output uses a single-letter marker per changed attribute.
+A source checkout or a `pip install` has no manifest — `verify` says so and
+exits 0 rather than claiming a pass it cannot support.
+
 ## The daemon does not fix anything
 
 1. Check that it is running:
