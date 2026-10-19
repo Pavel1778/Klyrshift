@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Domain dictionaries for names and code.** Two new thematic categories,
+  `names` and `code`, ship for Russian and English. `klyrshift dict install
+  names` (or `code`) widens the detector's vocabulary so a personal name or a
+  programming keyword is recognised instead of being "corrected", exactly like
+  the existing professional categories. The lists are curated in-repo and
+  installable offline.
+- **A calibrated confidence model, and `klyrshift explain`.** The detector has
+  always returned a raw plausibility margin, which is unbounded and grows with
+  the word count — fine as an internal gate, useless as a number a user can
+  reason about. `LanguageDetector.analyze()` now returns a `Confidence` that
+  maps the same decision onto `[0, 1]` (a logistic over the margin, the share of
+  the target that is known vocabulary, and a penalty for very short buffers) and
+  records how it was reached: a taught word, a conversion into known vocabulary,
+  a mixed-script buffer, or the language model. The new read-only `klyrshift
+  explain --text <word>` prints the verdict and the reason, and `klyrshift
+  doctor` gains a "Модель детектора" row showing the loaded languages and a
+  sanity confidence. Nothing about *what* the daemon corrects changes.
+- **The detector reports which languages it actually loaded.** A requested
+  language with no corpus and no extended dictionary is skipped; the new
+  `LanguageDetector.loaded_languages` property exposes the real set so `doctor`
+  cannot claim a model that is not there.
 - **The detector's latency and memory are now budgeted in CI.** The
   `latency-budget` job runs `scripts/measure_latency.py` with `--budget-ms 0.5`
   and `--budget-mib 64`; the script exits non-zero when the slowest direction or
@@ -37,6 +58,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `dpkg --verify klyrshift` now works as well. A source checkout or a venv
   install has no manifest and is reported as "not installed from a .deb",
   not as a pass.
+
+### Changed
+
+- **The interface language is now configurable.** `Config.ui_locale`
+  (`auto`/`ru`/`en`) selects the string catalogue; `auto` follows the desktop
+  locale.
 
 ### Fixed
 

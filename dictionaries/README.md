@@ -29,6 +29,8 @@ the base list.
 | Category | Languages | Files |
 |---|---|---|
 | `it` | ru, en | `it/ru-it-1k.txt`, `it/en-it-1k.txt` |
+| `code` | ru, en | `code/ru-code-1k.txt`, `code/en-code-1k.txt` |
+| `names` | ru, en | `names/ru-names-1k.txt`, `names/en-names-1k.txt` |
 | `medicine` | ru, en | `medicine/ru-medicine-1k.txt`, `medicine/en-medicine-1k.txt` |
 | `legal` | ru, en | `legal/ru-legal-1k.txt`, `legal/en-legal-1k.txt` |
 | `finance` | ru, en | `finance/ru-finance-1k.txt`, `finance/en-finance-1k.txt` |

@@ -363,6 +363,45 @@ def check_package_integrity() -> CheckResult:
     )
 
 
+def check_detector_model(config: Config) -> CheckResult:
+    """Report the detector's loaded corpora and calibrated confidence model.
+
+    Makes the Stage 3 confidence model visible: the user can see which languages
+    have a model and how a known word is scored, without guessing.
+    """
+    from .converter import LayoutConverter
+    from .detector import LanguageDetector
+
+    try:
+        detector = LanguageDetector(
+            converter=LayoutConverter(),
+            stop_words=config.stop_words,
+            min_word_length=config.min_word_length,
+            languages=tuple(config.languages),
+            extended_dictionary_dir=config.extended_dictionary_dir,
+            thematic_categories=config.installed_dict_categories,
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        return CheckResult("Модель детектора", WARN, f"не загрузилась: {exc}")
+
+    loaded = sorted(detector.loaded_languages)
+    if not loaded:
+        return CheckResult(
+            "Модель детектора",
+            FAIL,
+            "ни один язык не загружен",
+            "проверьте config.languages и установленные словари",
+        )
+    # A known wrong-layout word is the sanity probe: the model must both decide
+    # to convert it and report a high calibrated confidence.
+    confidence = detector.analyze("ghbdtn", "us")
+    return CheckResult(
+        "Модель детектора",
+        OK,
+        f"языки: {', '.join(loaded)}; уверенность модели: {confidence.value:.0%}",
+    )
+
+
 def collect_checks(config: Config | None = None) -> list[CheckResult]:
     """Run all checks and return their results in display order.
 
@@ -381,6 +420,7 @@ def collect_checks(config: Config | None = None) -> list[CheckResult]:
         check_gui_libraries(),
         check_gnome_version(),
         check_package_integrity(),
+        check_detector_model(cfg),
     ]
     results.extend(check_backends(cfg))
     results.append(check_config(cfg))

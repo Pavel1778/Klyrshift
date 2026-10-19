@@ -966,6 +966,49 @@ def cmd_collect_logs(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_explain(args: argparse.Namespace) -> int:
+    """Explain how the detector would treat a word, with calibrated confidence.
+
+    Read-only: nothing is corrected, switched or written. Meant to answer "why
+    did Klyrshift (not) touch this word?".
+    """
+    from .converter import LayoutConverter
+    from .detector import LanguageDetector
+
+    config = load_config()
+    text = args.text if args.text else sys.stdin.read().strip()
+    if not text:
+        print("Нет текста для анализа.")
+        return 2
+
+    converter = LayoutConverter()
+    detector = LanguageDetector(
+        converter=converter,
+        stop_words=config.stop_words,
+        min_word_length=config.min_word_length,
+        languages=tuple(config.languages),
+        extended_dictionary_dir=config.extended_dictionary_dir,
+        thematic_categories=config.installed_dict_categories,
+    )
+    detector.set_user_words(load_user_dictionary(config.dictionary_custom_path))
+    switcher = LayoutSwitcher(layouts=config.layouts, switch_method=config.switch_method)
+    current = args.layout or switcher.get_current_layout(force=True)
+
+    target = detector.target_layout(text, current)
+    confidence = detector.analyze(text, current)
+    print(f"Текст: {text}")
+    print(f"Текущая раскладка: {current}")
+    if target is None:
+        print("Решение: не исправлять.")
+    else:
+        converted = converter.convert(text, current, target)
+        print(f"Решение: исправить в {target} -> {converted}")
+    print(f"Оценка: {confidence.describe()}")
+    if confidence.evidence == "model":
+        print(f"  доля известных слов в цели: {confidence.vocabulary_share:.0%}")
+    return 0
+
+
 def cmd_doctor(_args: argparse.Namespace) -> int:
     """Run environment self-diagnosis and print a status table."""
     return run_doctor()
@@ -1123,6 +1166,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="только показать исправление, ничего не применять",
     )
     fix.set_defaults(func=cmd_fix)
+
+    explain = subparsers.add_parser(
+        "explain", help="объяснить решение детектора для слова (только чтение)"
+    )
+    explain.add_argument("--text", help="текст для анализа (иначе читается из stdin)")
+    explain.add_argument("--layout", default="", help="текущая раскладка (иначе определяется)")
+    explain.set_defaults(func=cmd_explain)
 
     doctor = subparsers.add_parser("doctor", help="самодиагностика окружения")
     doctor.set_defaults(func=cmd_doctor)

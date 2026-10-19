@@ -57,6 +57,8 @@ class DictionaryCategory:
 
 CATEGORIES: Final[tuple[DictionaryCategory, ...]] = (
     DictionaryCategory("it", "IT / программирование", "IT / programming", ("ru", "en")),
+    DictionaryCategory("code", "Код и идентификаторы", "Code and identifiers", ("ru", "en")),
+    DictionaryCategory("names", "Имена и фамилии", "Names and surnames", ("ru", "en")),
     DictionaryCategory("medicine", "Медицина и биология", "Medicine and biology", ("ru", "en")),
     DictionaryCategory("legal", "Юриспруденция", "Law", ("ru", "en")),
     DictionaryCategory("finance", "Финансы и бухгалтерия", "Finance and accounting", ("ru", "en")),

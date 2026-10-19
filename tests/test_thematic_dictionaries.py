@@ -89,9 +89,11 @@ def test_category_slugs_are_unique() -> None:
 
 
 def test_expected_category_set_is_shipped() -> None:
-    """v0.2.8.1 adds seven professional categories to the original five."""
+    """v0.2.9 adds the code and names domains to the professional set."""
     expected = {
         "it",
+        "code",
+        "names",
         "medicine",
         "legal",
         "finance",

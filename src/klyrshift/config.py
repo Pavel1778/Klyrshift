@@ -200,6 +200,10 @@ VALID_LOG_LEVELS: Final[tuple[str, ...]] = ("DEBUG", "INFO", "WARNING", "ERROR",
 VALID_MODES: Final[tuple[str, ...]] = ("auto", "manual", "hybrid")
 # The GUI colour scheme: follow the desktop, or force light/dark.
 VALID_THEMES: Final[tuple[str, ...]] = ("system", "light", "dark")
+# Interface locale: ``auto`` follows the desktop; ``ru``/``en`` force a shipped
+# catalogue. Kept in sync with ``klyrshift.i18n.SUPPORTED_LOCALES`` by a test.
+DEFAULT_UI_LOCALE: Final[str] = "auto"
+VALID_UI_LOCALES: Final[tuple[str, ...]] = ("auto", "ru", "en")
 VALID_DICTIONARY_SIZES: Final[tuple[int, ...]] = (1000, 5000, 10000)
 # The languages Klyrshift ships layouts and dictionaries for.
 SUPPORTED_LANGUAGES: Final[tuple[str, ...]] = ("en", "ru", "uk", "de", "fr")
@@ -520,6 +524,9 @@ class Config:
     stop_words: list[str] = field(default_factory=load_default_stop_words)
     layouts: list[str] = field(default_factory=lambda: ["us", "ru"])
     languages: list[str] = field(default_factory=lambda: list(DEFAULT_LANGUAGES))
+    # Interface language. ``auto`` follows the desktop locale (see
+    # ``klyrshift.i18n``); a concrete code (``ru``, ``en``) forces it.
+    ui_locale: str = DEFAULT_UI_LOCALE
     backend: str = "auto"
     switch_method: str = "auto"
     notify_on_fix: bool = False
@@ -703,6 +710,10 @@ class Config:
         self.theme = str(self.theme).lower()
         if self.theme not in VALID_THEMES:
             raise ValueError(f"theme must be one of {VALID_THEMES}")
+
+        self.ui_locale = str(self.ui_locale).lower()
+        if self.ui_locale not in VALID_UI_LOCALES:
+            raise ValueError(f"ui_locale must be one of {VALID_UI_LOCALES}")
 
         self.log_rotation_mb = int(self.log_rotation_mb)
         if not 1 <= self.log_rotation_mb <= 50:

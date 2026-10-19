@@ -18,6 +18,7 @@ import json
 import logging
 import math
 import re
+from dataclasses import dataclass, field
 from importlib import resources
 from typing import Any, Final
 
@@ -81,6 +82,66 @@ MIN_WORDS_FOR_CONFIDENCE: Final[int] = 2
 UNKNOWN_BIGRAM_PROBABILITY: Final[float] = 1e-7
 # Minimum plausibility gain required before a conversion is applied.
 MIN_IMPROVEMENT: Final[float] = 1.0
+
+# --- Calibrated confidence -------------------------------------------------
+# The raw ``improvement`` margin above is unbounded and its scale depends on the
+# word count, so it is a poor input for a *threshold* the user has to reason
+# about. ``calibrated_confidence`` maps the margin, the vocabulary evidence and
+# the buffer shape onto ``[0, 1]`` so that 0.5 means "as likely right as wrong".
+# The mapping is a logistic over three independent signals:
+#   * the margin, squashed so a huge margin saturates (and ``inf`` -> 1.0),
+#   * the share of the target's words that are dictionary members,
+#   * a penalty for very short buffers, which are inherently ambiguous.
+_MARGIN_SCALE: Final[float] = 4.0
+_VOCAB_WEIGHT: Final[float] = 2.0
+_LENGTH_WEIGHT: Final[float] = 0.35
+# Below this many characters a verdict is treated as a guess, whatever it scores.
+SHORT_BUFFER_LENGTH: Final[int] = 4
+# How each decision was reached; drives the GUI/doctor explanation and is stable
+# enough to be asserted on in tests.
+EVIDENCE_TAUGHT: Final[str] = "taught"
+EVIDENCE_VOCABULARY: Final[str] = "vocabulary"
+EVIDENCE_MODEL: Final[str] = "model"
+EVIDENCE_MIXED_SCRIPT: Final[str] = "mixed-script"
+
+
+@dataclass(frozen=True)
+class Confidence:
+    """A calibrated confidence for one conversion decision.
+
+    Attributes:
+        value: ``[0, 1]`` estimate of the probability the conversion is right.
+            ``1.0`` for a decision that did not depend on a score (a taught word
+            or a conversion into known vocabulary).
+        margin: The raw plausibility margin that produced ``value``.
+        evidence: How the decision was reached -- one of :data:`EVIDENCE_TAUGHT`,
+            :data:`EVIDENCE_VOCABULARY`, :data:`EVIDENCE_MODEL`,
+            :data:`EVIDENCE_MIXED_SCRIPT`.
+        vocabulary_share: Share (``[0, 1]``) of the target's words that are in
+            the target language's vocabulary; ``1.0`` when there is no word.
+    """
+
+    value: float
+    margin: float
+    evidence: str
+    vocabulary_share: float = field(default=0.0)
+
+    @property
+    def is_certain(self) -> bool:
+        """Return ``True`` when the decision did not rely on a score."""
+        return self.evidence in (EVIDENCE_TAUGHT, EVIDENCE_VOCABULARY, EVIDENCE_MIXED_SCRIPT)
+
+    def describe(self) -> str:
+        """Return a short human-readable explanation (Russian, for the GUI)."""
+        percent = round(self.value * 100)
+        reasons = {
+            EVIDENCE_TAUGHT: "слово из словаря пользователя",
+            EVIDENCE_VOCABULARY: "перевод даёт известные слова",
+            EVIDENCE_MIXED_SCRIPT: "смешанный алфавит в буфере",
+            EVIDENCE_MODEL: "по языковой модели",
+        }
+        reason = reasons.get(self.evidence, self.evidence)
+        return f"уверенность {percent}% ({reason})"
 
 
 def _has_cyrillic(text: str) -> bool:
@@ -349,6 +410,16 @@ class LanguageDetector:
         """Return the user dictionary (lower-cased, sorted)."""
         return sorted(self._user_words)
 
+    @property
+    def loaded_languages(self) -> tuple[str, ...]:
+        """Return the languages that actually have a loaded model.
+
+        Not every requested language ends up loaded: one with no bundled corpus
+        and no extended dictionary is skipped (see :meth:`_load_corpora`), so this
+        reports what the detector can really score, not what it was asked for.
+        """
+        return tuple(sorted(self._vocabularies))
+
     def language_for_layout(self, layout: str) -> str | None:
         """Return the language a layout types, or ``None`` when unknown."""
         return self._layout_language(layout)
@@ -537,6 +608,68 @@ class LanguageDetector:
                 return None
             validated = layout
         return validated
+
+    def _vocabulary_share(self, text: str, language: str) -> float:
+        """Return the share of ``text``'s words that are known in ``language``.
+
+        ``1.0`` when the text has no word long enough to judge: an empty share
+        would otherwise penalise a short but correct conversion.
+        """
+        vocabulary = self._vocabularies.get(language, set())
+        words = [w for w in WORD_RE.findall(text) if len(w) >= self.min_word_length]
+        if not words:
+            return 1.0
+        known = sum(1 for w in words if w.lower() in vocabulary)
+        return known / len(words)
+
+    def calibrated_confidence(self, margin: float, target: str, language: str) -> Confidence:
+        """Return a calibrated confidence for a ``margin``-driven decision.
+
+        The raw margin is unbounded and grows with the number of words, so it is
+        not directly comparable across buffers. This squashes it into ``[0, 1]``
+        with a logistic and folds in two more signals: how much of the target is
+        known vocabulary, and whether the buffer is long enough to be judged at
+        all. ``margin=inf`` saturates to ``1.0``.
+        """
+        if math.isinf(margin):
+            return Confidence(
+                value=1.0,
+                margin=margin,
+                evidence=EVIDENCE_MODEL,
+                vocabulary_share=self._vocabulary_share(target, language),
+            )
+        share = self._vocabulary_share(target, language)
+        length_penalty = max(0.0, (SHORT_BUFFER_LENGTH - len(target.strip())) * _LENGTH_WEIGHT)
+        logit = margin / _MARGIN_SCALE + _VOCAB_WEIGHT * share - length_penalty
+        value = 1.0 / (1.0 + math.exp(-logit))
+        return Confidence(
+            value=value, margin=margin, evidence=EVIDENCE_MODEL, vocabulary_share=share
+        )
+
+    def analyze(self, buffer: str, current_layout: str, neighbor: str | None = None) -> Confidence:
+        """Return the calibrated confidence for a decision about ``buffer``.
+
+        A read-only companion to :meth:`target_layout_with_confidence`: it reports
+        the same decision with a calibrated ``[0, 1]`` value and the evidence
+        behind it, so the GUI and ``doctor`` can explain *why* a word would or
+        would not be corrected without changing what the daemon does.
+        """
+        layout, confidence = self.target_layout_with_confidence(buffer, current_layout, neighbor)
+        if layout is None:
+            return Confidence(value=0.0, margin=0.0, evidence=EVIDENCE_MODEL)
+        if confidence is None or math.isinf(confidence):
+            # The decision did not depend on a score. Name the reason: a taught
+            # conversion (the *converted* form is a user word), a mixed-script
+            # buffer, or a conversion whose every word is already known.
+            stripped = buffer.strip()
+            evidence = EVIDENCE_VOCABULARY
+            if self._taught_conversion(stripped, current_layout) is not None:
+                evidence = EVIDENCE_TAUGHT
+            elif _has_cyrillic(stripped) and _has_latin(stripped):
+                evidence = EVIDENCE_MIXED_SCRIPT
+            return Confidence(value=1.0, margin=float("inf"), evidence=evidence)
+        language = self._layout_language(layout) or ""
+        return self.calibrated_confidence(confidence, buffer, language)
 
     def _bigram_score(self, word: str, language: str) -> float:
         """Return the average log-probability of ``word`` in ``language``."""
