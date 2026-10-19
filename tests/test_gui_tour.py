@@ -153,6 +153,97 @@ def test_tour_finish_records_the_version(window: Any) -> None:
     assert load_onboarding_state().completed_version == TOUR_VERSION
 
 
+def test_wizard_writes_the_chosen_languages(gui_state: Any) -> None:
+    """Toggling a language row updates the config and never empties it."""
+    from klyrshift.gui.widgets.first_run_wizard import FirstRunWizard
+
+    wizard = FirstRunWizard(gui_state)
+
+    # Turn everything off; the last one must stay on.
+    for lang in ("en", "ru"):
+        wizard._language_rows[lang].set_active(False)
+    assert gui_state.config.languages  # never empty
+    assert wizard._language_rows[gui_state.config.languages[0]].get_active() is True
+
+    wizard._language_rows["de"].set_active(True)
+    assert "de" in gui_state.config.languages
+    wizard.close()
+
+
+def test_wizard_applies_mode_and_autostart_on_finish(
+    gui_state: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Finishing saves the config and applies the autostart choice once."""
+    from klyrshift.gui.widgets.first_run_wizard import FirstRunWizard
+
+    calls: list[str] = []
+    monkeypatch.setattr(gui_state, "save", lambda: calls.append("save"))
+    monkeypatch.setattr(gui_state, "is_autostart_enabled", lambda: False)
+    monkeypatch.setattr(gui_state, "set_autostart", lambda enabled: calls.append(f"auto={enabled}"))
+
+    finished: list[int] = []
+    wizard = FirstRunWizard(gui_state, on_finished=lambda: finished.append(1))
+    wizard._mode.set_mode("manual", notify=True)
+    wizard._autostart.set_active(True)
+    wizard._finish()
+
+    assert gui_state.config.mode == "manual"
+    assert calls == ["save", "auto=True"]
+    assert finished == [1]
+
+
+def test_wizard_reports_skip_once(gui_state: Any) -> None:
+    """Closing without finishing records a skip exactly once.
+
+    ``close()`` only emits "closed" once the dialog has been presented, so the
+    dialog is presented and pumped first, like the real window does.
+    """
+    from klyrshift.gui.widgets.first_run_wizard import FirstRunWizard
+
+    skips: list[int] = []
+    wizard = FirstRunWizard(gui_state, on_skipped=lambda: skips.append(1))
+    wizard.present(None)
+    _pump()
+    wizard.close()
+    _pump()
+    wizard.emit("closed")
+    assert skips == [1]
+
+
+def test_wizard_finish_is_not_a_skip(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Finishing must not also record a skip, or the offer reappears."""
+    from klyrshift.gui.widgets.first_run_wizard import FirstRunWizard
+
+    monkeypatch.setattr(gui_state, "save", lambda: None)
+    monkeypatch.setattr(gui_state, "is_autostart_enabled", lambda: True)
+    skips: list[int] = []
+    wizard = FirstRunWizard(gui_state, on_skipped=lambda: skips.append(1))
+    wizard._finish()
+    wizard.emit("closed")
+    assert skips == []
+
+
+def test_wizard_advances_and_finishes_on_the_last_page(
+    gui_state: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The last "Далее" becomes "Готово" and finishes the dialog."""
+    from klyrshift.gui.widgets.first_run_wizard import FirstRunWizard
+
+    monkeypatch.setattr(gui_state, "save", lambda: None)
+    monkeypatch.setattr(gui_state, "is_autostart_enabled", lambda: True)
+    finished: list[int] = []
+    wizard = FirstRunWizard(gui_state, on_finished=lambda: finished.append(1))
+
+    wizard.present(None)
+    _pump()
+    for _ in range(wizard.carousel.get_n_pages() - 1):
+        wizard._go(1)
+        _pump()
+    assert wizard._next.get_label() == "Готово"
+    wizard._go(1)
+    assert finished == [1]
+
+
 def test_tour_skip_records_the_version(window: Any) -> None:
     """Skipping also persists the version, so a routine start stays quiet."""
     from klyrshift.onboarding import TOUR_VERSION, load_onboarding_state
@@ -161,6 +252,41 @@ def test_tour_skip_records_the_version(window: Any) -> None:
     window.tour.skip()
     assert window.tour.get_visible() is False
     assert load_onboarding_state().skipped_version == TOUR_VERSION
+
+
+def test_window_offers_the_wizard_before_the_tour(window: Any) -> None:
+    """A fresh install is asked to configure before it is shown around."""
+    from klyrshift.onboarding import load_onboarding_state
+
+    window._onboarding = load_onboarding_state()
+    assert window._offer_wizard() is False
+    assert window._wizard is not None
+
+    window._wizard._finish()
+    _pump()
+    assert load_onboarding_state().wizard_completed_version > 0
+
+
+def test_window_wizard_skip_is_recorded(window: Any) -> None:
+    """Skipping the wizard must not re-offer it on the next start."""
+    from klyrshift.onboarding import WIZARD_VERSION, load_onboarding_state
+
+    window._onboarding = load_onboarding_state()
+    window._offer_wizard()
+    window._wizard.present(window)
+    _pump()
+    window._wizard.close()
+    _pump()
+    assert load_onboarding_state().wizard_skipped_version == WIZARD_VERSION
+
+
+def test_wizard_reload_syncs_settings_rows(window: Any) -> None:
+    """After the wizard the settings rows show the wizard's choices."""
+    window._state.config.mode = "hybrid"
+    window._state.config.languages = ["ru", "de"]
+    window.settings_page.reload()
+    assert window.settings_page.language_rows["de"].get_active() is True
+    assert window.settings_page.language_rows["en"].get_active() is False
 
 
 def test_settings_groups_offer_context_help(window: Any) -> None:

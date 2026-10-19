@@ -10,9 +10,11 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk  # noqa: E402
 
 from ..onboarding import (  # noqa: E402
     TOUR_VERSION,
+    WIZARD_VERSION,
     load_onboarding_state,
     save_onboarding_state,
     should_offer_tour,
+    should_offer_wizard,
 )
 from .about_page import build_about_window  # noqa: E402
 from .advanced_page import AdvancedPage  # noqa: E402
@@ -23,6 +25,7 @@ from .home_page import HomePage  # noqa: E402
 from .settings_page import SettingsPage  # noqa: E402
 from .state import GuiState  # noqa: E402
 from .typo_page import TypoPage  # noqa: E402
+from .widgets.first_run_wizard import FirstRunWizard  # noqa: E402
 from .widgets.tour_overlay import TourOverlay, bounds_rect  # noqa: E402
 
 
@@ -203,8 +206,41 @@ class KlyrshiftWindow(Adw.ApplicationWindow):
         self._root_overlay.add_overlay(self._tour)
 
         self._onboarding = load_onboarding_state()
+        if should_offer_wizard(self._onboarding):
+            GLib.idle_add(self._offer_wizard)
+        elif should_offer_tour(self._onboarding):
+            GLib.idle_add(self._offer_tour)
+
+    def _offer_wizard(self) -> bool:
+        """Show the first-run wizard once; return ``False`` to run once.
+
+        The wizard asks the three questions a new user has to answer before
+        Klyrshift does anything useful (languages, mode, autostart). When it is
+        done the guided tour is offered next, so the explanation follows the
+        setup instead of interrupting it.
+        """
+        self._wizard = FirstRunWizard(
+            self._state,
+            on_finished=self._on_wizard_finished,
+            on_skipped=self._on_wizard_skipped,
+        )
+        self._wizard.present(self)
+        return False
+
+    def _on_wizard_finished(self) -> None:
+        self._onboarding.wizard_completed_version = WIZARD_VERSION
+        save_onboarding_state(self._onboarding)
+        # Refresh the pages so the choices made in the wizard are visible: the
+        # settings rows and the home autostart switch read the config only when
+        # they are built, and ``refresh`` re-reads the daemon state off-thread.
+        self._settings.reload()
+        self._home.refresh()
         if should_offer_tour(self._onboarding):
             GLib.idle_add(self._offer_tour)
+
+    def _on_wizard_skipped(self) -> None:
+        self._onboarding.wizard_skipped_version = WIZARD_VERSION
+        save_onboarding_state(self._onboarding)
 
     def _offer_tour(self) -> bool:
         """Show the first-run tour offer; return ``False`` to run once."""

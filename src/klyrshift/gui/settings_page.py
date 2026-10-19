@@ -31,7 +31,7 @@ class SettingsPage(BoundPreferencesPage):
     # --- groups -----------------------------------------------------------
     def _build_mode_group(self) -> None:
         group = self.attach_help(Adw.PreferencesGroup(title="Основные"), "mode")
-        self.add_combo(
+        self._mode_row = self.add_combo(
             group,
             "Режим работы",
             list(MODE_ORDER),
@@ -51,6 +51,21 @@ class SettingsPage(BoundPreferencesPage):
     def _on_mode_selected(self, mode: str) -> None:
         self._config.mode = mode
         self._save(f"Режим изменён на {MODE_LABELS.get(mode, mode)}")
+
+    def reload(self) -> None:
+        """Re-read the config into the rows without emitting change signals.
+
+        The first-run wizard writes the same config fields the rows bind to; a
+        row that is not re-synced would show the old value until the window is
+        rebuilt. Signals are blocked so a reload never writes the config back.
+        """
+        self._mode_row.handler_block_by_func(self._on_combo)
+        self._mode_row.set_selected(MODE_ORDER.index(self._config.mode))
+        self._mode_row.handler_unblock_by_func(self._on_combo)
+        for lang, row in self._language_rows.items():
+            row.handler_block_by_func(self._on_language)
+            row.set_active(lang in self._config.languages)
+            row.handler_unblock_by_func(self._on_language)
 
     def _build_hotkeys_group(self) -> None:
         group = self.attach_help(
