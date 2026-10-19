@@ -649,6 +649,12 @@ class Config:
     # should be active when it gains focus, e.g. {"kitty": "ru"}.
     app_layouts: dict[str, str] = field(default_factory=dict)
     app_layout_switch: bool = False
+    # Maps an application name to the correction mode it should use, e.g.
+    # {"code": "manual", "kitty": "auto"}. An app absent here uses ``mode``.
+    # This is the per-application half of the mode policy: an IDE wants the
+    # manual hotkey, a chat window wants automatic correction, and the user
+    # should not have to toggle the global mode on every focus change.
+    app_modes: dict[str, str] = field(default_factory=dict)
 
     # --- Stage 13: opt-in update check -------------------------------------
     # The only feature that uses the network; off by default.
@@ -928,6 +934,16 @@ class Config:
             if str(app).strip() and str(layout).strip()
         }
         self.app_layout_switch = bool(self.app_layout_switch)
+
+        # --- Stage 9: per-app correction mode ------------------------------
+        self.app_modes = {
+            str(app).strip().lower(): str(mode).strip().lower()
+            for app, mode in (self.app_modes or {}).items()
+            if str(app).strip() and str(mode).strip()
+        }
+        for _app, _mode in self.app_modes.items():
+            if _mode not in VALID_MODES:
+                raise ValueError(f"app_modes[{_app!r}] must be one of {VALID_MODES}, got {_mode!r}")
 
         # --- learning ------------------------------------------------------
         self.learning_enabled = bool(self.learning_enabled)

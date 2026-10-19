@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A correction mode per application.** The global mode is one setting, but
+  the right mode depends on what the user is doing: an editor with code should
+  not be rewritten automatically while a chat window benefits from it. The new
+  `[app_modes]` table pins a mode (auto/manual/hybrid) to an application, and an
+  application absent from the table keeps the global mode. The override is
+  resolved at both policy gates, so it also decides whether a low-confidence
+  hybrid fix is applied. Set it from «Дополнительно» → «Режим по приложениям»
+  (the mode is chosen from a combo, so an invalid value cannot be entered) or
+  with `klyrshift app-mode`. The focused application is now probed once per word
+  instead of once per gate, which keeps the extra check off the hot path.
+
 - **A keyboard reference, and keyboard tab navigation.** Every page was
   already reachable with Tab, but nothing listed the window shortcuts and there
   was no way to move between tabs without the mouse. `Ctrl+Page_Down`/`Up`

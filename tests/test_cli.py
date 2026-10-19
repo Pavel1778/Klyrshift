@@ -32,6 +32,7 @@ def test_build_parser_has_all_commands() -> None:
         "kill",
         "status",
         "mode",
+        "app-mode",
         "undo",
         "learn",
         "hotkeys",
@@ -560,6 +561,48 @@ def test_mode_does_not_signal_when_daemon_stopped(
 
     assert cli.main(["mode", "manual"]) == 0
     assert reloads == []
+
+
+def test_app_mode_show_set_and_clear(
+    isolated_env: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``klyrshift app-mode`` manages per-application overrides."""
+    assert cli.main(["app-mode"]) == 0
+    assert "не заданы" in capsys.readouterr().out
+
+    assert cli.main(["app-mode", "code", "manual"]) == 0
+    assert "code" in capsys.readouterr().out
+    assert cli.main(["app-mode", "code"]) == 0
+    assert capsys.readouterr().out.strip() == "manual"
+
+    # An application without an override reports the global mode.
+    assert cli.main(["app-mode", "firefox"]) == 0
+    assert capsys.readouterr().out.strip() == "auto"
+
+    assert cli.main(["app-mode"]) == 0
+    assert "code: manual" in capsys.readouterr().out
+
+    assert cli.main(["app-mode", "code", "--clear"]) == 0
+    assert cli.main(["app-mode"]) == 0
+    assert "не заданы" in capsys.readouterr().out
+
+
+def test_app_mode_rejects_an_unknown_mode(isolated_env: Path) -> None:
+    with pytest.raises(SystemExit):
+        cli.main(["app-mode", "code", "sometimes"])
+
+
+def test_app_mode_signals_running_daemon(
+    isolated_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from klyrshift import daemon_control
+
+    reloads: list[bool] = []
+    monkeypatch.setattr(daemon_control, "is_running", lambda: True)
+    monkeypatch.setattr(daemon_control, "reload_config", lambda: reloads.append(True) or True)
+
+    assert cli.main(["app-mode", "code", "manual"]) == 0
+    assert reloads == [True]
 
 
 def test_undo_requires_running_daemon(

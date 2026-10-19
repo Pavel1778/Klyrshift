@@ -279,6 +279,15 @@ word is scored against the corpora whose *layout could have produced it*.
   degrades to auto behaviour when it cannot tell, and never reads window contents.
   A manual fix (`SHIFT+SHIFT`) bypasses the exception list, so it still works
   inside a terminal.
+- **Per-app mode** (`app_modes`). The global `mode` is one value, but the right
+  mode depends on the task: code should not be rewritten automatically while a
+  chat window benefits from it. `app_modes` maps an application to its own mode
+  (`auto`/`manual`/`hybrid`); an application absent from the map keeps `mode`.
+  `KlyrshiftDaemon._effective_mode` resolves this, and both policy gates consult
+  it — `_should_fix_buffer` (does an automatic fix happen at all) and
+  `_layout_target` (is a low-confidence hybrid fix applied). The focused
+  application is probed once per word through `_focused_app`, which caches the
+  D-Bus answer for `APP_PROBE_INTERVAL` so the two gates do not each pay for it.
 - **Quiet hours** (`quiet_hours_enabled`, `quiet_hours_start`, `quiet_hours_end`).
   Inside the daily window the daemon skips *automatic* correction but keeps the
   manual fix. The window may wrap midnight (`22:00`–`08:00`). The check is

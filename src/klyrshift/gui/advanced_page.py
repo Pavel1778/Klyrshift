@@ -25,6 +25,7 @@ from .prefs_base import BoundPreferencesPage  # noqa: E402
 from .state import GuiState  # noqa: E402
 from .widgets.app_exceptions_list import AppExceptionsList  # noqa: E402
 from .widgets.app_layout_map import AppLayoutMap  # noqa: E402
+from .widgets.app_mode_map import AppModeMap  # noqa: E402
 from .widgets.backup_group import BackupGroup  # noqa: E402
 from .widgets.hotkey_row import HotkeyRow  # noqa: E402
 
@@ -218,10 +219,25 @@ class AdvancedPage(BoundPreferencesPage):
         self.add_switch(
             self._app_layouts, _("Переключать раскладку по приложению"), "app_layout_switch"
         )
+        self._app_modes = self.attach_help(
+            AppModeMap(
+                _("Режим по приложениям"),
+                _("Приложения из списка используют свой режим вместо общего"),
+                self._config.app_modes,
+                on_change=self._on_app_modes_changed,
+                on_detect=self._detect_current_app,
+            ),
+            "app_modes",
+        )
+        self.add(self._app_modes)
 
     def _on_app_layouts_changed(self, mapping: dict[str, str]) -> None:
         self._config.app_layouts = mapping
         self._save(_("Раскладка по приложениям сохранена"))
+
+    def _on_app_modes_changed(self, mapping: dict[str, str]) -> None:
+        self._config.app_modes = mapping
+        self._save(_("Режим по приложениям сохранён"))
 
     def _on_exceptions_changed(self, apps: list[str]) -> None:
         self._config.exceptions_apps = apps

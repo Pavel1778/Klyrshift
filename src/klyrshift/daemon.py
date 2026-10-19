@@ -69,6 +69,11 @@ if TYPE_CHECKING:  # pragma: no cover - import used only for typing
 
 logger = logging.getLogger(__name__)
 
+# How long a focused-application probe stays valid. Long enough to cover the
+# two policy gates inside one word boundary, short enough that an Alt+Tab is
+# noticed on the next word.
+APP_PROBE_INTERVAL: Final[float] = 0.25
+
 LOCK_FILE_NAME: Final[str] = "daemon.lock"
 # Metadata-only correction history written on SIGUSR2 for the GUI to read.
 HISTORY_FILE_NAME: Final[str] = "history.json"
@@ -328,6 +333,10 @@ class KlyrshiftDaemon:
         # Task E: skip rules and the user dictionary.
         self._skip_regex = _compile_skip_regex(config.custom_skip_regex)
         self._excepted_apps = {app.lower() for app in config.exceptions_apps}
+        # The focused app is probed at most once per word (two policy gates ask
+        # for it), and cached briefly because the D-Bus probe is not free.
+        self._focused_app_cache: str | None = None
+        self._focused_app_at: float = float("-inf")
         self._last_word: str = ""
         # The word the user just undid (Ctrl+Z, or the undo hotkey). It is never
         # corrected again this session, so the user's own text stands.
@@ -932,6 +941,39 @@ class KlyrshiftDaemon:
             )
         return self._quiet_now
 
+    def _focused_app(self) -> str | None:
+        """Return the focused application name, cached for ``APP_PROBE_INTERVAL``.
+
+        Both the mode gate and the exception gate ask for the focused app during
+        one word boundary; without the cache that would be two D-Bus round trips
+        per keystroke.
+        """
+        now = time.monotonic()
+        if now - self._focused_app_at < APP_PROBE_INTERVAL:
+            return self._focused_app_cache
+        try:
+            app = get_active_app()
+        except Exception:
+            logger.debug("Active-app probe failed", exc_info=True)
+            app = None
+        self._focused_app_cache = app
+        self._focused_app_at = now
+        return app
+
+    def _effective_mode(self, app: str | None) -> str:
+        """Return the correction mode that applies to ``app``.
+
+        A per-application override (``Config.app_modes``) wins over the global
+        ``mode``, so an IDE can stay manual while everything else corrects
+        automatically without the user toggling the mode on every focus change.
+        ``app`` is ``None`` when no focused application could be determined, in
+        which case the global mode applies.
+        """
+        if not app:
+            return self.config.mode
+        override = self.config.app_modes.get(app.lower())
+        return override if override else self.config.mode
+
     def _should_fix_buffer(self) -> bool:
         """Return whether the current mode and per-app rules allow a fix."""
         if self._is_quiet_now():
@@ -939,21 +981,20 @@ class KlyrshiftDaemon:
             # (double Shift) still goes through, because the user asked for it.
             logger.debug("Quiet hours active; skipping automatic correction")
             return False
-        manual = self.config.mode == "manual"
-        if not manual and not self._excepted_apps:
+        # The exception list and the per-app mode both need the focused app, so
+        # the probe is skipped entirely when neither could change the answer.
+        needs_app = bool(self._excepted_apps) or bool(self.config.app_modes)
+        if not needs_app and self.config.mode != "manual":
             return True
 
-        try:
-            app = get_active_app()
-        except Exception:
-            logger.debug("Active-app probe failed", exc_info=True)
-            app = None
+        app = self._focused_app()
         if app and app.lower() in self._excepted_apps:
             # The user listed the application as "never touch": skip even in
             # auto/hybrid mode.
             logger.debug("App %s is on the exception list; skipping", app)
             return False
-        if manual:
+        mode = self._effective_mode(app)
+        if mode == "manual":
             if not app:
                 return False
             return app.lower() in {name.lower() for name in self.config.exceptions_force_in_manual}
@@ -978,7 +1019,10 @@ class KlyrshiftDaemon:
         layout, confidence = self.detector.target_layout_with_confidence(buffer, current, neighbor)
         if layout is None:
             return None
-        if force or self.config.mode != "hybrid":
+        # ``hybrid`` is a per-application property too: the same word may be
+        # applied automatically in one app and withheld in another.
+        mode = self._effective_mode(self._focused_app())
+        if force or mode != "hybrid":
             return layout
         if confidence is None or confidence < self.config.hybrid_confidence:
             logger.debug(
@@ -2105,6 +2149,8 @@ class KlyrshiftDaemon:
         self._load_snippets(new_config)
         self._skip_regex = _compile_skip_regex(new_config.custom_skip_regex)
         self._excepted_apps = {app.lower() for app in new_config.exceptions_apps}
+        # A mode override may have changed; do not answer with a stale probe.
+        self._focused_app_at = float("-inf")
         self.switcher.layouts = list(new_config.layouts)
         self._hotkeys = {
             "fix": self._parse_hotkey(new_config.hotkey_fix_last_word),

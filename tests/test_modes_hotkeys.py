@@ -209,6 +209,65 @@ def test_hybrid_applies_a_certain_fix_without_a_score(monkeypatch: pytest.Monkey
     assert _injector(daemon).replacements == [(7, "привет ", "ru")]
 
 
+# --- per-application modes --------------------------------------------------
+
+
+def test_per_app_mode_overrides_the_global_auto_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An app pinned to manual is not corrected even though the mode is auto."""
+    monkeypatch.setattr("klyrshift.daemon.get_active_app", lambda: "code")
+    daemon = make_daemon(mode="auto", app_modes={"code": "manual"})
+    press(daemon, "ghbdtn")
+    tap(daemon, "KEY_SPACE")
+    assert _injector(daemon).replacements == []
+
+
+def test_per_app_mode_can_enable_fixing_in_manual_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The override works both ways: a chat app fixes while the mode is manual."""
+    monkeypatch.setattr("klyrshift.daemon.get_active_app", lambda: "telegram")
+    daemon = make_daemon(mode="manual", app_modes={"telegram": "auto"})
+    press(daemon, "ghbdtn")
+    tap(daemon, "KEY_SPACE")
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
+
+
+def test_app_without_an_override_uses_the_global_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("klyrshift.daemon.get_active_app", lambda: "firefox")
+    daemon = make_daemon(mode="auto", app_modes={"code": "manual"})
+    press(daemon, "ghbdtn")
+    tap(daemon, "KEY_SPACE")
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
+
+
+def test_per_app_hybrid_is_evaluated_per_application(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A low-confidence fix is withheld in a hybrid app but applied in an auto one."""
+    monkeypatch.setattr("klyrshift.daemon.get_active_app", lambda: "code")
+    daemon = make_daemon(mode="auto", hybrid_confidence=3.0, app_modes={"code": "hybrid"})
+    monkeypatch.setattr(
+        daemon.detector, "target_layout_with_confidence", lambda *a, **k: ("ru", 1.0)
+    )
+    press(daemon, "ghbdtn")
+    tap(daemon, "KEY_SPACE")
+    assert _injector(daemon).replacements == []
+
+
+def test_app_modes_reject_an_unknown_mode() -> None:
+    with pytest.raises(ValueError):
+        Config(app_modes={"code": "sometimes"})
+
+
+def test_app_modes_are_normalised() -> None:
+    config = Config(app_modes={"  Code ": " MANUAL "})
+    assert config.app_modes == {"code": "manual"}
+
+
 def test_hybrid_confidence_must_be_sane() -> None:
     with pytest.raises(ValueError):
         Config(hybrid_confidence=-1.0)

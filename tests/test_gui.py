@@ -671,6 +671,35 @@ def test_advanced_page_app_layouts_changed(gui_state: Any, monkeypatch: pytest.M
     assert gui_state.config.app_layouts == {"kitty": "ru"}
 
 
+def test_advanced_page_app_modes_changed(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(gui_state, "save", lambda: None)
+    from klyrshift.gui.advanced_page import AdvancedPage
+
+    page = AdvancedPage(gui_state)
+    page._on_app_modes_changed({"code": "manual"})
+    assert gui_state.config.app_modes == {"code": "manual"}
+
+
+def test_app_mode_map_add_and_remove() -> None:
+    """The group offers only valid modes, so an invalid value cannot be entered."""
+    from klyrshift.gui.widgets.app_mode_map import AppModeMap
+
+    changes: list[dict[str, str]] = []
+    widget = AppModeMap("Режим по приложениям", on_change=changes.append)
+    widget._app_entry.set_text("  Code ")
+    # The combo follows VALID_MODES = ("auto", "manual", "hybrid").
+    widget._mode_row.set_selected(1)
+    widget._on_add(None)
+    assert widget.mapping == {"code": "manual"}
+    assert changes[-1] == {"code": "manual"}
+    # An empty application name is ignored, not stored under "".
+    widget._on_add(None)
+    assert widget.mapping == {"code": "manual"}
+    widget._on_remove(None, "code")
+    assert widget.mapping == {}
+    assert changes[-1] == {}
+
+
 def test_backup_group_export_import(gui_state: Any) -> None:
     from klyrshift.gui.widgets.backup_group import BackupGroup
 

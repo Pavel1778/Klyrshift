@@ -76,7 +76,7 @@ The main goal is that a correction is always safe to reverse.
 | System tray | done |
 | Light / dark / system theme | done |
 | First-run wizard | done — languages, mode and autostart, then the tour |
-| Per-application profiles | partial — exceptions and layout map exist |
+| Per-application profiles | done — `exceptions_apps` skips an app, `[app_layouts]` pins its layout, `[app_modes]` pins its correction mode (auto/manual/hybrid); set from the «Дополнительно» page or `klyrshift app-mode` |
 | Full keyboard navigation and scaling audit | done — every page is reachable with Tab, `Ctrl+Page_Down/Up` cycles the visible tabs, `Ctrl+?` opens a keyboard reference built from the live config, and the layout was checked at 360–1200 px |
 | Interface localisation | done — strings live in `klyrshift.i18n`, an English catalogue ships in `data/locales/en.json`, `--lang` switches the CLI and `Config.ui_locale` the GUI; a missing entry falls back to the Russian source |
 

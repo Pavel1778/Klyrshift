@@ -223,6 +223,42 @@ def cmd_mode(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_app_mode(args: argparse.Namespace) -> int:
+    """Show, set or clear the per-application correction mode."""
+    config = load_config()
+    if args.app is None:
+        if not config.app_modes:
+            print(_("Режимы по приложениям не заданы"))
+            return 0
+        for app, mode in sorted(config.app_modes.items()):
+            print(f"{app}: {mode}")
+        return 0
+    app = args.app.strip().lower()
+    if args.clear:
+        config.app_modes.pop(app, None)
+    else:
+        if args.mode is None:
+            print(config.app_modes.get(app, config.mode))
+            return 0
+        config.app_modes[app] = args.mode
+    try:
+        config.validate()
+    except ValueError as exc:
+        print(_("Недопустимый режим: {0}").format(exc))
+        return 2
+    save_config(config)
+    # The daemon keeps its own config copy; reload so the override applies now.
+    from .daemon_control import is_running, reload_config
+
+    if is_running():
+        reload_config()
+    if args.clear:
+        print(_("Режим по приложению удалён: {0}").format(app))
+    else:
+        print(_("Режим для {0}: {1}").format(app, config.app_modes[app]))
+    return 0
+
+
 def cmd_hotkeys(_args: argparse.Namespace) -> int:
     """Print the effective hotkeys, so the user can check what is bound.
 
@@ -1107,6 +1143,21 @@ def build_parser() -> argparse.ArgumentParser:
 
     undo = subparsers.add_parser("undo", help=_("отменить последнее исправление"))
     undo.set_defaults(func=cmd_undo)
+
+    app_mode = subparsers.add_parser(
+        "app-mode",
+        help=_("показать или задать режим для отдельного приложения"),
+    )
+    app_mode.add_argument("app", nargs="?", default=None, help=_("имя процесса, например code"))
+    app_mode.add_argument(
+        "mode",
+        nargs="?",
+        choices=["auto", "manual", "hybrid"],
+        default=None,
+        help=_("режим для этого приложения"),
+    )
+    app_mode.add_argument("--clear", action="store_true", help=_("убрать приложение из списка"))
+    app_mode.set_defaults(func=cmd_app_mode)
 
     learn = subparsers.add_parser("learn", help=_("обучение: статистика, список слов, вкл/выкл"))
     learn.add_argument(
