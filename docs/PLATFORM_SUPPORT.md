@@ -79,3 +79,24 @@ core compiling elsewhere is not the same as the product working elsewhere.
 - The container has **no GNOME, no display, no `/dev/input`, no `/dev/uinput`**,
   so every 🟡 row is unverified here. The 🟡 marks are honest, not optimistic:
   they mean "the code and its tests exist, a real session has not confirmed it".
+
+### What a real Debian 13 container does verify
+
+The package layer is checked against real `debian:13` containers (Docker), not
+the dev container alone. These run in CI and were re-run for this revision:
+
+- `scripts/smoke_test.sh` with `SMOKE_IMAGE=debian:13` — the `.deb` installs,
+  the daemon starts, `doctor` reports `backend=setxkbmap` with no `g3kb-switch`
+  present, and the data files load. **Passed.**
+- `scripts/upgrade_test.sh` (image `debian:13`) — the pre-rename `linguafix`
+  package is displaced, the old unit file is removed, exactly one daemon unit is
+  enabled, and `mode=manual` survives the rename. **Passed.**
+- `scripts/deb_selfsufficiency_test.sh` with `SMOKE_IMAGE=debian:13` — no manual
+  step is needed (no group change), reinstall is idempotent, and
+  `apt remove --purge` leaves nothing behind. **Passed.**
+
+What these still cannot reach is the kernel input path and the GNOME session:
+`/dev/uinput`, `/dev/input/event*`, the live layout switch and the real focus
+tracking need a seat. Those stay 🟡 and are what
+`scripts/acceptance_check.sh` is for on a physical machine.
+
