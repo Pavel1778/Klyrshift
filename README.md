@@ -554,6 +554,7 @@ make build-deb                # собрать .deb в dist/
 Поддержка платформ (X11/Wayland, что проверено): [docs/PLATFORM_SUPPORT.md](docs/PLATFORM_SUPPORT.md).
 Офлайн-работа и приватность: [docs/OFFLINE_AND_PRIVACY.md](docs/OFFLINE_AND_PRIVACY.md).
 Стратегия тестирования и метрики детектора: [docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md).
+Формат языковых пакетов (версия, контрольная сумма, откат): [docs/LANGUAGE_PACKAGES.md](docs/LANGUAGE_PACKAGES.md).
 План развития: [docs/ROADMAP.md](docs/ROADMAP.md).
 Ручной план тестирования на реальной системе: [docs/TESTING.md](docs/TESTING.md).
 Чек-лист выпуска (проверки пакета, словарей и живой клавиатуры): [docs/RELEASING.md](docs/RELEASING.md).

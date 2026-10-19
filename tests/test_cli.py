@@ -703,7 +703,8 @@ def test_dict_verify_rejects_a_tampered_package(
     tampered = tmp_path / "tampered.tar.gz"
     with tarfile.open(archive, "r:gz") as src, tarfile.open(tampered, "w:gz") as dst:
         for member in src.getmembers():
-            payload = src.extractfile(member).read() if member.isfile() else b""
+            stream = src.extractfile(member) if member.isfile() else None
+            payload = stream.read() if stream is not None else b""
             if member.name == "ru-50k.txt":
                 payload = b"evil\n"
             info = tarfile.TarInfo(member.name)
