@@ -422,6 +422,37 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   interpreter segfaults in `ctypes/__init__.py`, rerun with
   `env -u LD_LIBRARY_PATH`. This is an environment quirk, not a code bug.
 
+## Licensing and packaging (audited)
+
+- **The base frequency lists are CC-BY-SA-4.0 content, not MIT.** The
+  FrequencyWords project is the upstream (`hermitdave/FrequencyWords`): its
+  *code* is MIT, but the generated word lists are content, which the project
+  places under CC-BY-SA-4.0. The lists under
+  `src/klyrshift/data/dictionaries/*.txt` are that content (word column only,
+  original frequency order), so they must be attributed to CC-BY-SA-4.0
+  wherever they are described, and the attribution must name the upstream.
+  The hand-curated thematic lists under `dictionaries/<slug>/` are MIT, like
+  the code. Do not collapse the two into one licence.
+- **Every `.deb` must ship `/usr/share/doc/<pkg>/copyright`.** Debian Policy
+  12.5 requires it; the package shipped none until the licence audit, so the
+  base lists travelled with no attribution at all. The file is DEP-5 and lives
+  at `data/copyright`; `scripts/build_deb.sh` installs it.
+- **A native package also needs `changelog.gz` or lintian fails at error
+  level.** Copying `CHANGELOG.md` there is not enough: lintian validates the
+  syntax as a *Debian* changelog and raises
+  `syntax-error-in-debian-changelog`. `build_deb.sh` emits a minimal
+  Debian-format entry and ships `CHANGELOG.md` beside it for the real history.
+- **A `copyright` that points at a licence file Debian does not ship is worse
+  than none.** `/usr/share/common-licenses/CC-BY-SA-4.0` exists on Debian 12
+  and 13; `tests/test_packaging_contract.py` checks the reference resolves
+  instead of trusting the string.
+- Verify with `lintian --tag-display-limit 0 dist/<pkg>_*.deb`; the goal is
+  zero `E:` tags. The remaining `W:` tags (systemctl in maintainer scripts, no
+  man page, udev modalias) are deliberate and documented.
+- The About dialog carries a "dictionary data" credit for the same reason:
+  CC-BY-SA requires attribution, and `Gtk.License.MIT_X11` only describes the
+  code.
+
 ## Known limitation
 
 The daemon works on a real GNOME desktop only; the CI and smoke tests do not
