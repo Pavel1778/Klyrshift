@@ -210,6 +210,18 @@ HELP_TOPICS: Final[dict[str, HelpTopic]] = {
         ),
         fields=("languages", "layouts"),
     ),
+    "theme": HelpTopic(
+        key="theme",
+        title="Оформление",
+        short="Светлая или тёмная тема окна настроек.",
+        details=(
+            "«Как в системе» следует за оформлением рабочего стола. «Светлая» и "
+            "«Тёмная» принудительно задают схему для окна Klyrshift. На выбор "
+            "слов и на исправление текста тема не влияет — только на внешний вид "
+            "окна настроек."
+        ),
+        fields=("theme",),
+    ),
     "hotkeys": HelpTopic(
         key="hotkeys",
         title="Горячие клавиши",

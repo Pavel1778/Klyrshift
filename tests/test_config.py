@@ -107,10 +107,11 @@ def test_unknown_keys_are_ignored(tmp_config_path: Path) -> None:
 
 
 def test_validation_normalises_values() -> None:
-    config = Config(layouts=["US", "RU"], backend="UINPUT", log_level="debug")
+    config = Config(layouts=["US", "RU"], backend="UINPUT", log_level="debug", theme="DARK")
     assert config.layouts == ["us", "ru"]
     assert config.backend == "uinput"
     assert config.log_level == "DEBUG"
+    assert config.theme == "dark"
 
 
 @pytest.mark.parametrize(
@@ -123,6 +124,7 @@ def test_validation_normalises_values() -> None:
         {"backend": "bogus"},
         {"switch_method": "bogus"},
         {"log_level": "bogus"},
+        {"theme": "bogus"},
         {"backspace_settle_ms": -1},
         {"trigger_settle_ms": -1},
     ],

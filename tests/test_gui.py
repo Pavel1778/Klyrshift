@@ -1175,3 +1175,43 @@ def test_service_unit_has_no_user_hostile_scheduling() -> None:
     assert "Nice=" not in joined
     assert "CPUSchedulingPolicy=" not in joined
     assert "CPUSchedulingPriority=" not in joined
+
+
+def test_apply_theme_maps_values(gui_state: Any) -> None:
+    """``apply_theme`` maps every valid value and falls back on garbage."""
+    import gi
+
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw
+
+    from klyrshift.gui.theme import apply_theme
+
+    manager = Adw.StyleManager.get_default()
+    assert apply_theme("dark") == "dark"
+    assert manager.get_color_scheme() == Adw.ColorScheme.FORCE_DARK
+    assert apply_theme("light") == "light"
+    assert manager.get_color_scheme() == Adw.ColorScheme.FORCE_LIGHT
+    assert apply_theme("system") == "system"
+    assert manager.get_color_scheme() == Adw.ColorScheme.DEFAULT
+
+    # A hand-edited config must not crash the window.
+    assert apply_theme("neon") == "system"
+    assert manager.get_color_scheme() == Adw.ColorScheme.DEFAULT
+
+
+def test_settings_page_theme_combo(gui_state: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Selecting a theme updates the config, applies it and saves."""
+    from klyrshift.gui import settings_page as settings_module
+    from klyrshift.gui.settings_page import THEME_ORDER, SettingsPage
+
+    applied: list[str] = []
+    monkeypatch.setattr(settings_module, "apply_theme", applied.append)
+
+    saved: list[str] = []
+    page = SettingsPage(gui_state, on_saved=saved.append)
+    assert page.theme_row.get_selected() == THEME_ORDER.index("system")
+
+    page.theme_row.set_selected(THEME_ORDER.index("dark"))
+    assert gui_state.config.theme == "dark"
+    assert applied == ["dark"]
+    assert any("Тёмная" in message for message in saved)

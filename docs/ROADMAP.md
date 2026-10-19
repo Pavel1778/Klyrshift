@@ -74,7 +74,7 @@ The main goal is that a correction is always safe to reverse.
 | First-run tour | done |
 | Status, dictionary, history, typo, help pages | done |
 | System tray | done |
-| Light / dark / system theme | partial — follows the system, no explicit switch |
+| Light / dark / system theme | done |
 | First-run wizard | partial — tour exists, wizard does not |
 | Per-application profiles | partial — exceptions and layout map exist |
 | Full keyboard navigation and scaling audit | planned |
