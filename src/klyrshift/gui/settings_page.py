@@ -65,7 +65,6 @@ class SettingsPage(BoundPreferencesPage):
         self._config.mode = mode
         self._save(f"Режим изменён на {MODE_LABELS.get(mode, mode)}")
 
-<<<<<<< HEAD
     def _build_appearance_group(self) -> None:
         group = self.attach_help(Adw.PreferencesGroup(title="Оформление"), "theme")
         self._theme_row = self.add_combo(

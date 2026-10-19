@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-<<<<<<< HEAD
 - **The detector's latency and memory are now budgeted in CI.** The
   `latency-budget` job runs `scripts/measure_latency.py` with `--budget-ms 0.5`
   and `--budget-mib 64`; the script exits non-zero when the slowest direction or
