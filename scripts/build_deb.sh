@@ -33,6 +33,7 @@ mkdir -p "${BUILD_DIR}/usr/share/applications"
 mkdir -p "${BUILD_DIR}/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "${BUILD_DIR}/usr/lib/systemd/user"
 mkdir -p "${BUILD_DIR}/usr/lib/udev/rules.d"
+mkdir -p "${BUILD_DIR}/usr/share/doc/${PKG}"
 mkdir -p "${DIST_DIR}"
 
 # --- Python package ---------------------------------------------------------
@@ -73,6 +74,29 @@ render_unit "${REPO_DIR}/data/${PKG}.service" \
     "${BUILD_DIR}/usr/lib/systemd/user/${PKG}.service" "/usr/bin/${PKG}"
 install -m 0644 "${REPO_DIR}/data/71-${PKG}.rules" \
     "${BUILD_DIR}/usr/lib/udev/rules.d/71-${PKG}.rules"
+
+# --- Documentation ----------------------------------------------------------
+# Debian Policy 12.5 requires every binary package to ship its copyright and
+# licence statement under /usr/share/doc/<package>. Without it the base
+# frequency lists -- which are CC-BY-SA-4.0 content, not MIT -- ship with no
+# attribution at all.
+install -m 0644 "${REPO_DIR}/data/copyright" \
+    "${BUILD_DIR}/usr/share/doc/${PKG}/copyright"
+# Debian Policy 12.7 asks for the upstream changelog as changelog.gz. Lintian
+# validates its syntax as a Debian changelog, so a Keep a Changelog file copied
+# here raises ``syntax-error-in-debian-changelog``. Emit a minimal Debian-format
+# entry that points at the real history, and ship that history alongside it.
+cat > "${BUILD_DIR}/usr/share/doc/${PKG}/changelog" <<EOF
+${PKG} (${VERSION}) unstable; urgency=medium
+
+  * Upstream release ${VERSION}. The full, human-readable history lives in
+    /usr/share/doc/${PKG}/CHANGELOG.md.
+
+ -- Pavel1778 <noreply@github.com>  $(date -R)
+EOF
+gzip -9n "${BUILD_DIR}/usr/share/doc/${PKG}/changelog"
+install -m 0644 "${REPO_DIR}/CHANGELOG.md" \
+    "${BUILD_DIR}/usr/share/doc/${PKG}/CHANGELOG.md"
 
 # --- DEBIAN/control ---------------------------------------------------------
 # The package was renamed twice -- ``linguafix`` -> ``lingvix`` -> ``klyrshift`` --

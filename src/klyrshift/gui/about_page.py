@@ -37,4 +37,12 @@ def build_about_window(parent: Gtk.Window | None = None) -> Adw.AboutDialog:
         _("Идеи и вдохновение"),
         ["g3kb-switch", "gswitch", "evdev", "niri-punto", "PolterType"],
     )
+    # CC-BY-SA-4.0 requires attribution, and the base frequency lists that ship
+    # in the .deb are FrequencyWords content under that licence (the code above
+    # them stays MIT). Without this credit the dialog names only the code
+    # licence and hides where the word data comes from.
+    dialog.add_credit_section(
+        _("Данные словарей"),
+        [_("FrequencyWords (hermitdave/FrequencyWords) — CC-BY-SA-4.0")],
+    )
     return dialog

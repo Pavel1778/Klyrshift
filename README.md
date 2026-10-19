@@ -340,8 +340,11 @@ klyrshift dict import-file ~/Downloads/ru-50k.txt --lang ru   # вручную
 
 Файлы кладутся в `~/.local/share/klyrshift/dictionaries/<lang>.txt` и
 подхватываются при следующем запуске демона (или по хоткею перезагрузки
-конфигурации). Источник — [FrequencyWords](https://github.com/hermitdave/FrequencyWords)
-(лицензия MIT); зеркало списков лежит в репозитории в папке `dictionaries/`.
+конфигурации). Источник — [FrequencyWords](https://github.com/hermitdave/FrequencyWords);
+его код под MIT, а сгенерированные списки слов — контент под
+[CC-BY-SA-4.0](https://creativecommons.org/licenses/by-sa/4.0/). Зеркало списков
+лежит в репозитории в папке `dictionaries/`; условия указаны в
+[data/copyright](data/copyright).
 
 То же самое можно сделать в GUI: на вкладке **«Настройки»**, в разделе
 **«Языки»**, у каждого языка есть переключатель (использовать ли его) и кнопки
@@ -651,7 +654,9 @@ make build-deb                # собрать .deb в dist/
 
 ## 📄 Лицензия / License
 
-MIT — см. [LICENSE](LICENSE).
+Код — MIT, см. [LICENSE](LICENSE). Базовые частотные списки
+(`dictionaries/*-50k.txt`) — контент из FrequencyWords под CC-BY-SA-4.0;
+полные условия для обоих случаев — в [data/copyright](data/copyright).
 
 История изменений — в [CHANGELOG.md](CHANGELOG.md). Баги и предложения —
 в [Issues](https://github.com/Pavel1778/Klyrshift/issues).

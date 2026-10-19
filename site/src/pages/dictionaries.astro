@@ -4,11 +4,13 @@ import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import { pick } from "../lib/site";
 import {
+  BASE_LIST_LICENSE,
   baseLanguages as languages,
   categoryCards,
   DICTIONARY_ASSET_BASE as RAW,
   DICTIONARY_MIRROR_BASE as MIRROR,
   humanSize,
+  THEMATIC_LIST_LICENSE,
   thematicCategories,
 } from "../lib/dictionaries";
 
@@ -49,7 +51,7 @@ const totalWords = categoryCards
             [
               { value: String(thematicCategories.length), label: pick("разделов", "categories") },
               { value: totalWords.toLocaleString(pick("ru-RU", "en-US")), label: pick("слов всего", "words total") },
-              { value: "MIT", label: pick("лицензия", "licence") },
+              { value: `${THEMATIC_LIST_LICENSE} / ${BASE_LIST_LICENSE}`, label: pick("лицензии", "licences") },
             ].map((stat) => (
               <div class="rounded-xl border border-[#e5e5e5] bg-white px-3 py-4 dark:border-[#3d3d3d] dark:bg-[#2d2d2d]">
                 <dt class="text-2xl font-bold tracking-tight">{stat.value}</dt>
@@ -69,8 +71,8 @@ const totalWords = categoryCards
         <p class="mt-3 max-w-2xl text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
           {
             pick(
-              "Топ-50k самых частых слов языка, упорядочены по частоте. Входят в .deb, но можно скачать отдельно.",
-              "Top-50k most frequent words per language, ordered by frequency. Bundled in the .deb, but downloadable on their own.",
+              `Топ-50k самых частых слов языка, упорядочены по частоте. Входят в .deb, но можно скачать отдельно. Источник — FrequencyWords, лицензия ${BASE_LIST_LICENSE}.`,
+              `Top-50k most frequent words per language, ordered by frequency. Bundled in the .deb, but downloadable on their own. Source: FrequencyWords, licence ${BASE_LIST_LICENSE}.`,
             )
           }
         </p>
@@ -171,8 +173,8 @@ const totalWords = categoryCards
         <p class="mt-8 max-w-2xl text-xs text-[#0a0a0a]/60 dark:text-[#fafafa]/60">
           {
             pick(
-              "Источник базовых словарей: FrequencyWords (hermitdave/FrequencyWords), лицензия MIT. Тематические списки составлены вручную для Klyrshift. Файлы в репозитории содержат только столбец слов.",
-              "Base dictionaries source: FrequencyWords (hermitdave/FrequencyWords), MIT licence. Thematic lists are curated by hand for Klyrshift. The repository files keep only the word column.",
+              `Источник базовых словарей: FrequencyWords (hermitdave/FrequencyWords) — код под MIT, сами списки под ${BASE_LIST_LICENSE}. Тематические списки составлены вручную для Klyrshift (${THEMATIC_LIST_LICENSE}). Файлы в репозитории содержат только столбец слов.`,
+              `Base dictionaries source: FrequencyWords (hermitdave/FrequencyWords) — MIT code, ${BASE_LIST_LICENSE} lists. Thematic lists are curated by hand for Klyrshift (${THEMATIC_LIST_LICENSE}). The repository files keep only the word column.`,
             )
           }
         </p>

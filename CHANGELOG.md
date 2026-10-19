@@ -98,6 +98,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The shipped `.deb` had no licence statement.** Debian Policy 12.5 requires
+  a `copyright` file under `/usr/share/doc/<package>`, and the package shipped
+  none — so the base frequency lists travelled with no attribution. Worse, the
+  attribution that did exist was wrong: FrequencyWords releases its *code* under
+  MIT, but the generated word lists are *content* under CC-BY-SA-4.0, and the
+  README, the landing page and the About dialog all called them MIT. The `.deb`
+  now ships a DEP-5 `copyright` (with a `changelog.gz`, which lintian otherwise
+  flags at error level), the lists are credited to CC-BY-SA-4.0 everywhere they
+  appear, and the About dialog gains a dictionary-data credit. `lintian` on the
+  built package is clean of licence and changelog errors;
+  `tests/test_packaging_contract.py` pins the file, the attribution and the
+  reference to a licence text Debian actually ships.
+
 - **Shutdown no longer aborts when the control socket is in the selector.** The
   daemon's cleanup closed every object the selector held, but the control socket
   is a `ControlServer` with `stop()`, not `close()`. The resulting
@@ -555,8 +568,9 @@ Hotfix for three defects reported after the 0.2.8 live test.
   `$XDG_DATA_HOME/lingvix/dictionaries/<lang>.txt`. The detector reads them in
   addition to the bundled corpora, widening vocabulary membership only — n-gram
   scoring is unchanged, so already-correct words keep their verdict while rarer
-  words are recognised. Lists mirror FrequencyWords (MIT) under the repository's
-  `dictionaries/` folder. A new landing-page section links them.
+  words are recognised. Lists mirror FrequencyWords content (CC-BY-SA-4.0;
+  the upstream code is MIT) under the repository's `dictionaries/` folder. A new
+  landing-page section links them.
 - `dict download` now tries the stable
   `releases/latest/download/<lang>-50k.txt` asset first, then the branch mirror,
   then upstream, and finally copies a locally shipped list — so it succeeds with

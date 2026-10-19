@@ -110,8 +110,10 @@ BUNDLED_DICTIONARY_SUFFIX: Final[str] = "-50k.txt"
 
 # Where ``klyrshift dict download`` fetches lists from by default. The project
 # mirrors the upstream top-50k lists (word column only) under the repo's
-# ``dictionaries/`` folder. The upstream FrequencyWords source (MIT) is kept as
-# a fallback so the command still works if the mirror is unreachable.
+# ``dictionaries/`` folder. The upstream FrequencyWords source is kept as a
+# fallback so the command still works if the mirror is unreachable. Its code is
+# MIT, but the generated lists are content under CC-BY-SA-4.0 (see
+# ``data/copyright``).
 _BUNDLED_RAW_BASE: Final[str] = repo.RAW_MIRROR_BASE + "dictionaries/"
 _UPSTREAM_RAW: Final[dict[str, str]] = {
     lang: (

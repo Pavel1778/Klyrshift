@@ -115,6 +115,7 @@
   "Готово": "Done",
   "Графический интерфейс": "Graphical interface",
   "Далее": "Next",
+  "Данные словарей": "Dictionary data",
   "Двойной Shift по умолчанию. Нажмите «Изменить» и дважды нажмите нужный модификатор (Shift/Ctrl/Alt) или задайте комбинацию.": "Double Shift by default. Click \"Change\" and press the modifier you want twice (Shift/Ctrl/Alt), or set a combination.",
   "Двойной Shift работает даже в «Ручном» режиме и не мешает обычному набору. Изменить сочетание можно кнопкой «Изменить»: нажмите её, затем дважды нужный модификатор (Shift, Ctrl или Alt) либо задайте комбинацию. Esc отменяет изменение. Рядом настраивается клавиша отмены последнего исправления.": "Double Shift works even in \"Manual\" mode and does not interfere with normal typing. You can change the combination with the \"Change\" button: press it, then tap the modifier you want twice (Shift, Ctrl or Alt) or set a combination. Esc cancels the change. The undo hotkey is configured next to it.",
   "Действуют во всей системе, а не только в окне Klyrshift.": "These work system-wide, not only in the Klyrshift window.",

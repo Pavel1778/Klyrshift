@@ -23,7 +23,13 @@ export const DICTIONARY_MIRROR_BASE =
 
 export type BaseLanguage = { code: string; title: string };
 
-/** Languages that ship a base frequency list (`<code>-50k.txt`). */
+/**
+ * Languages that ship a base frequency list (`<code>-50k.txt`).
+ *
+ * These lists are FrequencyWords content, so they are CC-BY-SA-4.0 -- unlike
+ * the hand-curated thematic lists, which are MIT. The two are kept separate
+ * everywhere the licence is shown.
+ */
 export const baseLanguages: BaseLanguage[] = [
   { code: "ru", title: "Русский" },
   { code: "en", title: "English" },
@@ -31,6 +37,12 @@ export const baseLanguages: BaseLanguage[] = [
   { code: "de", title: "Deutsch" },
   { code: "fr", title: "Français" },
 ];
+
+/** Licence of the base frequency lists (FrequencyWords content). */
+export const BASE_LIST_LICENSE = "CC-BY-SA-4.0";
+
+/** Licence of the hand-curated thematic lists and of the code itself. */
+export const THEMATIC_LIST_LICENSE = "MIT";
 
 export type ThematicCategory = {
   slug: string;

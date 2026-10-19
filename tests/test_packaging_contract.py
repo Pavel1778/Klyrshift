@@ -166,7 +166,58 @@ def test_deb_ships_a_complete_md5sums_manifest(tmp_path: Path) -> None:
         assert actual == digest, f"{path}: manifest digest does not match content"
 
 
-# --- release workflow -------------------------------------------------------
+# --- Debian policy: copyright and changelog ---------------------------------
+
+
+COPYRIGHT = REPO_ROOT / "data" / "copyright"
+
+
+def test_copyright_file_exists_and_is_dep5() -> None:
+    """Debian Policy 12.5: the package must ship a copyright statement.
+
+    The base frequency lists are FrequencyWords *content* (CC-BY-SA-4.0), not
+    MIT like the code, so the package must attribute them. Without this file the
+    lists shipped with no licence statement at all.
+    """
+    text = COPYRIGHT.read_text(encoding="utf-8")
+    assert text.startswith("Format: https://www.debian.org/doc/packaging-manuals/")
+    assert "License: MIT" in text
+    assert "CC-BY-SA-4.0" in text
+    # The content licence must cover the bundled lists, and only those.
+    assert "src/klyrshift/data/dictionaries/*.txt" in text
+
+
+def test_copyright_names_the_upstream_source() -> None:
+    """CC-BY-SA requires attribution, so the upstream must be named."""
+    text = COPYRIGHT.read_text(encoding="utf-8")
+    assert "hermitdave/FrequencyWords" in text
+    assert "CC-BY-SA-4.0" in text
+
+
+def test_copyright_points_at_a_license_that_debian_ships() -> None:
+    """A reference to a licence file that does not exist is worse than none."""
+    text = COPYRIGHT.read_text(encoding="utf-8")
+    referenced = re.findall(r"/usr/share/common-licenses/([A-Za-z0-9+-]+(?:\.[0-9]+)*)", text)
+    assert referenced, "copyright references no on-disk licence text"
+    for name in referenced:
+        # Only meaningful on a Debian host; skip elsewhere (e.g. a bare runner).
+        path = Path("/usr/share/common-licenses") / name
+        if Path("/usr/share/common-licenses").is_dir():
+            assert path.is_file(), f"{path} does not exist"
+
+
+def test_build_script_installs_copyright_and_changelog() -> None:
+    script = BUILD_DEB.read_text(encoding="utf-8")
+    assert "/usr/share/doc/${PKG}/copyright" in script
+    assert "changelog.gz" in script
+
+
+def test_dictionaries_are_attributed_in_the_interface() -> None:
+    """The GUI and the landing page must not claim the lists are MIT-only."""
+    site_data = (REPO_ROOT / "site" / "src" / "lib" / "dictionaries.ts").read_text(encoding="utf-8")
+    assert "CC-BY-SA-4.0" in site_data
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    assert "CC-BY-SA-4.0" in readme
 
 
 def test_package_declares_the_rename_relationship() -> None:
