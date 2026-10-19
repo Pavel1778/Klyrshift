@@ -12,6 +12,7 @@ regression thresholds.
 | Lint / types | `ruff`, `isort`, `black --check`, `mypy --strict` | Yes | Style, imports, type soundness |
 | Unit / integration | `pytest`, coverage floor 80 % | Yes | Logic, parsing, config, conversion, daemon policy |
 | Detector quality | `scripts/measure_detector.py` | Manually | Recall, false positives, corruption, speed on fixed corpora |
+| Detector cost | `scripts/measure_latency.py` | In CI (`latency-budget`) | ms/word and peak memory on fixed corpora, with a budget |
 | Package smoke | `scripts/smoke_test.sh` | Yes | The built `.deb` installs and its entry points run |
 | Manual desktop | `docs/TESTING.md` level 3 | No | Permissions, D-Bus, `uinput`, real applications |
 
@@ -51,6 +52,32 @@ Measured on the current tree, Debian 13, Python 3.13:
 The residual miss rate on short words (1–2 characters) is expected: they carry
 almost no statistical signal and are skipped by `min_word_length`.
 
+### Latency and memory baseline
+
+`scripts/measure_latency.py` measures the two costs a user feels and a CI budget
+could guard. It is kept separate from the quality script because `tracemalloc`
+must be switched off before timing: it hooks every allocation, so a loop
+measured under it reports the tracer's cost, not the detector's.
+
+```bash
+PYTHONPATH=src python scripts/measure_latency.py --limit 3000 --repeats 3
+```
+
+Pass `--budget-ms` and `--budget-mib` to turn the run into a check: the process
+exits non-zero when the slowest direction or the peak memory exceeds the
+budget. The `latency-budget` CI job runs exactly this with loose thresholds
+(0.5 ms/word, 64 MiB) — the point is to catch an order-of-magnitude regression
+on a noisy shared runner, not to police a few percent of noise.
+
+| Slice | Direction | ms/word | Peak traced memory |
+|---|---|---|---|
+| top 3000 | ru on us | 0.007 | — |
+| top 3000 | en on ru | 0.007 | — |
+| build + first word | — | — | 4.3 MiB |
+
+Peak memory covers building the detector and deciding one word, which is what a
+long-running daemon holds; it is not per-word growth.
+
 ## Regression thresholds
 
 A change must not:
@@ -58,8 +85,14 @@ A change must not:
 - introduce a false positive or a corruption (both must stay at **0**);
 - lower recall on a recorded slice by more than 0.5 percentage points;
 - raise `ms/word` by more than 20 % on a recorded slice;
+- raise peak traced memory by more than 20 % on the recorded slice;
 - drop coverage below the 80 % CI floor;
 - turn a passing test into a skip.
+
+The "both layouts spell a real word" class is covered separately by
+`tests/test_ambiguous_words.py`, which sweeps the shipped corpora for
+cross-layout collisions and pins that neither spelling is ever moved. It is a
+test rather than a script because it must fail the build, not be read by eye.
 
 Improving one metric at the cost of another must be stated explicitly in the PR.
 An "improvement" that trades a false positive for recall is a regression.

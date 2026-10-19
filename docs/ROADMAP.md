@@ -103,8 +103,8 @@ are not. Nothing here is started; see
 |---|---|
 | Reproducible detector benchmark | done |
 | Recorded baseline and thresholds | done |
-| Mixed / ambiguous / code corpus | planned |
-| Latency and memory budget in CI | planned |
+| Mixed / ambiguous / code corpus | done — `tests/test_ambiguous_words.py` sweeps cross-layout collisions |
+| Latency and memory budget in CI | done — `scripts/measure_latency.py --budget-ms/--budget-mib` fails the `latency-budget` CI job |
 
 ## Order of work
 

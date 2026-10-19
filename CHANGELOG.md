@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The detector's latency and memory are now budgeted in CI.** The
+  `latency-budget` job runs `scripts/measure_latency.py` with `--budget-ms 0.5`
+  and `--budget-mib 64`; the script exits non-zero when the slowest direction or
+  the peak traced allocation crosses the line. The thresholds are loose on
+  purpose — a shared runner is noisy, and the regression worth catching is an
+  order of magnitude (a corpus reloaded per word, an accidental O(n²)), not a
+  few percent. `--budget-ms`/`--budget-mib` also make the script usable as a
+  local check.
+
 ## [0.2.9] - 2026-10-19
 
 Adds always-on learning, and makes a correction safe to reverse even after
