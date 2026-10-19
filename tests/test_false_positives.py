@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from klyrshift.converter import LayoutConverter
-from klyrshift.detector import LanguageDetector
+from klyrshift.detector import _BASE_VOWELS, LanguageDetector
 
 
 @pytest.fixture
@@ -180,3 +180,72 @@ def test_vocabulary_validated_override_is_not_applied_to_urls(
     """The override must not resurrect a structural false positive."""
     for token in ("github.com", "user@example.com", "/usr/local/bin", "snake_case"):
         assert det._vocabulary_validated_layout(token, "us") is None
+
+
+# --- accented Latin vowels (diacritic false-positive guard) ----------------------
+
+
+@pytest.fixture
+def multi_det() -> LanguageDetector:
+    """A detector with every shipped corpus, so de/fr really have a model."""
+    return LanguageDetector(
+        converter=LayoutConverter(),
+        stop_words=[],
+        min_word_length=3,
+        languages=("en", "ru", "uk", "de", "fr"),
+    )
+
+
+@pytest.mark.parametrize(
+    ("word", "language"),
+    [
+        # Every vowel here is accented: the old hand-written set saw no vowel at
+        # all, so a valid word was rejected as noise.
+        ("zähl", "de"),
+        ("möcht", "de"),
+        ("füllt", "de"),
+        ("rück", "de"),
+        ("schämt", "de"),
+        ("brûlés", "fr"),
+        ("cédé", "fr"),
+        ("mémé", "fr"),
+        ("dégénéré", "fr"),
+    ],
+)
+def test_accented_vowel_words_are_plausible(
+    multi_det: LanguageDetector, word: str, language: str
+) -> None:
+    """An accented vowel counts as a vowel in the shape guard.
+
+    The guard used to miss ``ü``/``é``/``ø`` and the rest, so a valid German or
+    French word outside the top-10k vocabulary looked vowel-less and was treated
+    as noise. These words are deliberately absent from the bundled corpora and
+    contain no plain base vowel, so only the accent fold can make them pass.
+    """
+    assert word.lower() not in multi_det._vocabularies.get(language, set())
+    assert not any(char in _BASE_VOWELS for char in word.lower())
+    assert multi_det._word_is_plausible(word, language) is True
+
+
+def test_cyrillic_short_i_stays_a_consonant() -> None:
+    """The Latin fold must not touch Cyrillic: ``й`` is a consonant."""
+    from klyrshift.detector import _VOWELS
+
+    assert "й" not in _VOWELS
+    assert "ё" in _VOWELS  # a real Russian vowel, already listed
+    assert "ї" in _VOWELS  # Ukrainian
+
+
+def test_every_accented_latin_vowel_is_recognised() -> None:
+    """No precomposed accented Latin vowel may be missing from the set."""
+    import unicodedata
+
+    from klyrshift.detector import _VOWELS
+
+    missing = []
+    for code in range(0xC0, 0x2B0):
+        char = chr(code)
+        decomposed = unicodedata.normalize("NFKD", char)
+        if decomposed != char and decomposed[0] in _BASE_VOWELS and char not in _VOWELS:
+            missing.append(char)
+    assert missing == []

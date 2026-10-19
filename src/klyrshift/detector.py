@@ -18,6 +18,7 @@ import json
 import logging
 import math
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from importlib import resources
 from typing import Any, Final
@@ -34,11 +35,44 @@ TOKEN_RE: Final[re.Pattern[str]] = re.compile(r"[a-z0-9_]+", re.IGNORECASE)
 
 # Vowels of the shipped languages (en/ru/uk/de/fr). A consonant run longer than
 # ``max_consecutive_consonants`` is treated as "not a real word".
-_VOWELS: Final[frozenset[str]] = frozenset(
+_BASE_VOWELS: Final[frozenset[str]] = frozenset(
     "aeiouy"  # Latin
     "аеёиоуыэюя"  # Russian
     "іїє"  # Ukrainian
 )
+# Latin vowels that carry a diacritic but do not decompose under NFKD, so the
+# fold below cannot reach them. Written as escapes on purpose: ``\u0153`` is also
+# a mojibake signature, so spelling it literally would trip
+# ``tests/test_source_encoding.py``.
+_EXTRA_LATIN_VOWELS: Final[frozenset[str]] = frozenset(
+    "\u00f8\u0153\u00e6\u0131"  # o-slash, oe-ligature, ae-ligature, dotless i
+)
+
+
+def _accented_latin_vowels() -> frozenset[str]:
+    """Return :data:`_BASE_VOWELS` plus every precomposed accented Latin vowel.
+
+    The vowel/consonant shape check is a false-positive guard: it decides
+    whether a buffer already reads as real words. A hand-written set misses
+    ``ü``, ``é`` and the rest, so a valid German or French word that is not in
+    the top-10k vocabulary (``Büßung``, ``préférée``) shows no vowel at all and
+    is treated as noise. Folding every precomposed Latin letter to its base with
+    NFKD covers the whole accented range without listing it by hand.
+
+    The fold is deliberately limited to Latin. Cyrillic ``й`` decomposes to
+    ``и`` plus a breve and is a consonant, so folding it would change Russian
+    detection; ``ё`` and ``ї`` are already in :data:`_BASE_VOWELS`.
+    """
+    vowels = set(_BASE_VOWELS) | _EXTRA_LATIN_VOWELS
+    for code in range(0xC0, 0x2B0):  # Latin-1 Supplement .. IPA Extensions
+        char = chr(code)
+        decomposed = unicodedata.normalize("NFKD", char)
+        if decomposed != char and decomposed[0] in _BASE_VOWELS:
+            vowels.add(char)
+    return frozenset(vowels)
+
+
+_VOWELS: Final[frozenset[str]] = _accented_latin_vowels()
 _LETTER_RE: Final[re.Pattern[str]] = re.compile(r"[^\W\d_]", re.UNICODE)
 # A structural separator that joins sub-tokens (URL, e-mail, path, version).
 # Leading/trailing punctuation is not included: a sentence-ending "." is fine.
