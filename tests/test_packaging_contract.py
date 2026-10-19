@@ -183,8 +183,52 @@ def test_copyright_file_exists_and_is_dep5() -> None:
     assert text.startswith("Format: https://www.debian.org/doc/packaging-manuals/")
     assert "License: MIT" in text
     assert "CC-BY-SA-4.0" in text
-    # The content licence must cover the bundled lists, and only those.
-    assert "src/klyrshift/data/dictionaries/*.txt" in text
+    # The content licence must cover the bundled lists, and only those. The
+    # glob has to name a path that actually exists: the lists live in
+    # ``dictionaries/`` at the repository root, and the build script installs
+    # them to ``<pkg>/data/dictionaries/`` inside the package.
+    assert "dictionaries/*-50k.txt" in text
+
+
+def test_copyright_glob_matches_the_files_it_claims() -> None:
+    """A ``Files:`` glob that matches nothing attributes nothing.
+
+    The first draft pointed at ``src/klyrshift/data/dictionaries/*.txt``, a path
+    that exists neither in the repository (the lists live in ``dictionaries/``)
+    nor in the installed package, so the CC-BY-SA paragraph covered no file at
+    all. Resolve every glob instead of trusting the string, and keep the
+    in-package path in step with what ``build_deb.sh`` installs.
+    """
+    text = COPYRIGHT.read_text(encoding="utf-8")
+
+    patterns: list[str] = []
+    in_files_field = False
+    for line in text.splitlines():
+        if line.startswith("Files:"):
+            in_files_field = True
+            patterns.append(line[len("Files:") :].strip())
+        elif in_files_field and line[:1] == " " and line.strip():
+            patterns.append(line.strip())
+        else:
+            in_files_field = False
+
+    patterns = [p for p in patterns if p and p != "*"]
+    assert patterns, "copyright declares no file-specific stanza"
+
+    repo_patterns = [p for p in patterns if not p.startswith("usr/")]
+    assert repo_patterns, "the content stanza names no repository path"
+    for pattern in repo_patterns:
+        assert list(REPO_ROOT.glob(pattern)), f"{pattern!r} matches no file"
+
+    # The installed copy must land where the build script puts the lists:
+    # /usr/lib/<pkg>/<pkg>/data/dictionaries/.
+    script = BUILD_DEB.read_text(encoding="utf-8")
+    install_dir = "/usr/lib/${PKG}/${PKG}/data/dictionaries/"
+    assert install_dir in script
+    expected_pkg_dir = install_dir.replace("${PKG}", "klyrshift").lstrip("/")
+    assert any(
+        p.startswith(expected_pkg_dir) for p in patterns
+    ), f"no Files: glob covers {expected_pkg_dir!r}"
 
 
 def test_copyright_names_the_upstream_source() -> None:

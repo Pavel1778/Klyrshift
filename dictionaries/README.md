@@ -8,8 +8,11 @@ Top-50k word lists used by `klyrshift dict download <lang>`. Each file keeps
 only the word column of the upstream list, one word per line.
 
 Source: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) by Hermit
-Dave, licensed under the MIT License. The lists are frequency-ordered, so the
-first lines are the most common words.
+Dave. The FrequencyWords *code* is MIT, but the generated lists are *content*,
+which the project places under
+[CC-BY-SA-4.0](https://creativecommons.org/licenses/by-sa/4.0/): a word
+frequency list is content, so these files are CC-BY-SA-4.0, not MIT. The lists
+are frequency-ordered, so the first lines are the most common words.
 
 | File | Language |
 |---|---|
@@ -44,8 +47,9 @@ the base list.
 | `sport` | ru, en | `sport/ru-sport-1k.txt`, `sport/en-sport-1k.txt` |
 
 Every thematic list is curated by hand for this project and released under the
-MIT License (see the repository `LICENSE`); the per-category `README.md` records
-the source. No list with an unclear or proprietary licence is included.
+MIT License, like the code (see the repository `LICENSE`); the per-category
+`README.md` records the source. The two licences apply to different files: the
+base frequency lists above stay CC-BY-SA-4.0. No list with an unclear or proprietary licence is included.
 
 ## Installing
 
