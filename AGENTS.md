@@ -469,3 +469,21 @@ exercise the evdev → uinput correction path end to end. See `docs/TESTING.md`.
   blocks its own `notify::active` handler so a reload never writes the config
   back. When two branches touch the same widget, always re-run the GUI tests
   under `xvfb-run -a`, not just the headless suite.
+
+## Repository hygiene
+
+- **`backup/*` branches are safety snapshots, not work in progress.** They are
+  cut before a risky operation and are always ancestors of `main` (verified with
+  `git merge-base --is-ancestor <b> main`). Deleting the ref loses nothing: the
+  commits stay reachable through `main`. Record the SHA before deleting
+  (`git rev-parse <b>`) so the intent is auditable, then `git branch -d` (never
+  `-D`); `-d` refuses a branch that is not merged, which is the guard that keeps
+  this safe.
+- **The repository is named `Klyrshift`; `LinguaFix` and `Lingvix` are the two
+  previous names.** They must survive in the upgrade path and in the history
+  (the `.deb` declares `Conflicts:`/`Replaces:` on both, `docs/INSTALL.md` tells
+  a user how to migrate, and the CHANGELOG records the rename), but no live
+  source, doc, script or site file may reference them as a current name.
+  `tests/test_repo_urls.py` and `tests/test_version_consistency.py` pin the live
+  names. A hit is only stale if it is not explicitly about the old package,
+  the migration, or a past release.
