@@ -46,6 +46,7 @@ def test_build_parser_has_all_commands() -> None:
         "export",
         "import",
         "restart",
+        "verify",
     ):
         assert command in actions
 
@@ -91,6 +92,21 @@ def test_doctor_command(
 ) -> None:
     monkeypatch.setattr(cli, "run_doctor", lambda: 0)
     assert cli.main(["doctor"]) == 0
+
+
+def test_verify_command(
+    isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``klyrshift verify`` delegates to the integrity check and passes its code."""
+    monkeypatch.setattr("klyrshift.integrity.run_verify", lambda: 0)
+    assert cli.main(["verify"]) == 0
+
+
+def test_verify_command_reports_damage(
+    isolated_env: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("klyrshift.integrity.run_verify", lambda: 1)
+    assert cli.main(["verify"]) == 1
 
 
 def test_collect_logs_command(
@@ -620,3 +636,193 @@ def test_install_autostart_uses_dedicated_autostart_file(
     monkeypatch.setattr(cli, "_bundled_data_file", fake)
     assert cli.main(["install-autostart"]) == 0
     assert "klyrshift-autostart.desktop" in requested
+
+
+def test_dict_pack_verify_install_roundtrip(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """``dict pack`` -> ``verify`` -> ``install-file`` round-trips a package."""
+    monkeypatch.setenv("XDG_DATA_HOME", str(isolated_env / "data"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(isolated_env / "config"))
+    source = tmp_path / "ru-50k.txt"
+    source.write_text("привет\nмир\n", encoding="utf-8")
+    archive = tmp_path / "ru-50k.tar.gz"
+
+    assert (
+        cli.main(
+            [
+                "dict",
+                "pack",
+                str(source),
+                "--name",
+                "ru-50k",
+                "--lang",
+                "ru",
+                "--output",
+                str(archive),
+                "--license",
+                "MIT",
+            ]
+        )
+        == 0
+    )
+    assert "Собран пакет" in capsys.readouterr().out
+    assert archive.is_file()
+
+    assert cli.main(["dict", "verify", str(archive)]) == 0
+    assert "в порядке" in capsys.readouterr().out
+
+    assert cli.main(["dict", "install-file", str(archive)]) == 0
+    assert "Установлен пакет" in capsys.readouterr().out
+    installed = isolated_env / "data" / "klyrshift" / "dictionaries" / "ru-50k.txt"
+    assert installed.is_file()
+
+    assert cli.main(["dict", "uninstall-file", str(archive)]) == 0
+    assert not installed.exists()
+
+
+def test_dict_verify_rejects_a_tampered_package(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """``dict verify`` exits non-zero on a package whose bytes changed."""
+    import io
+    import tarfile
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(isolated_env / "data"))
+    source = tmp_path / "ru-50k.txt"
+    source.write_text("привет\n", encoding="utf-8")
+    archive = tmp_path / "ru-50k.tar.gz"
+    assert (
+        cli.main(
+            [
+                "dict",
+                "pack",
+                str(source),
+                "--name",
+                "ru-50k",
+                "--lang",
+                "ru",
+                "--output",
+                str(archive),
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    tampered = tmp_path / "tampered.tar.gz"
+    with tarfile.open(archive, "r:gz") as src, tarfile.open(tampered, "w:gz") as dst:
+        for member in src.getmembers():
+            stream = src.extractfile(member) if member.isfile() else None
+            payload = stream.read() if stream is not None else b""
+            if member.name == "ru-50k.txt":
+                payload = b"evil\n"
+            info = tarfile.TarInfo(member.name)
+            info.size = len(payload)
+            info.mtime = 0
+            dst.addfile(info, io.BytesIO(payload))
+
+    assert cli.main(["dict", "verify", str(tampered)]) == 1
+    assert "не прошёл проверку" in capsys.readouterr().out
+
+
+def test_dict_pack_without_files(isolated_env: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["dict", "pack"]) == 2
+    assert "Укажите файлы" in capsys.readouterr().out
+
+
+def test_learn_list_without_a_daemon(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``learn list`` says the daemon is not running instead of printing nothing."""
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(isolated_env / "runtime"))
+    assert cli.main(["learn", "list"]) == 1
+    assert "Демон не запущен" in capsys.readouterr().out
+
+
+def test_learn_promote_without_a_daemon(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(isolated_env / "runtime"))
+    assert cli.main(["learn", "promote", "vercel"]) == 1
+    assert "Демон не запущен" in capsys.readouterr().out
+
+
+def test_learn_promote_requires_a_word(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(isolated_env / "runtime"))
+    assert cli.main(["learn", "promote"]) == 2
+    assert "Укажите слово" in capsys.readouterr().out
+
+
+def test_learn_list_and_promote_against_a_live_socket(
+    isolated_env: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The CLI drives the control socket end to end."""
+    import selectors
+    import threading
+
+    from klyrshift import control
+
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(isolated_env / "runtime"))
+    words: list[str] = []
+
+    def handler(request: dict[str, object]) -> dict[str, object]:
+        command = request.get("cmd")
+        if command == "learn.list":
+            return {"words": list(words)}
+        word = request.get("word")
+        assert isinstance(word, str)
+        if command == "learn.promote":
+            words.append(word)
+            return {"ok": True}
+        if command == "learn.forget":
+            words.remove(word)
+            return {"ok": True}
+        return {"error": "unknown"}
+
+    server = control.ControlServer(handler)
+    assert server.start()
+    selector = selectors.DefaultSelector()
+    selector.register(server.fileno, selectors.EVENT_READ, server)
+    stop = threading.Event()
+
+    def serve() -> None:
+        while not stop.is_set():
+            for key, _mask in selector.select(0.05):
+                key.data.handle()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    try:
+        assert cli.main(["learn", "list"]) == 0
+        assert "Выученных слов пока нет" in capsys.readouterr().out
+
+        assert cli.main(["learn", "promote", "vercel"]) == 0
+        assert "закреплено" in capsys.readouterr().out
+
+        assert cli.main(["learn", "list"]) == 0
+        assert "vercel" in capsys.readouterr().out
+
+        assert cli.main(["learn", "forget", "vercel"]) == 0
+        assert "забыто" in capsys.readouterr().out
+    finally:
+        stop.set()
+        thread.join(timeout=5)
+        selector.close()
+        server.stop()

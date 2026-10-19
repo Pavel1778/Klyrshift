@@ -49,10 +49,10 @@ The main goal is that a correction is always safe to reverse.
 | Bundled dictionaries for five languages | done |
 | Thematic dictionaries with offline fallback | done |
 | User dictionary add / remove / import / export | done |
-| A versioned, checksummed language-package format | planned |
-| Install / remove languages from the GUI | partial — enable/disable exists, install does not |
-| Package rollback on a failed update | planned |
-| Integrity check before install | planned |
+| A versioned, checksummed language-package format | done — `langpack.py`, `dict pack/verify/install-file` |
+| Install / remove languages from the GUI | done |
+| Package rollback on a failed update | done — `langpack.install_package` restores on failure |
+| Integrity check before install | done — SHA-256 per member, verified before any write |
 
 ## Stage 3 — Learning and text intelligence — **partial**
 
@@ -61,10 +61,10 @@ The main goal is that a correction is always safe to reverse.
 | Remember confirmed corrections | done |
 | Remember rejected corrections (`Ctrl+Z`) | done |
 | Session vocabulary promotion | done |
-| Manual add / remove of learned words | partial — `--reset` and `--off` exist, per-word edit does not |
+| Manual add / remove of learned words | done — `klyrshift learn list/promote/forget` edits the running daemon's in-memory vocabulary |
 | Separate dictionaries per domain (names, code, general) | planned |
 | Local confidence model | partial — bigram + vocabulary scoring exists |
-| Suggestions instead of auto-change at low confidence | partial — `hybrid` withholds; no inline suggestion UI |
+| Suggestions instead of auto-change at low confidence | done — `hybrid` withholds and offers the fix through the tray entry, the accept hotkey and an optional notification |
 
 ## Stage 4 — UX / UI redesign — **partial**
 
@@ -74,8 +74,8 @@ The main goal is that a correction is always safe to reverse.
 | First-run tour | done |
 | Status, dictionary, history, typo, help pages | done |
 | System tray | done |
-| Light / dark / system theme | partial — follows the system, no explicit switch |
-| First-run wizard | partial — tour exists, wizard does not |
+| Light / dark / system theme | done |
+| First-run wizard | done — languages, mode and autostart, then the tour |
 | Per-application profiles | partial — exceptions and layout map exist |
 | Full keyboard navigation and scaling audit | planned |
 | Interface localisation | partial — Russian strings are inline, not a catalogue |
@@ -88,7 +88,7 @@ The main goal is that a correction is always safe to reverse.
 | Install / uninstall guide | done |
 | `doctor` diagnostics | done |
 | Config migration between versions | done |
-| Package integrity check | planned |
+| Package integrity check | done — the `.deb` ships an `md5sums` manifest; `klyrshift verify` and `dpkg --verify klyrshift` detect a corrupted file |
 | Flatpak / AppImage | planned — needs a portal input path |
 
 ## Stage 6 — Cross-platform — **planned**
@@ -103,14 +103,13 @@ are not. Nothing here is started; see
 |---|---|
 | Reproducible detector benchmark | done |
 | Recorded baseline and thresholds | done |
-| Mixed / ambiguous / code corpus | planned |
-| Latency and memory budget in CI | planned |
+| Mixed / ambiguous / code corpus | done — `tests/test_ambiguous_words.py` sweeps cross-layout collisions |
+| Latency and memory budget in CI | done — `scripts/measure_latency.py --budget-ms/--budget-mib` fails the `latency-budget` CI job |
 
 ## Order of work
 
 1. Finish Stage 1 on a real desktop (the only blocker is hardware).
-2. Close the Stage 3 gaps that do not need new architecture (per-word learning
-   edit, suggestions).
+2. Close the Stage 3 gaps that do not need new architecture (suggestions).
 3. Build the versioned language-package format (Stage 2).
 4. The UX wizard and theme switch (Stage 4).
 

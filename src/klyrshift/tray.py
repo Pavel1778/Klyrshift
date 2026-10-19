@@ -26,6 +26,8 @@ class TrayIcon:
             menu entry.
         on_settings: Callback invoked by the "Settings" menu entry.
         on_quit: Callback invoked by the "Quit" menu entry.
+        on_accept_suggestion: Callback invoked by the "Apply suggestion" menu
+            entry. The entry is insensitive until a suggestion is offered.
     """
 
     def __init__(
@@ -35,12 +37,24 @@ class TrayIcon:
         on_status: Callable[[], str] | None = None,
         on_settings: Callable[[], None] | None = None,
         on_quit: Callable[[], None] | None = None,
+        on_accept_suggestion: Callable[[], None] | None = None,
     ) -> None:
         self.on_fix = on_fix
         self.on_status = on_status
         self.on_settings = on_settings
         self.on_quit = on_quit
+        self.on_accept_suggestion = on_accept_suggestion
         self._indicator: object | None = None
+        self._suggestion_item: object | None = None
+
+    def set_suggestion_available(self, available: bool) -> None:
+        """Enable or disable the "Apply suggestion" entry.
+
+        Called from the daemon when a suggestion is offered or consumed. Safe
+        before the menu exists: the item is only built when the tray starts.
+        """
+        if self._suggestion_item is not None:
+            self._suggestion_item.set_sensitive(available)  # type: ignore[attr-defined]
 
     def _show_status(self) -> None:
         """Show the current status as a desktop notification."""
@@ -112,6 +126,7 @@ class TrayIcon:
         entries = [
             ("Показать статус", self._show_status),
             ("Исправить сейчас", self.on_fix),
+            ("Применить предложение", self.on_accept_suggestion),
             ("Настройки", self.on_settings),
             ("Выход", self.on_quit),
         ]
@@ -121,6 +136,11 @@ class TrayIcon:
                 item.connect("activate", lambda _item, cb=callback: cb())
             else:
                 item.set_sensitive(False)
+            if label == "Применить предложение":
+                # Insensitive until the daemon offers a suggestion; the entry is
+                # a no-op the rest of the time.
+                item.set_sensitive(False)
+                self._suggestion_item = item
             menu.append(item)
         menu.show_all()
         return menu

@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The detector's latency and memory are now budgeted in CI.** The
+  `latency-budget` job runs `scripts/measure_latency.py` with `--budget-ms 0.5`
+  and `--budget-mib 64`; the script exits non-zero when the slowest direction or
+  the peak traced allocation crosses the line. The thresholds are loose on
+  purpose — a shared runner is noisy, and the regression worth catching is an
+  order of magnitude (a corpus reloaded per word, an accidental O(n²)), not a
+  few percent. `--budget-ms`/`--budget-mib` also make the script usable as a
+  local check.
+- **Hybrid mode now offers the fix it will not apply.** Hybrid mode has always
+  withheld a low-confidence conversion instead of rewriting the word, but the
+  offer was only reachable through the fix hotkey. The withheld suggestion is
+  now kept explicitly and can be applied deliberately: the tray gains an
+  "Apply suggestion" entry (disabled until an offer is waiting), a new
+  `hotkey_accept_suggestion` binding does the same from the keyboard, and
+  `suggest_on_withhold` (off by default) shows a notification when an offer
+  appears. The offer is dropped as soon as the next word is flushed, so a
+  stale suggestion is never applied to text the user has moved past. The typed
+  text stays in memory: the offer is never logged and the notification body is
+  a fixed label, preserving the "no typed text on disk or in argv" invariant.
+- **The `.deb` now ships an `md5sums` manifest, and `klyrshift verify` checks
+  it.** `dpkg-deb --build` does not generate the manifest, so a corrupted or
+  edited file had no way to be detected after installation. `scripts/build_deb.sh`
+  writes one entry per installed file; `klyrshift verify` (and the `doctor`
+  "Целостность пакета" row) compares the files on disk against it and reports
+  a missing file distinctly from a modified one, because the fix differs.
+  `dpkg --verify klyrshift` now works as well. A source checkout or a venv
+  install has no manifest and is reported as "not installed from a .deb",
+  not as a pass.
+
+### Fixed
+
+- **The withheld-conversion log line leaked the typed word.** The hybrid-mode
+  DEBUG message used `%r` on the buffer, so `log_level=DEBUG` wrote the user's
+  text to `klyrshift.log` -- the same class of leak the T9 path had already
+  fixed. It now logs the confidence and the word length only.
+
+
 ## [0.2.9] - 2026-10-19
 
 Adds always-on learning, and makes a correction safe to reverse even after

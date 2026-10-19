@@ -151,6 +151,10 @@ VALID_FEATURE_MODES: Final[tuple[str, ...]] = ("auto", "manual", "hybrid", "off"
 # Default hotkeys for the manual T9 / punctuation actions.
 DEFAULT_TYPO_HOTKEY: Final[str] = "CTRL+SHIFT+F"
 DEFAULT_PUNCTUATION_HOTKEY: Final[str] = "CTRL+SHIFT+P"
+# Accept the suggestion hybrid mode withheld for the last word. Empty by
+# default: the double-Shift fix hotkey already applies it, so a second binding
+# would surprise a user who never asked for one.
+DEFAULT_ACCEPT_SUGGESTION_HOTKEY: Final[str] = ""
 # The pre-0.2.8 T9 mode migrates from the legacy ``typo_correction`` boolean
 # (and, in ``manual``, from the now-removed ``typo_in_manual`` opt-in).
 #
@@ -194,6 +198,8 @@ VALID_BACKENDS: Final[tuple[str, ...]] = ("auto", "uinput", "wtype", "xdotool")
 VALID_SWITCH_METHODS: Final[tuple[str, ...]] = ("auto", "g3kb-switch", "setxkbmap")
 VALID_LOG_LEVELS: Final[tuple[str, ...]] = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 VALID_MODES: Final[tuple[str, ...]] = ("auto", "manual", "hybrid")
+# The GUI colour scheme: follow the desktop, or force light/dark.
+VALID_THEMES: Final[tuple[str, ...]] = ("system", "light", "dark")
 VALID_DICTIONARY_SIZES: Final[tuple[int, ...]] = (1000, 5000, 10000)
 # The languages Klyrshift ships layouts and dictionaries for.
 SUPPORTED_LANGUAGES: Final[tuple[str, ...]] = ("en", "ru", "uk", "de", "fr")
@@ -520,6 +526,10 @@ class Config:
     notify_on_error: bool = False
     sound_on_fix: bool = False
     tray_enabled: bool = True
+    # The GUI colour scheme. ``system`` follows the desktop (the default and the
+    # historical behaviour); ``light``/``dark`` force one scheme for the window.
+    # The daemon ignores this: it only affects the settings window.
+    theme: str = "system"
     hotkey: str = DEFAULT_FIX_HOTKEY
     log_level: str = "INFO"
     log_rotation_mb: int = DEFAULT_LOG_ROTATION_MB
@@ -541,6 +551,13 @@ class Config:
     # Manual reverse conversion: force the last word (even a correct one) into
     # the other layout, e.g. ``привет`` -> ``ghbdtn``. No detector involved.
     hotkey_toggle_layout_last_word: str = DEFAULT_TOGGLE_LAYOUT_HOTKEY
+    # Apply the layout suggestion hybrid mode withheld for the last word. The
+    # double-Shift fix hotkey already does this; this binding exists for a user
+    # who wants a dedicated key, so it is empty by default.
+    hotkey_accept_suggestion: str = DEFAULT_ACCEPT_SUGGESTION_HOTKEY
+    # Notify when a suggestion is offered. Off by default for the same reason
+    # ``notify_on_fix`` is: a notification on every uncertain word is noise.
+    suggest_on_withhold: bool = False
     hotkey_swallow: bool = True
     hotkey_double_tap_ms: int = DEFAULT_DOUBLE_TAP_MS
     undo_window_seconds: int = DEFAULT_UNDO_WINDOW_SECONDS
@@ -683,6 +700,10 @@ class Config:
         if self.log_level not in VALID_LOG_LEVELS:
             raise ValueError(f"log_level must be one of {VALID_LOG_LEVELS}")
 
+        self.theme = str(self.theme).lower()
+        if self.theme not in VALID_THEMES:
+            raise ValueError(f"theme must be one of {VALID_THEMES}")
+
         self.log_rotation_mb = int(self.log_rotation_mb)
         if not 1 <= self.log_rotation_mb <= 50:
             raise ValueError("log_rotation_mb must be between 1 and 50")
@@ -744,6 +765,7 @@ class Config:
         self.hotkey_toggle_mode = normalise_hotkey(self.hotkey_toggle_mode)
         self.hotkey_reload_config = normalise_hotkey(self.hotkey_reload_config)
         self.hotkey_toggle_layout_last_word = normalise_hotkey(self.hotkey_toggle_layout_last_word)
+        self.hotkey_accept_suggestion = normalise_hotkey(self.hotkey_accept_suggestion)
 
         self.hotkey_double_tap_ms = int(self.hotkey_double_tap_ms)
         # The pre-0.2.8 default of 300 ms is too short to reliably catch a

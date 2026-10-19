@@ -260,14 +260,63 @@ def cmd_undo(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_learn_words(action: str, args: argparse.Namespace) -> int:
+    """Handle ``learn list`` / ``promote`` / ``forget`` over the control socket.
+
+    These words are the ones the daemon promoted from watching the user's typing;
+    they live in memory only, so a one-shot CLI cannot read them from a file. It
+    asks the daemon instead. When no daemon is running there is nothing to list
+    or edit, and the command says so rather than silently doing nothing.
+    """
+    from . import control
+
+    if action == "list":
+        words = control.learn_list()
+        if words is None:
+            print("Демон не запущен: список выученных слов доступен только у работающего демона.")
+            return 1
+        if not words:
+            print("Выученных слов пока нет.")
+            return 0
+        print(f"Выученные слова ({len(words)}):")
+        for word in words:
+            print(f"  {word}")
+        return 0
+
+    word = (args.word or "").strip()
+    if not word:
+        print(f"Укажите слово: klyrshift learn {action} <слово>")
+        return 2
+    if action == "promote":
+        result = control.learn_promote(word)
+        if result is None:
+            print("Демон не запущен: закрепить слово можно только у работающего демона.")
+            return 1
+        print(f"Слово «{word}» закреплено: оно больше не исправляется в этой сессии.")
+        return 0
+    result = control.learn_forget(word)
+    if result is None:
+        print("Демон не запущен: забыть слово можно только у работающего демона.")
+        return 1
+    print(f"Слово «{word}» забыто: оно снова может исправляться.")
+    return 0
+
+
 def cmd_learn(args: argparse.Namespace) -> int:
     """Show or change the always-on learning settings.
 
     The learned words themselves live in the daemon's memory only (nothing the
     user types is ever written to disk), so this reports the persisted
-    *counters* and the current setting, never a word.
+    *counters* and the current setting, never a word. ``learn list`` /
+    ``promote`` / ``forget`` are the exception: the user names a word on
+    purpose, and it is exchanged with the running daemon over the local control
+    socket — it is still never written to the learning profile.
     """
     from .learning import LearningStore
+
+    action = getattr(args, "learn_action", None)
+    if action in {"list", "promote", "forget"}:
+        return _cmd_learn_words(action, args)
 
     config = load_config()
     if args.on:
@@ -314,6 +363,9 @@ def cmd_dict(args: argparse.Namespace) -> int:
     if action in ("categories", "install", "list-installed", "remove-category"):
         return _cmd_dict_thematic(action, args, default_extended_dictionary_dir)
 
+    if action in ("pack", "verify", "install-file", "uninstall-file"):
+        return _cmd_dict_langpack(action, args, default_extended_dictionary_dir)
+
     path = config_path_for_dict()
     if action == "list":
         words = load_user_dictionary(str(path))
@@ -350,7 +402,11 @@ def cmd_dict(args: argparse.Namespace) -> int:
         "  klyrshift dict categories\n"
         "  klyrshift dict install <категория> [--lang ru]\n"
         "  klyrshift dict list-installed\n"
-        "  klyrshift dict remove-category <категория>"
+        "  klyrshift dict remove-category <категория>\n"
+        "  klyrshift dict pack <файл> --name <имя> --lang <язык> [--kind frequency]\n"
+        "  klyrshift dict verify <пакет.tar.gz>\n"
+        "  klyrshift dict install-file <пакет.tar.gz>\n"
+        "  klyrshift dict uninstall-file <пакет.tar.gz>"
     )
     return 2
 
@@ -491,6 +547,135 @@ def config_path_for_dict() -> Path:
     from .dictionary import user_dictionary_path
 
     return user_dictionary_path(load_config().dictionary_custom_path)
+
+
+def _cmd_dict_langpack(
+    action: str, args: argparse.Namespace, default_dir: Callable[[], Path]
+) -> int:
+    """Handle the versioned language-package actions (pack/verify/install-file/...)."""
+    from .config import load_config, save_config
+    from .langpack import (
+        PackageError,
+        build_package,
+        install_package,
+        read_manifest,
+        uninstall_package,
+        verify_package,
+    )
+
+    config = load_config()
+    directory = config.extended_dictionary_dir or str(default_dir())
+
+    if action == "pack":
+        requested = ([args.word] if args.word else []) + list(getattr(args, "file", []) or [])
+        if not requested:
+            print(
+                "Укажите файлы: klyrshift dict pack <файл> [--file <файл> ...] --name ru-50k --lang ru"
+            )
+            return 2
+        sources = [Path(p).expanduser() for p in requested]
+        missing = [str(p) for p in sources if not p.is_file()]
+        if missing:
+            print("Файлы не найдены: " + ", ".join(missing))
+            return 1
+        name = args.name or sources[0].stem
+        language = (args.lang or "").strip().lower()
+        if not language:
+            # Infer from the name prefix, the same convention import-file uses.
+            language = sources[0].name.split("-")[0].split(".")[0].lower()
+        destination = Path(args.output).expanduser() if args.output else Path(f"{name}.tar.gz")
+        try:
+            manifest = build_package(
+                sources,
+                destination,
+                name=name,
+                language=language,
+                kind=args.kind,
+                version=args.package_version,
+                license=args.license,
+                source="klyrshift dict pack",
+            )
+        except (PackageError, OSError) as exc:
+            print(f"Не удалось собрать пакет: {exc}")
+            return 1
+        print(f"Собран пакет {destination} ({manifest.kind}/{manifest.language}, {name}).")
+        for entry in manifest.files:
+            print(f"  {entry.name}: {entry.words} слов, sha256 {entry.sha256[:12]}…")
+        return 0
+
+    if action == "verify":
+        if not args.word:
+            print("Укажите пакет: klyrshift dict verify <пакет.tar.gz>")
+            return 2
+        archive = Path(args.word).expanduser()
+        if not archive.is_file():
+            print(f"Файл не найден: {archive}")
+            return 1
+        try:
+            manifest = read_manifest(archive)
+        except PackageError as exc:
+            print(f"Пакет недействителен: {exc}")
+            return 1
+        problems = verify_package(archive, manifest)
+        if problems:
+            print(f"Пакет {archive} не прошёл проверку:")
+            for problem in problems:
+                print(f"  - {problem}")
+            return 1
+        print(f"Пакет {archive} в порядке.")
+        print(
+            f"  {manifest.kind}/{manifest.language}, версия {manifest.version}, "
+            f"формат {manifest.format}, файлов {len(manifest.files)}"
+        )
+        if manifest.license:
+            print(f"  лицензия: {manifest.license}")
+        return 0
+
+    if action == "install-file":
+        if not args.word:
+            print("Укажите пакет: klyrshift dict install-file <пакет.tar.gz>")
+            return 2
+        archive = Path(args.word).expanduser()
+        if not archive.is_file():
+            print(f"Файл не найден: {archive}")
+            return 1
+        try:
+            result = install_package(archive, Path(directory))
+        except PackageError as exc:
+            print(f"Установка отклонена: {exc}")
+            return 1
+        except OSError as exc:
+            print(f"Не удалось установить пакет: {exc}")
+            return 1
+        _remember_extended_dir(config, directory, save_config)
+        print(
+            f"Установлен пакет {result.manifest.name} "
+            f"({result.manifest.kind}/{result.manifest.language}): "
+            f"{len(result.installed)} файл(ов) в {directory}."
+        )
+        if result.replaced:
+            print(f"Заменено файлов: {len(result.replaced)} (старые версии сохранены как резерв).")
+        print("Перезапустите демон или нажмите хоткей перезагрузки конфигурации.")
+        return 0
+
+    # action == "uninstall-file"
+    if not args.word:
+        print("Укажите пакет: klyrshift dict uninstall-file <пакет.tar.gz>")
+        return 2
+    archive = Path(args.word).expanduser()
+    if not archive.is_file():
+        print(f"Файл не найден: {archive}")
+        return 1
+    try:
+        manifest = read_manifest(archive)
+    except PackageError as exc:
+        print(f"Пакет недействителен: {exc}")
+        return 1
+    removed = uninstall_package(
+        manifest.kind, manifest.language, [f.name for f in manifest.files], Path(directory)
+    )
+    print(f"Удалено файлов: {len(removed)}.")
+    return 0
 
 
 def cmd_config(args: argparse.Namespace) -> int:
@@ -786,6 +971,13 @@ def cmd_doctor(_args: argparse.Namespace) -> int:
     return run_doctor()
 
 
+def cmd_verify(_args: argparse.Namespace) -> int:
+    """Verify the installed package files against the md5sums manifest."""
+    from .integrity import run_verify
+
+    return run_verify()
+
+
 def cmd_logs(args: argparse.Namespace) -> int:
     """Print (or follow) the daemon log."""
     from .logs import follow, log_file_path, read_tail
@@ -838,7 +1030,14 @@ def build_parser() -> argparse.ArgumentParser:
     undo = subparsers.add_parser("undo", help="отменить последнее исправление")
     undo.set_defaults(func=cmd_undo)
 
-    learn = subparsers.add_parser("learn", help="обучение: статистика и вкл/выкл")
+    learn = subparsers.add_parser("learn", help="обучение: статистика, список слов, вкл/выкл")
+    learn.add_argument(
+        "learn_action",
+        nargs="?",
+        choices=["list", "promote", "forget"],
+        help="list — показать выученные слова; promote/forget — закрепить/забыть слово",
+    )
+    learn.add_argument("word", nargs="?", help="слово для promote/forget")
     learn.add_argument("--on", action="store_true", help="включить обучение")
     learn.add_argument("--off", action="store_true", help="выключить обучение")
     learn.add_argument("--reset", action="store_true", help="сбросить счётчики обучения")
@@ -860,19 +1059,37 @@ def build_parser() -> argparse.ArgumentParser:
             "install",
             "list-installed",
             "remove-category",
+            "pack",
+            "verify",
+            "install-file",
+            "uninstall-file",
         ],
         help=(
             "list/add/remove — словарь пользователя; download/import-file — базовые "
             "расширенные словари; categories/install/list-installed/remove-category — "
-            "тематические словари"
+            "тематические словари; pack/verify/install-file/uninstall-file — "
+            "версионированные пакеты языков (manifest + sha256)"
         ),
     )
     dict_parser.add_argument(
         "word", nargs="?", help="слово (add/remove) или язык/путь (download/import-file)"
     )
     dict_parser.add_argument(
-        "--lang", default="", help="язык для import-file, если его нет в имени файла"
+        "--lang", default="", help="язык для import-file/pack, если его нет в имени файла"
     )
+    dict_parser.add_argument(
+        "--file", action="append", default=[], help="дополнительный файл для dict pack"
+    )
+    dict_parser.add_argument("--name", default="", help="имя пакета для dict pack")
+    dict_parser.add_argument(
+        "--kind",
+        default="frequency",
+        choices=["frequency", "thematic", "ngrams"],
+        help="тип пакета для dict pack",
+    )
+    dict_parser.add_argument("--output", default="", help="куда записать пакет (dict pack)")
+    dict_parser.add_argument("--package-version", default="1.0.0", help="версия пакета (dict pack)")
+    dict_parser.add_argument("--license", default="", help="лицензия пакета (dict pack)")
     dict_parser.set_defaults(func=cmd_dict)
 
     config = subparsers.add_parser("config", help="работа с конфигурацией")
@@ -909,6 +1126,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="самодиагностика окружения")
     doctor.set_defaults(func=cmd_doctor)
+
+    verify = subparsers.add_parser(
+        "verify", help="проверить целостность файлов установленного пакета"
+    )
+    verify.set_defaults(func=cmd_verify)
 
     collect = subparsers.add_parser("collect-logs", help="собрать диагностический архив для issue")
     collect.add_argument(

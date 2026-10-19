@@ -128,6 +128,24 @@ jobs:
           sha256sum *.deb | tee SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      # ``dpkg-deb --build`` does not write DEBIAN/md5sums, so the build script
+      # writes it. Assert it is present and covers every packaged file, or
+      # ``dpkg --verify klyrshift`` would pass vacuously after install.
+      - name: Verify the .deb ships a complete md5sums manifest
+        run: |
+          set -euo pipefail
+          deb="$(ls dist/klyrshift_*.deb | head -1)"
+          dpkg-deb --ctrl-tarfile "${deb}" | tar t | grep -qx './md5sums' \
+            || { echo "::error::${deb} has no md5sums manifest"; exit 1; }
+          dpkg-deb -e "${deb}" /tmp/ctrl
+          dpkg-deb -x "${deb}" /tmp/root
+          ( cd /tmp/root && find . -type f | sed 's|^\./||' | sort ) > /tmp/packaged.txt
+          cut -c35- /tmp/ctrl/md5sums | sort > /tmp/listed.txt
+          diff /tmp/packaged.txt /tmp/listed.txt \
+            || { echo "::error::md5sums does not cover exactly the packaged files"; exit 1; }
+          ( cd /tmp/root && md5sum -c --quiet /tmp/ctrl/md5sums )
+          echo "md5sums covers all $(wc -l < /tmp/listed.txt) files."
+
       # Build every thematic archive in the same way the release job does, and
       # assert each contains the member ``dict install`` searches for. Without
       # this a renamed category file would only fail at release time.
@@ -157,6 +175,31 @@ jobs:
             dist/*.deb
             dist/SHA256SUMS.txt
           if-no-files-found: error
+
+  latency-budget:
+    name: Detector latency & memory budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      # The thresholds are loose on purpose: a shared runner is noisy, and the
+      # regression this guards against is an order-of-magnitude one (a corpus
+      # reloaded per word, an accidental O(n^2)), not a few percent.
+      - name: Measure
+        run: |
+          python scripts/measure_latency.py \
+            --limit 3000 --repeats 3 --budget-ms 0.5 --budget-mib 64
 
   site:
     name: Landing page build

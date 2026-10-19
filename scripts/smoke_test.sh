@@ -100,6 +100,21 @@ grep -q "^ExecStart=/usr/bin/klyrshift start" "${HOME}/.config/systemd/user/klyr
 echo "--- doctor (expected to report failures in a bare container) ---"
 klyrshift doctor || true
 
+echo "--- package integrity (the .deb ships an md5sums manifest) ---"
+klyrshift verify || { echo "klyrshift verify failed on a fresh install"; exit 1; }
+# The manifest must cover every regular file dpkg installed, not a subset: a
+# partial manifest would silently pass and leave the uncovered files
+# uncheckable. dpkg -L also lists directories, which the manifest omits.
+dpkg -L klyrshift | while read -r path; do
+    [ -f "${path}" ] && printf "%s\n" "${path#/}"
+done | sort > /tmp/dpkg-files.txt
+# A manifest line is "<32 hex><two spaces><path>"; cut drops the digest.
+cut -c35- /var/lib/dpkg/info/klyrshift.md5sums | sort > /tmp/manifest-files.txt
+diff /tmp/dpkg-files.txt /tmp/manifest-files.txt \
+    || { echo "md5sums does not cover exactly the installed files"; exit 1; }
+# And the dpkg verifier must agree.
+dpkg --verify klyrshift || { echo "dpkg --verify reported changes"; exit 1; }
+
 echo "--- collect-logs ---"
 klyrshift collect-logs --output /tmp | grep -q "архив создан" || { echo "collect-logs failed"; exit 1; }
 ls /tmp/klyrshift-logs-*.tar.gz >/dev/null || { echo "no tarball produced"; exit 1; }
