@@ -27,6 +27,9 @@ from ..daemon_control import (
     stop as daemon_stop,
     undo_last_fix as daemon_undo_last_fix,
 )
+from ..langstore import LANGUAGE_LABELS
+
+__all__ = ["LANGUAGE_LABELS", "MODE_LABELS", "GuiState"]
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +38,6 @@ MODE_LABELS: Final[dict[str, str]] = {
     "auto": "Авто",
     "manual": "Ручной",
     "hybrid": "Гибрид",
-}
-LANGUAGE_LABELS: Final[dict[str, str]] = {
-    "en": "English",
-    "ru": "Русский",
-    "uk": "Українська",
-    "de": "Deutsch",
-    "fr": "Français",
 }
 
 
