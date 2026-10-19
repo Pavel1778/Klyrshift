@@ -1175,3 +1175,135 @@ def test_service_unit_has_no_user_hostile_scheduling() -> None:
     assert "Nice=" not in joined
     assert "CPUSchedulingPolicy=" not in joined
     assert "CPUSchedulingPriority=" not in joined
+
+
+def test_languages_group_reflects_status(gui_state: Any) -> None:
+    from klyrshift.gui.widgets.languages_group import LanguagesGroup
+    from klyrshift.langstore import LanguageStatus
+
+    toggles: list[tuple[str, bool]] = []
+    installs: list[str] = []
+    removes: list[str] = []
+    group = LanguagesGroup(
+        [
+            LanguageStatus("ru", "Русский", enabled=True, installed=True, word_count=42),
+            LanguageStatus("de", "Deutsch", enabled=False, installed=False, word_count=0),
+        ],
+        on_toggle=lambda lang, active: toggles.append((lang, active)),
+        on_install=installs.append,
+        on_remove=removes.append,
+    )
+
+    ru = group.rows["ru"]
+    assert ru.get_subtitle() == "Включён · Установлен · слов: 42"
+    # An installed language offers removal, not installation.
+    assert ru.remove_button.get_visible() is True
+    assert ru.install_button.get_visible() is False
+
+    de = group.rows["de"]
+    assert de.get_subtitle() == "Выключен · Не установлен"
+    assert de.install_button.get_visible() is True
+    assert de.remove_button.get_visible() is False
+
+    de.install_button.emit("clicked")
+    ru.remove_button.emit("clicked")
+    assert installs == ["de"]
+    assert removes == ["ru"]
+
+    de.switch.set_active(True)
+    assert ("de", True) in toggles
+
+
+def test_languages_group_busy_state(gui_state: Any) -> None:
+    from klyrshift.gui.widgets.languages_group import LanguagesGroup
+    from klyrshift.langstore import LanguageStatus
+
+    group = LanguagesGroup(
+        [LanguageStatus("de", "Deutsch", enabled=False, installed=False, word_count=0)],
+        on_toggle=lambda _l, _a: None,
+        on_install=lambda _l: None,
+        on_remove=lambda _l: None,
+    )
+    row = group.rows["de"]
+    group.set_busy("de", True)
+    assert row.install_button.get_sensitive() is False
+    group.set_busy("de", False)
+    assert row.install_button.get_sensitive() is True
+
+
+def test_settings_page_language_install_runs_in_background(
+    gui_state: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Install hands the download to a worker and refreshes when it returns."""
+    from klyrshift.gui import settings_page as settings_module
+    from klyrshift.gui.settings_page import SettingsPage
+    from klyrshift.langstore import LanguageStatus
+
+    gui_state.config.extended_dictionary_dir = str(tmp_path / "dicts")
+    monkeypatch.setattr(gui_state, "save", lambda: None)
+
+    captured: dict[str, Any] = {}
+
+    def fake_background(fn: Any, on_done: Any, *args: Any, **kwargs: Any) -> None:
+        captured["fn"] = fn
+        captured["args"] = args
+        on_done("ok")
+
+    monkeypatch.setattr(settings_module, "run_in_background", fake_background)
+
+    def fake_install(config: Any, language: str) -> LanguageStatus:
+        return LanguageStatus(language, language, True, True, 7)
+
+    monkeypatch.setattr(settings_module, "install_language", fake_install)
+
+    saved: list[str] = []
+    page = SettingsPage(gui_state, on_saved=saved.append)
+    page.languages_group.rows["de"].install_button.emit("clicked")
+
+    assert captured["fn"] is fake_install
+    assert captured["args"][1] == "de"
+    assert any("Deutsch" in message for message in saved)
+
+
+def test_settings_page_language_remove_refuses_last(
+    gui_state: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from klyrshift.gui import settings_page as settings_module
+    from klyrshift.gui.settings_page import SettingsPage
+
+    monkeypatch.setattr(gui_state, "save", lambda: None)
+    gui_state.config.languages = ["ru"]
+
+    def fake_remove(_config: Any, _language: str) -> None:
+        raise ValueError("cannot remove the only enabled language")
+
+    monkeypatch.setattr(settings_module, "remove_language", fake_remove)
+
+    saved: list[str] = []
+    page = SettingsPage(gui_state, on_saved=saved.append)
+    page.languages_group.rows["ru"].remove_button.emit("clicked")
+    assert any("единственный" in message for message in saved)
+
+
+def test_settings_page_language_remove_ok(
+    gui_state: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from klyrshift.gui import settings_page as settings_module
+    from klyrshift.gui.settings_page import SettingsPage
+
+    monkeypatch.setattr(gui_state, "save", lambda: None)
+    gui_state.config.languages = ["en", "de"]
+    gui_state.config.extended_dictionary_dir = str(tmp_path / "dicts")
+
+    removed: list[str] = []
+
+    def fake_remove(_config: Any, language: str) -> None:
+        removed.append(language)
+
+    monkeypatch.setattr(settings_module, "remove_language", fake_remove)
+
+    saved: list[str] = []
+    page = SettingsPage(gui_state, on_saved=saved.append)
+    page.languages_group.rows["de"].remove_button.emit("clicked")
+    assert removed == ["de"]
+    assert any("Deutsch" in message for message in saved)

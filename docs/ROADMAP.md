@@ -50,7 +50,7 @@ The main goal is that a correction is always safe to reverse.
 | Thematic dictionaries with offline fallback | done |
 | User dictionary add / remove / import / export | done |
 | A versioned, checksummed language-package format | planned |
-| Install / remove languages from the GUI | partial — enable/disable exists, install does not |
+| Install / remove languages from the GUI | done |
 | Package rollback on a failed update | planned |
 | Integrity check before install | planned |
 
