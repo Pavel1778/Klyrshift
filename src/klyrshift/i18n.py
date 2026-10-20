@@ -36,9 +36,35 @@ from typing import Any, Final
 logger = logging.getLogger(__name__)
 
 # Languages with a shipped catalogue. Russian is the source language and needs
-# no file; it is listed so ``--lang ru`` is accepted explicitly.
-SUPPORTED_LOCALES: Final[tuple[str, ...]] = ("ru", "en")
+# no file; it is listed so ``--lang ru`` is accepted explicitly. Every other
+# entry names a file in ``data/locales/<locale>.json``.
+SUPPORTED_LOCALES: Final[tuple[str, ...]] = ("ru", "en", "de", "fr", "uk")
 DEFAULT_LOCALE: Final[str] = "ru"
+
+# What a catalogue falls back to, in order, before the Russian source text.
+# The catalogues are translated incrementally, so a German build that lacks an
+# entry shows the English wording rather than the Russian one -- a German
+# speaker reading an English label is better served than one reading Cyrillic.
+# ``en`` and ``ru`` are terminals: the source is Russian, so ``ru`` needs no
+# fallback, and ``en`` is the fallback of last resort.
+LOCALE_FALLBACKS: Final[dict[str, tuple[str, ...]]] = {
+    "ru": (),
+    "en": (),
+    "de": ("en",),
+    "fr": ("en",),
+    "uk": ("en",),
+}
+
+# Native names, used by the interface-language selector. A language is always
+# listed in its own script, which is the convention a user who cannot read the
+# current interface language depends on.
+LOCALE_NAMES: Final[dict[str, str]] = {
+    "ru": "Русский",
+    "en": "English",
+    "de": "Deutsch",
+    "fr": "Français",
+    "uk": "Українська",
+}
 
 # Set by :func:`set_locale`; ``None`` means "detect from the environment".
 _active_locale: str | None = None
@@ -101,6 +127,21 @@ def _detect_locale() -> str:
     return DEFAULT_LOCALE
 
 
+def supported_locales() -> tuple[str, ...]:
+    """Return every locale the interface can be shown in, source first.
+
+    This is the single source of truth the config validator and the GUI
+    selector read, so adding a catalogue here is the only change needed to
+    offer a new interface language.
+    """
+    return SUPPORTED_LOCALES
+
+
+def locale_name(locale: str) -> str:
+    """Return the native name of ``locale``, falling back to the code itself."""
+    return LOCALE_NAMES.get(locale.lower(), locale)
+
+
 def get_locale() -> str:
     """Return the active locale (an explicit choice, else the environment)."""
     if _active_locale is not None:
@@ -126,17 +167,36 @@ def set_locale(locale: str | None) -> str:
 def plural_form(count: int, locale: str | None = None) -> int:
     """Return the plural form index for ``count`` in ``locale``.
 
-    Russian (and Ukrainian) use three forms: 1, 2-4, then 5+. English uses two:
-    1 and everything else.
+    Russian and Ukrainian use three forms: 1, 2-4, then 5+. English, German and
+    French use two, but French treats zero as singular ("0 mot", not "0 mots"),
+    which is why it is not folded into the default branch.
     """
     language = (locale or get_locale()).lower()
-    if language == "ru" or language == "uk":
+    if language in ("ru", "uk"):
         if count % 10 == 1 and count % 100 != 11:
             return 0
         if 2 <= count % 10 <= 4 and not 12 <= count % 100 <= 14:
             return 1
         return 2
+    if language == "fr":
+        return 0 if count in (0, 1) else 1
     return 0 if count == 1 else 1
+
+
+def _lookup(locale: str, source: str) -> Any:
+    """Return the entry for ``source`` in ``locale``'s chain, or ``None``.
+
+    The active catalogue is consulted first, then each fallback in
+    :data:`LOCALE_FALLBACKS`. ``ru`` is the source language and holds no
+    catalogue, so its chain is empty and the caller keeps the Russian text.
+    """
+    for candidate in (locale, *LOCALE_FALLBACKS.get(locale, ())):
+        if candidate == DEFAULT_LOCALE:
+            continue
+        entry = _load_catalogue(candidate).get(source)
+        if entry is not None:
+            return entry
+    return None
 
 
 def tr(source: str, *args: object, count: int | None = None, **kwargs: object) -> str:
@@ -155,8 +215,7 @@ def tr(source: str, *args: object, count: int | None = None, **kwargs: object) -
         so a broken catalogue can never crash the UI.
     """
     locale = get_locale()
-    catalogue = _load_catalogue(locale) if locale != DEFAULT_LOCALE else {}
-    entry = catalogue.get(source)
+    entry = _lookup(locale, source)
 
     if isinstance(entry, list):
         index = plural_form(count if count is not None else 0, locale)

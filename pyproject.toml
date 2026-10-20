@@ -34,6 +34,10 @@ dependencies = [
 [project.optional-dependencies]
 tray = ["PyGObject>=3.42"]
 gui = ["PyGObject>=3.42"]
+docs = [
+    "weasyprint>=60.0",
+    "markdown>=3.5",
+]
 dev = [
     "black>=24.0",
     "isort>=5.13",
@@ -102,7 +106,7 @@ files = ["src/klyrshift", "tests"]
 exclude = ["build", "dist"]
 
 [[tool.mypy.overrides]]
-module = ["uinput.*", "gi.*", "tomli.*"]
+module = ["uinput.*", "gi.*", "tomli.*", "weasyprint.*", "markdown.*"]
 ignore_missing_imports = true
 
 # PyGObject ships no type stubs, so every GTK class is ``Any`` and mypy flags

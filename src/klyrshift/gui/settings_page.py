@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 import gi
 
+from .. import i18n
 from ..i18n import LazyLabels, _, set_locale
 
 gi.require_version("Gtk", "4.0")
@@ -32,17 +33,21 @@ THEME_ORDER = ("system", "light", "dark")
 THEME_LABELS = LazyLabels({"system": "Как в системе", "light": "Светлая", "dark": "Тёмная"})
 
 # Interface language. ``auto`` follows the environment; the rest are explicit.
-UI_LOCALE_ORDER = ("auto", "ru", "en")
-_UI_LOCALE_LABELS_SOURCE = {
-    "auto": "Как в системе",
-    "ru": "Русский",
-    "en": "English",
-}
+# The explicit list comes from the catalogue registry, so a new catalogue shows
+# up in the combo without editing this module.
+UI_LOCALE_ORDER = ("auto", *i18n.SUPPORTED_LOCALES)
 
 
 def ui_locale_labels() -> list[str]:
-    """Translated labels for the interface-language combo, in display order."""
-    return [_(_UI_LOCALE_LABELS_SOURCE[value]) for value in UI_LOCALE_ORDER]
+    """Translated labels for the interface-language combo, in display order.
+
+    ``auto`` is translated because it is an instruction ("follow the desktop");
+    every other entry is the language's own name, which must stay readable to a
+    speaker who cannot yet read the current interface language.
+    """
+    labels = [i18n.tr("Как в системе")]
+    labels.extend(i18n.locale_name(locale) for locale in UI_LOCALE_ORDER[1:])
+    return labels
 
 
 class SettingsPage(BoundPreferencesPage):

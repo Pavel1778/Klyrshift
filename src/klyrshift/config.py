@@ -27,6 +27,8 @@ else:  # pragma: no cover - exercised on 3.10 only
 
 import tomli_w
 
+from . import i18n
+
 logger = logging.getLogger(__name__)
 
 APP_NAME: Final[str] = "klyrshift"
@@ -200,10 +202,11 @@ VALID_LOG_LEVELS: Final[tuple[str, ...]] = ("DEBUG", "INFO", "WARNING", "ERROR",
 VALID_MODES: Final[tuple[str, ...]] = ("auto", "manual", "hybrid")
 # The GUI colour scheme: follow the desktop, or force light/dark.
 VALID_THEMES: Final[tuple[str, ...]] = ("system", "light", "dark")
-# Interface locale: ``auto`` follows the desktop; ``ru``/``en`` force a shipped
-# catalogue. Kept in sync with ``klyrshift.i18n.SUPPORTED_LOCALES`` by a test.
+# Interface locale: ``auto`` follows the desktop; any other value forces a
+# shipped catalogue. Derived from ``klyrshift.i18n`` so adding a catalogue there
+# is the only edit needed to offer a new interface language.
 DEFAULT_UI_LOCALE: Final[str] = "auto"
-VALID_UI_LOCALES: Final[tuple[str, ...]] = ("auto", "ru", "en")
+VALID_UI_LOCALES: Final[tuple[str, ...]] = ("auto", *i18n.SUPPORTED_LOCALES)
 VALID_DICTIONARY_SIZES: Final[tuple[int, ...]] = (1000, 5000, 10000)
 # The languages Klyrshift ships layouts and dictionaries for.
 SUPPORTED_LANGUAGES: Final[tuple[str, ...]] = ("en", "ru", "uk", "de", "fr")

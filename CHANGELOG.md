@@ -40,6 +40,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entry, when a catalogue entry is orphaned, or when the plural helper
   mis-selects a form.
 
+- **Three more interface languages: German, French and Ukrainian.** The
+  interface shipped in Russian and English; `de`, `fr` and `uk` catalogues now
+  sit beside them and appear in the same "Interface language" combo, in their
+  own script (`Deutsch`, `Français`, `Українська`). The set of languages is
+  derived from one registry (`i18n.SUPPORTED_LOCALES`), so the config validator
+  and the GUI selector cannot disagree with the catalogues that exist. The
+  catalogues cover the settings window, the CLI and the first-run tour and
+  context help; only the tray and some daemon messages are untranslated yet and
+  fall back to English rather than to Russian, so a partial catalogue reads
+  coherently instead of half in Cyrillic. Ukrainian joins Russian in using three
+  plural forms; French treats zero as singular ("0 mot"), unlike German and
+  English. `--lang de|fr|uk` localises the CLI on the same catalogues.
+
+- **One offline handbook, in Markdown and PDF.** The documentation lived in a
+  dozen files, which is right for a repository and awkward for anyone reading
+  offline. `make docs-pdf` (or `scripts/build_docs.py`) concatenates `README.md`,
+  the `docs/*.md` guides and `CHANGELOG.md` into a single document and renders it
+  to `docs/klyrshift-handbook.pdf`, with a table of contents, page numbers and
+  rewritten internal links. The build is offline and deterministic
+  — no template fetch — so it can run in CI. The concatenated Markdown and the
+  rendered PDF are both committed, so the handbook can be read or searched
+  without a toolchain; the build regenerates them from the sources on demand. A
+  change belongs in the source document, never in either output. The `docs`
+  extra (`weasyprint`, `markdown`) is development-only and ships in no package.
+
 - **Domain dictionaries for names and code.** Two new thematic categories,
   `names` and `code`, ship for Russian and English. `klyrshift dict install
   names` (or `code`) widens the detector's vocabulary so a personal name or a

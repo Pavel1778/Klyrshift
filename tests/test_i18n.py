@@ -175,12 +175,25 @@ def test_locale_detection_strips_territory_and_encoding(monkeypatch: pytest.Monk
 def test_unsupported_environment_locale_falls_back_to_russian(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("LANG", "fr_FR.UTF-8")
+    monkeypatch.setenv("LANG", "ja_JP.UTF-8")
     monkeypatch.delenv("LANGUAGE", raising=False)
     monkeypatch.delenv("LC_ALL", raising=False)
     monkeypatch.delenv("LC_MESSAGES", raising=False)
     i18n.set_locale("")
     assert i18n.get_locale() == i18n.DEFAULT_LOCALE
+
+
+def test_every_shipped_locale_is_detected_from_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A shipped catalogue must be reachable by ``LANG`` alone."""
+    for locale in i18n.SUPPORTED_LOCALES:
+        monkeypatch.setenv("LANG", f"{locale}_XX.UTF-8")
+        monkeypatch.delenv("LANGUAGE", raising=False)
+        monkeypatch.delenv("LC_ALL", raising=False)
+        monkeypatch.delenv("LC_MESSAGES", raising=False)
+        i18n.set_locale("")
+        assert i18n.get_locale() == locale
 
 
 def test_parser_help_is_translated_by_the_flag() -> None:
@@ -218,3 +231,56 @@ def test_lazy_labels_translate_on_lookup() -> None:
     i18n.set_locale("ru")
     assert labels["a"] == "Светлая"
     assert list(labels) == ["a"] and len(labels) == 1
+
+
+def test_every_supported_locale_has_a_native_name() -> None:
+    """The interface-language selector lists each language in its own script."""
+    for locale in i18n.SUPPORTED_LOCALES:
+        assert i18n.locale_name(locale) != locale, locale
+    assert i18n.locale_name("klingon") == "klingon"
+
+
+def test_partial_catalogue_falls_back_to_english() -> None:
+    """A locale with a partial catalogue shows English, never Cyrillic."""
+    i18n.set_locale("de")
+    # Translated in de.json.
+    assert i18n.tr("Настройки") == "Einstellungen"
+    # Absent from de.json, present in en.json (a CLI hotkey label).
+    assert i18n.tr("Исправление последнего слова") == "Fix the last word"
+
+
+def test_fallback_stops_at_english_and_never_loops() -> None:
+    """``en`` and ``ru`` have empty fallback chains."""
+    assert i18n.LOCALE_FALLBACKS["en"] == ()
+    assert i18n.LOCALE_FALLBACKS["ru"] == ()
+    for locale in i18n.SUPPORTED_LOCALES:
+        assert locale not in i18n.LOCALE_FALLBACKS[locale]
+
+
+def test_missing_in_both_locale_and_english_keeps_the_source() -> None:
+    i18n.set_locale("uk")
+    assert i18n.tr("Строка, которой нет нигде.") == "Строка, которой нет нигде."
+
+
+def test_french_treats_zero_as_singular() -> None:
+    """French says "0 mot", so zero selects form 0, unlike German or English."""
+    assert [i18n.plural_form(n, "fr") for n in (0, 1, 2)] == [0, 0, 1]
+    assert [i18n.plural_form(n, "de") for n in (0, 1, 2)] == [1, 0, 1]
+    assert [i18n.plural_form(n, "en") for n in (0, 1, 2)] == [1, 0, 1]
+
+
+def test_ukrainian_uses_three_plural_forms() -> None:
+    assert [i18n.plural_form(n, "uk") for n in (1, 2, 5, 11, 21, 22)] == [0, 1, 2, 2, 0, 1]
+
+
+def test_supported_locales_is_the_registry_config_and_gui_read() -> None:
+    """Adding a catalogue is the only edit needed to offer a language."""
+    from klyrshift import config
+
+    assert ("auto", *i18n.SUPPORTED_LOCALES) == config.VALID_UI_LOCALES
+
+    # The GUI module imports GTK at module level, so read it as text: the
+    # selector must derive its order from the registry rather than restate it.
+    gui = Path(__file__).resolve().parent.parent / "src" / "klyrshift" / "gui" / "settings_page.py"
+    text = gui.read_text(encoding="utf-8")
+    assert 'UI_LOCALE_ORDER = ("auto", *i18n.SUPPORTED_LOCALES)' in text

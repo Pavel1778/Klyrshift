@@ -77,6 +77,10 @@ Caramba Switcher for Windows.
 - 🗂️ Профили по приложениям: список исключений, закреплённая раскладка
   (`[app_layouts]`) и отдельный режим исправления (`[app_modes]`)
 - 🔒 Приватность: в лог пишутся только метаданные, набранный текст не сохраняется
+- 🌍 Интерфейс на русском, английском, немецком, французском и украинском
+  (`klyrshift --lang de`, селектор «Язык интерфейса» в настройках)
+- 📖 Офлайн-справочник всей документации: `docs/klyrshift-handbook.pdf`
+  (Markdown-версия рядом), собирается командой `make docs-pdf`
 
 ## 🎯 Сравнение с аналогами / Comparison
 
@@ -618,9 +622,13 @@ make build-deb                # собрать .deb в dist/
 Управляющий сокет демона: [docs/CONTROL_SOCKET.md](docs/CONTROL_SOCKET.md).
 Стратегия тестирования и метрики детектора: [docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md).
 Формат языковых пакетов (версия, контрольная сумма, откат): [docs/LANGUAGE_PACKAGES.md](docs/LANGUAGE_PACKAGES.md).
+Языки интерфейса (каталоги, fallback, плюрали, как добавить язык): [docs/INTERFACE_LANGUAGES.md](docs/INTERFACE_LANGUAGES.md).
 План развития: [docs/ROADMAP.md](docs/ROADMAP.md).
 Ручной план тестирования на реальной системе: [docs/TESTING.md](docs/TESTING.md).
 Чек-лист выпуска (проверки пакета, словарей и живой клавиатуры): [docs/RELEASING.md](docs/RELEASING.md).
+Вся документация одним файлом: [docs/klyrshift-handbook.pdf](docs/klyrshift-handbook.pdf)
+(PDF) или [docs/klyrshift-handbook.md](docs/klyrshift-handbook.md) (Markdown);
+собирается из этих источников командой `make docs-pdf`.
 
 ## ⚠️ Известные ограничения / Known limitations
 
