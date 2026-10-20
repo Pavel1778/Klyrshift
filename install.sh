@@ -235,7 +235,32 @@ if [ -f "${REPO_DIR}/data/${APP_NAME}.svg" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 12. Enable and start the service
+# 12. Manual page and shell completion
+# ---------------------------------------------------------------------------
+# Regenerated from the argument parser by scripts/build_cli_docs.py; the files
+# are committed, so this is a pure copy. The paths are the user-level
+# equivalents of the .deb's /usr/share ones.
+if [ -f "${REPO_DIR}/data/${APP_NAME}.1" ]; then
+    MAN_DIR="${HOME}/.local/share/man/man1"
+    mkdir -p "${MAN_DIR}"
+    install -m 0644 "${REPO_DIR}/data/${APP_NAME}.1" "${MAN_DIR}/${APP_NAME}.1"
+    log "Установлена man-страница: man klyrshift (если ~/.local/share/man в MANPATH)"
+fi
+if [ -f "${REPO_DIR}/data/completions/${APP_NAME}.bash" ]; then
+    COMP_DIR="${HOME}/.local/share/bash-completion/completions"
+    mkdir -p "${COMP_DIR}"
+    install -m 0644 "${REPO_DIR}/data/completions/${APP_NAME}.bash" "${COMP_DIR}/${APP_NAME}"
+    log "Установлено автодополнение bash: ${COMP_DIR}/${APP_NAME}"
+fi
+if [ -f "${REPO_DIR}/data/completions/_${APP_NAME}" ]; then
+    ZSH_DIR="${HOME}/.local/share/zsh/site-functions"
+    mkdir -p "${ZSH_DIR}"
+    install -m 0644 "${REPO_DIR}/data/completions/_${APP_NAME}" "${ZSH_DIR}/_${APP_NAME}"
+    log "Установлено автодополнение zsh: ${ZSH_DIR}/_${APP_NAME}"
+fi
+
+# ---------------------------------------------------------------------------
+# 13. Enable and start the service
 # ---------------------------------------------------------------------------
 if have systemctl; then
     systemctl --user daemon-reload || true
@@ -253,14 +278,14 @@ if have systemctl; then
 fi
 
 # ---------------------------------------------------------------------------
-# 13. Notification
+# 14. Notification
 # ---------------------------------------------------------------------------
 if have notify-send; then
     notify-send "${APP_NAME}" "Klyrshift установлен и запущен" || true
 fi
 
 # ---------------------------------------------------------------------------
-# 14. Self-test
+# 15. Self-test
 # ---------------------------------------------------------------------------
 if [ -x "${BIN}" ]; then
     log "Самодиагностика (klyrshift doctor):"
@@ -268,7 +293,7 @@ if [ -x "${BIN}" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 15. Final instructions
+# 16. Final instructions
 # ---------------------------------------------------------------------------
 echo
 log "Готово!"

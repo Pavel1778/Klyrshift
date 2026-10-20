@@ -1,4 +1,4 @@
-.PHONY: help install uninstall test lint format typecheck check build-deb smoke-test zero-config upgrade-test clean dev docs-pdf
+.PHONY: help install uninstall test lint format typecheck check build-deb smoke-test zero-config upgrade-test clean dev docs-pdf cli-docs
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -42,6 +42,9 @@ check: lint typecheck test ## Run lint, typecheck and tests
 
 docs-pdf: ## Build the Markdown handbook and its PDF into docs/
 	$(VENV_PY) scripts/build_docs.py
+
+cli-docs: ## Regenerate the man page and shell completion from the parser
+	$(VENV_PY) scripts/build_cli_docs.py
 
 build-deb: ## Build a .deb package
 	bash scripts/build_deb.sh

@@ -20,7 +20,9 @@ That is the whole procedure. The package:
 - enables the systemd user service **globally**
   (`systemctl --user enable --global klyrshift.service`), so it starts at the
   next login. It is not started during installation because there may be no
-  graphical session yet.
+  graphical session yet;
+- ships the man page (`man klyrshift`) and the bash and zsh completions, so
+  `klyrshift <Tab>` completes commands and their options.
 
 After the next login the daemon is running. Verify with:
 
@@ -151,9 +153,12 @@ Either way the autostart can be toggled later from the GUI switch, or with
    `~/.config/autostart/klyrshift.desktop` (skipped with `--no-autostart`).
 10. Copies the icon to
     `~/.local/share/icons/hicolor/scalable/apps/klyrshift.svg`.
-11. Enables and starts the service (with `--no-autostart`, starts it without
+11. Installs the man page (`~/.local/share/man/man1/klyrshift.1`) and the bash
+    and zsh completions (`~/.local/share/bash-completion/completions/klyrshift`,
+    `~/.local/share/zsh/site-functions/_klyrshift`).
+12. Enables and starts the service (with `--no-autostart`, starts it without
     enabling it at login).
-12. Sends a desktop notification.
+13. Sends a desktop notification.
 
 ## After installing (developer path)
 

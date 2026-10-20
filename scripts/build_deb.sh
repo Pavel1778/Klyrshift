@@ -9,6 +9,9 @@
 #   /usr/share/icons/hicolor/scalable/apps/*.svg    icon
 #   /usr/lib/systemd/user/klyrshift.service         systemd user unit
 #   /usr/lib/udev/rules.d/71-klyrshift.rules        udev rule
+#   /usr/share/man/man1/klyrshift.1                 man page
+#   /usr/share/bash-completion/completions/klyrshift  bash completion
+#   /usr/share/zsh/vendor-completions/_klyrshift    zsh completion
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -33,6 +36,9 @@ mkdir -p "${BUILD_DIR}/usr/share/applications"
 mkdir -p "${BUILD_DIR}/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "${BUILD_DIR}/usr/lib/systemd/user"
 mkdir -p "${BUILD_DIR}/usr/lib/udev/rules.d"
+mkdir -p "${BUILD_DIR}/usr/share/man/man1"
+mkdir -p "${BUILD_DIR}/usr/share/bash-completion/completions"
+mkdir -p "${BUILD_DIR}/usr/share/zsh/vendor-completions"
 mkdir -p "${BUILD_DIR}/usr/share/doc/${PKG}"
 mkdir -p "${DIST_DIR}"
 
@@ -74,6 +80,25 @@ render_unit "${REPO_DIR}/data/${PKG}.service" \
     "${BUILD_DIR}/usr/lib/systemd/user/${PKG}.service" "/usr/bin/${PKG}"
 install -m 0644 "${REPO_DIR}/data/71-${PKG}.rules" \
     "${BUILD_DIR}/usr/lib/udev/rules.d/71-${PKG}.rules"
+
+# --- Manual page and shell completion ---------------------------------------
+# Debian Policy 12.1 expects every binary to ship a man page; without one
+# lintian reports ``no-manual-page``. Both files are generated from the live
+# argument parser (scripts/build_cli_docs.py), so they cannot describe a
+# command that no longer exists. ``make cli-docs`` regenerates them; the test
+# suite fails if the committed copies drift.
+install -m 0644 "${REPO_DIR}/data/${PKG}.1" \
+    "${BUILD_DIR}/usr/share/man/man1/${PKG}.1"
+# Debian Policy 12.1 wants man pages compressed; lintian reports
+# ``uncompressed-manual-page`` at error level otherwise. ``-n`` keeps the
+# timestamp out of the archive so the build stays reproducible. The user-level
+# copy install.sh writes stays uncompressed, which is what man-db expects under
+# ``~/.local/share/man``.
+gzip -9n "${BUILD_DIR}/usr/share/man/man1/${PKG}.1"
+install -m 0644 "${REPO_DIR}/data/completions/${PKG}.bash" \
+    "${BUILD_DIR}/usr/share/bash-completion/completions/${PKG}"
+install -m 0644 "${REPO_DIR}/data/completions/_${PKG}" \
+    "${BUILD_DIR}/usr/share/zsh/vendor-completions/_${PKG}"
 
 # --- Documentation ----------------------------------------------------------
 # Debian Policy 12.5 requires every binary package to ship its copyright and

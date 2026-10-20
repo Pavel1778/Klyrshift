@@ -10,7 +10,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib  # noqa: E402
 
-from ..i18n import set_locale  # noqa: E402
+from ..i18n import SUPPORTED_LOCALES, set_locale  # noqa: E402
 from .state import GuiState  # noqa: E402
 from .style import load_stylesheet  # noqa: E402
 from .theme import apply_theme  # noqa: E402
@@ -34,7 +34,7 @@ class KlyrshiftApplication(Adw.Application):
             ord("l"),
             GLib.OptionFlags.NONE,
             GLib.OptionArg.STRING,
-            "Interface language (auto, ru, en)",
+            f"Interface language (auto, {', '.join(SUPPORTED_LOCALES)})",
             "LOCALE",
         )
         set_locale(self._state.config.ui_locale)

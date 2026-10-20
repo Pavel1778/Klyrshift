@@ -31,7 +31,7 @@ from .converter import LayoutConverter
 from .detector import LanguageDetector
 from .dictionary import load_user_dictionary
 from .doctor import run_doctor
-from .i18n import _, set_locale
+from .i18n import SUPPORTED_LOCALES, _, set_locale
 from .injector import TextInjector
 from .switcher import LayoutSwitcher
 
@@ -1115,7 +1115,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--lang",
         default="",
         metavar="LOCALE",
-        help=_("язык вывода: auto (по окружению), ru или en"),
+        help=_("язык вывода: auto (по окружению) или один из: {0}").format(
+            ", ".join(SUPPORTED_LOCALES)
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

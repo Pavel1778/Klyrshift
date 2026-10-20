@@ -115,11 +115,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   install has no manifest and is reported as "not installed from a .deb",
   not as a pass.
 
+- **The package ships a man page and shell completion.** `man klyrshift` and
+  `klyrshift <Tab>` worked only for someone who had read the README. Both are
+  generated from the live argument parser by `scripts/build_cli_docs.py`
+  (`make cli-docs`), so they cannot describe a command that no longer exists:
+  the man page documents every subcommand, and the bash and zsh completions
+  offer its options and its `choices` positionals. The `.deb` installs them
+  under `/usr/share/man/man1` and the two completion directories; `install.sh`
+  and `uninstall.sh` do the same under `~/.local/share`. `tests/test_cli_docs.py`
+  fails on drift, on a missing command and on any `man --warnings` output.
+  `docs/CLI.md` is the prose companion and joins the offline handbook.
+
 ### Changed
 
 - **The interface language is now configurable.** `Config.ui_locale`
   (`auto`/`ru`/`en`) selects the string catalogue; `auto` follows the desktop
   locale.
+
+- **The `--lang` help no longer understates the languages.** It said "ru или
+  en" while five catalogues shipped. Both the CLI help and the GUI option now
+  build the list from `SUPPORTED_LOCALES`, and a test fails if the hint and the
+  registry disagree again.
 
 ### Fixed
 

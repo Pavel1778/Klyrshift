@@ -284,3 +284,12 @@ def test_supported_locales_is_the_registry_config_and_gui_read() -> None:
     gui = Path(__file__).resolve().parent.parent / "src" / "klyrshift" / "gui" / "settings_page.py"
     text = gui.read_text(encoding="utf-8")
     assert 'UI_LOCALE_ORDER = ("auto", *i18n.SUPPORTED_LOCALES)' in text
+
+
+def test_language_help_lists_every_shipped_locale() -> None:
+    """A stale "ru or en" hint must not survive a language being added."""
+    i18n.set_locale("ru")
+    help_text = build_parser().format_help()
+    for locale in i18n.SUPPORTED_LOCALES:
+        assert locale in help_text
+    assert "ru или en" not in help_text

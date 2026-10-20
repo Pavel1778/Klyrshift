@@ -1,2 +1,5 @@
 include dictionaries/*-50k.txt
 include dictionaries/README.md
+include data/klyrshift.1
+include data/completions/klyrshift.bash
+include data/completions/_klyrshift

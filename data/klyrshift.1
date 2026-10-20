@@ -1,0 +1,219 @@
+.TH KLYRSHIFT 1 "2026-10-19" "klyrshift 0.2.9" "User Commands"
+.SH NAME
+klyrshift \- automatic keyboard layout switcher
+.SH SYNOPSIS
+.B klyrshift
+[\fI\-\-lang LOCALE\fR]
+\fIcommand\fR
+[\fIoptions\fR]
+.SH DESCRIPTION
+Klyrshift is an automatic keyboard\-layout switcher.
+.PP
+Klyrshift is a background daemon: it watches what you type and, when a word was typed in the wrong layout, rewrites it and switches the layout. The command line starts, stops and configures that daemon and inspects its dictionaries. Appending \-\-help to a command prints its reference; klyrshift gui opens the settings window.
+.SH OPTIONS
+.TP
+.B \-h\fR, \fB\-\-help
+show this help message and exit
+.TP
+.B \-\-version
+show program's version number and exit
+.TP
+.B \-\-lang \fILOCALE\fR
+output language: auto (from the environment) or one of: ru, en, de, fr, uk
+.SH COMMANDS
+.SS app\-mode
+show or set the mode for one application
+.PP
+.B app
+.br
+process name, for example code
+.PP
+.B mode {auto, manual, hybrid}
+.br
+mode for this application
+.PP
+.RS
+.TP
+.B \-\-clear
+remove the application from the list
+.RE
+.SS collect\-logs
+collect a diagnostic archive for an issue
+.PP
+.RS
+.TP
+.B \-\-output \fIDIR\fR
+directory for the archive (defaults to the home directory)
+.RE
+.SS config
+work with the configuration
+.PP
+.B config_action {show, edit, reset, path, migrate}
+.PP
+.RS
+.TP
+.B \-\-dry\-run
+for migrate: show the changes without writing anything
+.RE
+.SS dict
+dictionary of words not to correct
+.PP
+.B dict_action {list, add, remove, download, import\-file, categories, install, list\-installed, remove\-category, pack, verify, install\-file, uninstall\-file}
+.br
+list/add/remove — user dictionary; download/import\-file — base extended dictionaries; categories/install/list\-installed/remove\-category — themed dictionaries; pack/verify/install\-file/uninstall\-file — versioned language packages (manifest + sha256)
+.PP
+.B word
+.br
+word (add/remove) or language/path (download/import\-file)
+.PP
+.RS
+.TP
+.B \-\-lang
+language for import\-file/pack when it is not in the file name
+.TP
+.B \-\-file
+additional file for dict pack
+.TP
+.B \-\-name
+package name for dict pack
+.TP
+.B \-\-kind
+package kind for dict pack
+.TP
+.B \-\-output
+where to write the package (dict pack)
+.TP
+.B \-\-package\-version
+package version (dict pack)
+.TP
+.B \-\-license
+package license (dict pack)
+.RE
+.SS doctor
+environment self\-diagnostics
+.SS explain
+explain the detector decision for a word (read\-only)
+.PP
+.RS
+.TP
+.B \-\-text
+text to analyze (otherwise read from stdin)
+.TP
+.B \-\-layout
+current layout (otherwise detected)
+.RE
+.SS export
+save settings to a file (JSON)
+.PP
+.B output
+.br
+file to back up
+.SS fix
+correct the text manually
+.PP
+.RS
+.TP
+.B \-\-text
+text to correct (otherwise read from stdin)
+.TP
+.B \-\-apply
+apply the correction on screen
+.TP
+.B \-\-dry\-run
+only show the correction without applying anything
+.RE
+.SS gui
+open the graphical interface (GTK4)
+.SS hotkeys
+show the active hotkeys
+.SS import
+restore settings from a file (JSON)
+.PP
+.B source
+.br
+backup file
+.SS install\-autostart
+enable autostart
+.SS kill
+force\-kill a hung daemon (SIGKILL)
+.SS learn
+learning: statistics, word list, on/off
+.PP
+.B learn_action {list, promote, forget}
+.br
+list — show learned words; promote/forget — pin/unpin a word
+.PP
+.B word
+.br
+word for promote/forget
+.PP
+.RS
+.TP
+.B \-\-on
+enable learning
+.TP
+.B \-\-off
+disable learning
+.TP
+.B \-\-reset
+reset the learning counters
+.RE
+.SS logs
+show the daemon log
+.PP
+.RS
+.TP
+.B \-n\fR, \fB\-\-lines \fIN\fR
+how many recent lines to show (50 by default)
+.TP
+.B \-f\fR, \fB\-\-follow
+follow the log in real time
+.TP
+.B \-\-level \fILEVEL\fR
+show only lines of this level (DEBUG/INFO/WARNING/ERROR)
+.RE
+.SS mode
+show or change the mode (auto/manual/hybrid)
+.PP
+.B mode {auto, manual, hybrid}
+.SS restart
+restart the daemon
+.SS start
+start the daemon
+.PP
+.RS
+.TP
+.B \-\-foreground
+do not detach into the background
+.TP
+.B \-\-dry\-run
+analyze without switching the layout or replacing text
+.RE
+.SS status
+show the status
+.SS stop
+stop the daemon
+.SS undo
+undo the last correction
+.SS uninstall\-autostart
+disable autostart
+.SS verify
+check the file integrity of the installed package
+.SS version
+show the version
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+A command failed, or the requested action was not possible.
+.SH FILES
+.TP
+.I ~/.config/klyrshift/config.toml
+User configuration.
+.TP
+.I ~/.local/share/klyrshift/
+Dictionaries, backups and the log.
+.SH SEE ALSO
+Full documentation: \fBhttps://github.com/Pavel1778/Klyrshift\fR

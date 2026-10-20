@@ -615,6 +615,7 @@ make test                     # только тесты с покрытием (>
 make build-deb                # собрать .deb в dist/
 ```
 
+Команды и опции: [docs/CLI.md](docs/CLI.md) (та же справка в `man klyrshift`).
 Архитектура и принятые решения: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 Договор об отмене исправления: [docs/UNDO_CONTRACT.md](docs/UNDO_CONTRACT.md).
 Поддержка платформ (X11/Wayland, что проверено): [docs/PLATFORM_SUPPORT.md](docs/PLATFORM_SUPPORT.md).

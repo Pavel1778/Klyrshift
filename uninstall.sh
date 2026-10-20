@@ -56,6 +56,9 @@ rm -f "${UNIT_DIR}/${APP_NAME}.service"
 rm -f "${AUTOSTART_DIR}/${APP_NAME}.desktop"
 rm -f "${APPS_DIR}/${APP_NAME}.desktop"
 rm -f "${ICON_DIR}/${APP_NAME}.svg"
+rm -f "${HOME}/.local/share/man/man1/${APP_NAME}.1"
+rm -f "${HOME}/.local/share/bash-completion/completions/${APP_NAME}"
+rm -f "${HOME}/.local/share/zsh/site-functions/_${APP_NAME}"
 
 if [ -f "${UDEV_RULE}" ] && confirm "Удалить udev-правило ${UDEV_RULE} (нужен sudo)?"; then
     sudo rm -f "${UDEV_RULE}"

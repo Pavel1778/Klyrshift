@@ -7,6 +7,7 @@ This handbook is generated from the project's Markdown sources by
 
 - [Klyrshift](#klyrshift)
 - [Installation](#installation)
+- [Command-line reference](#command-line-reference)
 - [Troubleshooting](#troubleshooting)
 - [Platform support](#platform-support)
 - [Language packages](#language-packages)
@@ -641,6 +642,7 @@ make test                     # только тесты с покрытием (>
 make build-deb                # собрать .deb в dist/
 ```
 
+Команды и опции: [docs/CLI.md](#contents) (та же справка в `man klyrshift`).
 Архитектура и принятые решения: [docs/ARCHITECTURE.md](#contents).
 Договор об отмене исправления: [docs/UNDO_CONTRACT.md](#contents).
 Поддержка платформ (X11/Wayland, что проверено): [docs/PLATFORM_SUPPORT.md](#contents).
@@ -736,7 +738,9 @@ That is the whole procedure. The package:
 - enables the systemd user service **globally**
   (`systemctl --user enable --global klyrshift.service`), so it starts at the
   next login. It is not started during installation because there may be no
-  graphical session yet.
+  graphical session yet;
+- ships the man page (`man klyrshift`) and the bash and zsh completions, so
+  `klyrshift <Tab>` completes commands and their options.
 
 After the next login the daemon is running. Verify with:
 
@@ -867,9 +871,12 @@ Either way the autostart can be toggled later from the GUI switch, or with
    `~/.config/autostart/klyrshift.desktop` (skipped with `--no-autostart`).
 10. Copies the icon to
     `~/.local/share/icons/hicolor/scalable/apps/klyrshift.svg`.
-11. Enables and starts the service (with `--no-autostart`, starts it without
+11. Installs the man page (`~/.local/share/man/man1/klyrshift.1`) and the bash
+    and zsh completions (`~/.local/share/bash-completion/completions/klyrshift`,
+    `~/.local/share/zsh/site-functions/_klyrshift`).
+12. Enables and starts the service (with `--no-autostart`, starts it without
     enabling it at login).
-12. Sends a desktop notification.
+13. Sends a desktop notification.
 
 ### After installing (developer path)
 
@@ -975,6 +982,128 @@ bash uninstall.sh
 
 Both stop and disable the service, remove the udev rule, the unit, the autostart
 entry and the icon, and delete the per-user configuration and logs.
+
+<a id="docs/CLI.md"></a>
+
+## Command-line reference
+
+`klyrshift` is one binary with a subcommand for each action. Running it with no
+subcommand prints an error and the usage summary; `klyrshift --help` lists every
+command, and `klyrshift <command> --help` documents one.
+
+This page is the prose reference. The man page (`man klyrshift`) and the shell
+completion are generated from the same argument parser by
+`scripts/build_cli_docs.py`, so all three describe the same commands; the test
+suite fails if any of them drifts.
+
+```text
+klyrshift [--lang LOCALE] <command> [options]
+```
+
+### Global options
+
+| Option | Meaning |
+| --- | --- |
+| `-h`, `--help` | Show the usage summary and exit. |
+| `--version` | Print the version and exit. |
+| `--lang LOCALE` | Language of the output. `auto` (the default) follows the environment; otherwise one of `ru`, `en`, `de`, `fr`, `uk`. |
+
+The output language only affects the messages this tool prints. It is separate
+from the dictionary language and from the interface language of the GUI; see
+[Interface languages](#contents).
+
+### Daemon control
+
+| Command | What it does |
+| --- | --- |
+| `start` | Start the daemon. `--foreground` keeps it attached to the terminal; `--dry-run` analyses without ever switching the layout or replacing text. |
+| `stop` | Stop the daemon (the service is not disabled; it returns at next login). |
+| `kill` | Stop the daemon immediately, without the graceful shutdown `stop` performs. |
+| `restart` | Stop and start again. |
+| `status` | Show whether the daemon is running and a one-line summary of its state. |
+
+### Correction behaviour
+
+| Command | What it does |
+| --- | --- |
+| `mode [auto\|manual\|hybrid]` | Show or set the global correction mode. `auto` corrects on its own, `manual` only on the hotkey, `hybrid` corrects on its own when it is confident and otherwise waits for the hotkey. |
+| `app-mode [APP] [MODE]` | Show or set the mode for one application. `--clear` removes the override. An application without an override uses the global mode. |
+| `undo` | Revert the last correction. See [Undo contract](#contents). |
+| `hotkeys` | Print the configured hotkeys. |
+| `fix [--text TEXT] [--apply] [--dry-run]` | Correct a string. With no `--text` it reads from standard input; with `--apply` it also rewrites the text on screen. |
+| `explain [--text TEXT] [--layout LAYOUT]` | Explain what would be decided for a string and why, without changing anything. `--layout` states the current layout instead of detecting it. |
+
+### Learning
+
+| Command | What it does |
+| --- | --- |
+| `learn [list\|promote\|forget] [WORD]` | Inspect and adjust learned words. `list` shows them; `promote` pins a word so it is never rewritten; `forget` removes it. |
+| `learn --on` / `--off` | Enable or disable learning. |
+| `learn --reset` | Reset the learning counters. |
+
+### Dictionaries
+
+| Command | What it does |
+| --- | --- |
+| `dict list` | List the installed dictionaries. |
+| `dict add WORD` / `dict remove WORD` | Add or remove a word in the user dictionary. |
+| `dict download LANG` / `dict import-file PATH` | Fetch or import a base dictionary. `--lang` names the language when the file name does not. |
+| `dict categories` | List the available thematic categories. |
+| `dict install CATEGORY` / `dict remove-category CATEGORY` | Install or remove a thematic dictionary. |
+| `dict list-installed` | List the installed thematic dictionaries. |
+| `dict pack` | Build a versioned language package (manifest + sha256). Options: `--lang`, `--file`, `--name`, `--kind`, `--output`, `--package-version`, `--license`. |
+| `dict verify PATH` | Check a package against its manifest and checksums. |
+| `dict install-file PATH` / `dict uninstall-file PATH` | Install or remove a package from a file. |
+
+See [Language packages](#contents) for the package format.
+
+### Configuration and data
+
+| Command | What it does |
+| --- | --- |
+| `config show` / `edit` / `reset` / `path` / `migrate` | Show, edit, reset or locate the configuration, or migrate it to the current schema. `migrate --dry-run` shows the changes without writing them. |
+| `export [FILE]` | Write a backup (dictionaries and configuration) to `FILE`. |
+| `import SOURCE` | Restore from a backup. |
+
+### Diagnostics
+
+| Command | What it does |
+| --- | --- |
+| `doctor` | Run the self-diagnosis and print what is wrong and how to fix it. |
+| `verify` | Verify the installed files against the package manifest. |
+| `collect-logs [--output DIR]` | Collect a diagnostic archive for a bug report. |
+| `logs [-n N] [-f] [--level LEVEL]` | Show the log. `-f` follows it in real time; `--level` filters to `DEBUG`, `INFO`, `WARNING` or `ERROR`. |
+| `version` | Print the version. |
+
+### Desktop integration
+
+| Command | What it does |
+| --- | --- |
+| `gui` | Open the settings window. |
+| `install-autostart` / `uninstall-autostart` | Start the daemon at login, or stop doing so. |
+
+### Shell completion
+
+Bash and zsh completions ship with the package. For a manual install they live
+under `data/completions/`; `install.sh` copies them into
+`~/.local/share/bash-completion/completions/klyrshift` and
+`~/.local/share/zsh/site-functions/_klyrshift`.
+
+```bash
+## bash: no configuration needed once the file is in place
+klyrshift dic<Tab>          # -> dict
+klyrshift dict <Tab>        # -> the dict actions
+klyrshift mode <Tab>        # -> auto manual hybrid
+
+## zsh: make sure the site-functions directory is on $fpath
+fpath=(~/.local/share/zsh/site-functions $fpath)
+```
+
+### Exit status
+
+`0` on success, `1` when a command failed or the requested action was not
+possible. A diagnostic command such as `doctor` exits non-zero when it finds a
+problem, so it can be used in scripts.
 
 <a id="docs/TROUBLESHOOTING.md"></a>
 
@@ -3567,7 +3696,8 @@ The main goal is that a correction is always safe to reverse.
 | `doctor` diagnostics | done |
 | Config migration between versions | done |
 | Package integrity check | done — the `.deb` ships an `md5sums` manifest; `klyrshift verify` and `dpkg --verify klyrshift` detect a corrupted file |
-| Debian Policy compliance | done — the `.deb` ships a DEP-5 `copyright` (Debian Policy 12.5) and `changelog.gz` (12.7); the base frequency lists are credited to CC-BY-SA-4.0 and the code stays MIT; `lintian` reports no error-level tags |
+| Debian Policy compliance | done — the `.deb` ships a DEP-5 `copyright` (Debian Policy 12.5), `changelog.gz` (12.7) and a compressed man page (12.1); the base frequency lists are credited to CC-BY-SA-4.0 and the code stays MIT; `lintian` reports no error-level tags |
+| Shell completion | done — bash and zsh completions generated from the argument parser (`data/completions/`), shipped by the `.deb` and `install.sh` |
 | Flatpak / AppImage | planned — needs a portal input path |
 
 ### Stage 6 — Cross-platform — **planned**
@@ -3718,11 +3848,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   install has no manifest and is reported as "not installed from a .deb",
   not as a pass.
 
+- **The package ships a man page and shell completion.** `man klyrshift` and
+  `klyrshift <Tab>` worked only for someone who had read the README. Both are
+  generated from the live argument parser by `scripts/build_cli_docs.py`
+  (`make cli-docs`), so they cannot describe a command that no longer exists:
+  the man page documents every subcommand, and the bash and zsh completions
+  offer its options and its `choices` positionals. The `.deb` installs them
+  under `/usr/share/man/man1` and the two completion directories; `install.sh`
+  and `uninstall.sh` do the same under `~/.local/share`. `tests/test_cli_docs.py`
+  fails on drift, on a missing command and on any `man --warnings` output.
+  `docs/CLI.md` is the prose companion and joins the offline handbook.
+
 #### Changed
 
 - **The interface language is now configurable.** `Config.ui_locale`
   (`auto`/`ru`/`en`) selects the string catalogue; `auto` follows the desktop
   locale.
+
+- **The `--lang` help no longer understates the languages.** It said "ru или
+  en" while five catalogues shipped. Both the CLI help and the GUI option now
+  build the list from `SUPPORTED_LOCALES`, and a test fails if the hint and the
+  registry disagree again.
 
 #### Fixed
 

@@ -39,6 +39,13 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 - The pytest suite replaces the OS boundary with fakes, so it **cannot** catch
   packaging bugs. `scripts/smoke_test.sh` installs the real `.deb` into a clean
   container and is the only check that proves the package works.
+- The man page (`data/klyrshift.1`) and the bash/zsh completion
+  (`data/completions/`) are **generated**, not edited: `make cli-docs` renders
+  them from `klyrshift.cli.build_parser()` via `scripts/build_cli_docs.py`.
+  Never hand-edit them — add a subcommand and regenerate. `tests/test_cli_docs.py`
+  fails on drift, on a command missing from the man page or the completion, and
+  on any `man --warnings` output. The generator forces the English locale, so a
+  rebuild is byte-stable regardless of the machine's locale.
 - The README screenshots are real renders; regenerate them with
   `scripts/make_screenshots.py` after any GUI change. The script is hermetic --
   it pins a placeholder `HOME` and redirects every write into a throwaway tree --

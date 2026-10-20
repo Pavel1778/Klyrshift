@@ -669,7 +669,7 @@
   "устройства не найдены": "no devices found",
   "файл бэкапа": "backup file",
   "файл для бэкапа": "file to back up",
-  "язык вывода: auto (по окружению), ru или en": "output language: auto (from the environment), ru or en",
+  "язык вывода: auto (по окружению) или один из: {0}": "output language: auto (from the environment) or one of: {0}",
   "язык для import-file/pack, если его нет в имени файла": "language for import-file/pack when it is not in the file name",
   "языки: {0}; уверенность модели: {1:.0%}": "languages: {0}; model confidence: {1:.0%}",
   "❌  изменён: {0}": "❌  modified: {0}",

@@ -89,7 +89,8 @@ The main goal is that a correction is always safe to reverse.
 | `doctor` diagnostics | done |
 | Config migration between versions | done |
 | Package integrity check | done — the `.deb` ships an `md5sums` manifest; `klyrshift verify` and `dpkg --verify klyrshift` detect a corrupted file |
-| Debian Policy compliance | done — the `.deb` ships a DEP-5 `copyright` (Debian Policy 12.5) and `changelog.gz` (12.7); the base frequency lists are credited to CC-BY-SA-4.0 and the code stays MIT; `lintian` reports no error-level tags |
+| Debian Policy compliance | done — the `.deb` ships a DEP-5 `copyright` (Debian Policy 12.5), `changelog.gz` (12.7) and a compressed man page (12.1); the base frequency lists are credited to CC-BY-SA-4.0 and the code stays MIT; `lintian` reports no error-level tags |
+| Shell completion | done — bash and zsh completions generated from the argument parser (`data/completions/`), shipped by the `.deb` and `install.sh` |
 | Flatpak / AppImage | planned — needs a portal input path |
 
 ## Stage 6 — Cross-platform — **planned**

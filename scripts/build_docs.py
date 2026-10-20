@@ -36,6 +36,7 @@ DOCS = REPO_ROOT / "docs"
 SOURCES: tuple[str, ...] = (
     "README.md",
     "docs/INSTALL.md",
+    "docs/CLI.md",
     "docs/TROUBLESHOOTING.md",
     "docs/PLATFORM_SUPPORT.md",
     "docs/LANGUAGE_PACKAGES.md",
