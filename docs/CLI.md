@@ -107,6 +107,8 @@ under `data/completions/`; `install.sh` copies them into
 klyrshift dic<Tab>          # -> dict
 klyrshift dict <Tab>        # -> the dict actions
 klyrshift mode <Tab>        # -> auto manual hybrid
+klyrshift --lang <Tab>      # -> auto ru en de fr uk
+klyrshift --lang=e<Tab>     # -> --lang=en
 
 # zsh: make sure the site-functions directory is on $fpath
 fpath=(~/.local/share/zsh/site-functions $fpath)

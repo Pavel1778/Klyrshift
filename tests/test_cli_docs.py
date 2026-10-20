@@ -83,6 +83,50 @@ def test_bash_completion_knows_every_command(generator: object) -> None:
         assert f"        {command.name})" in bash, command.name
 
 
+def test_bash_completion_offers_locales_for_lang() -> None:
+    """``--lang <TAB>`` must offer locales, not commands.
+
+    Sourced and driven for real: the generator could emit a plausible-looking
+    ``compgen`` line that never runs, and only executing it catches that. The
+    joined spelling ``--lang=`` is checked too, since that is where the value
+    would otherwise be completed as a command name.
+    """
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash is not installed")
+    driver = (
+        f'source "{BASH}"\n'
+        "complete_lang() {\n"
+        '    COMP_WORDS=("$@")\n'
+        "    COMP_CWORD=$(( $# - 1 ))\n"
+        "    COMPREPLY=()\n"
+        "    _klyrshift\n"
+        '    printf "%s\\n" "${COMPREPLY[@]}"\n'
+        "}\n"
+        'complete_lang klyrshift --lang ""\n'
+        "echo ---\n"
+        "complete_lang klyrshift --lang r\n"
+        "echo ---\n"
+        "complete_lang klyrshift --lang=u\n"
+    )
+    result = subprocess.run([bash, "-c", driver], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+    plain, prefix, joined = result.stdout.split("---\n")
+    assert set(plain.split()) == {"auto", *i18n.SUPPORTED_LOCALES}
+    assert prefix.split() == ["ru"]
+    assert joined.split() == ["--lang=uk"]
+
+
+def test_zsh_completion_offers_locales_for_lang(generator: object) -> None:
+    """Both ``--lang`` specs (global and ``dict``) carry the locale list."""
+    zsh = ZSH.read_text(encoding="utf-8")
+    locales = " ".join(("auto", *i18n.SUPPORTED_LOCALES))
+    specs = [line for line in zsh.splitlines() if "--lang[" in line]
+    assert len(specs) == 2, specs
+    for line in specs:
+        assert f":locale:({locales})" in line, line
+
+
 def test_man_page_has_no_unrendered_placeholder() -> None:
     man = MAN.read_text(encoding="utf-8")
     assert "@BIN@" not in man

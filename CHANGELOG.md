@@ -126,6 +126,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fails on drift, on a missing command and on any `man --warnings` output.
   `docs/CLI.md` is the prose companion and joins the offline handbook.
 
+- **`--lang` completes its locales.** Typing `klyrshift --lang <Tab>` used to
+  fall through to the command list, so the value had to be remembered; the
+  bash and zsh completions now offer `auto`, `ru`, `en`, `de`, `fr` and `uk`,
+  both for the global option and for `dict pack --lang`. The list comes from
+  `klyrshift.i18n.SUPPORTED_LOCALES`, so a locale added there appears in the
+  completion on the next `make cli-docs`. `--lang=` is completed too. The bash
+  test sources the generated file and drives `_klyrshift`, so a completion that
+  never runs fails the suite rather than passing on a string match.
+
 ### Changed
 
 - **The interface language is now configurable.** `Config.ui_locale`

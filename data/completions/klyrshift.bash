@@ -5,6 +5,19 @@ _klyrshift() {
     local cur cmd i
     cur="${COMP_WORDS[COMP_CWORD]}"
 
+    # ``--lang`` takes a locale, not a command or a flag, so it is handled
+    # before the command is worked out: otherwise the locale would be
+    # mistaken for the command name. Both the separated (``--lang ru``)
+    # and the joined (``--lang=ru``) spelling are offered.
+    if (( COMP_CWORD > 0 )) && [[ "${COMP_WORDS[COMP_CWORD-1]}" == "--lang" ]]; then
+        COMPREPLY=( $(compgen -W "auto ru en de fr uk" -- "$cur") )
+        return 0
+    fi
+    if [[ "$cur" == --lang=* ]]; then
+        COMPREPLY=( $(compgen -P "--lang=" -W "auto ru en de fr uk" -- "${cur#--lang=}") )
+        return 0
+    fi
+
     # The first word that is not an option is the command. Options come
     # before or after it; the ones with a value are skipped by matching
     # the value that follows them.

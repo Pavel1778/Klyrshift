@@ -1094,6 +1094,8 @@ under `data/completions/`; `install.sh` copies them into
 klyrshift dic<Tab>          # -> dict
 klyrshift dict <Tab>        # -> the dict actions
 klyrshift mode <Tab>        # -> auto manual hybrid
+klyrshift --lang <Tab>      # -> auto ru en de fr uk
+klyrshift --lang=e<Tab>     # -> --lang=en
 
 ## zsh: make sure the site-functions directory is on $fpath
 fpath=(~/.local/share/zsh/site-functions $fpath)
@@ -3861,6 +3863,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `uninstall.sh` do the same under `~/.local/share`. `tests/test_cli_docs.py`
   fails on drift, on a missing command and on any `man --warnings` output.
   `docs/CLI.md` is the prose companion and joins the offline handbook.
+
+- **`--lang` completes its locales.** Typing `klyrshift --lang <Tab>` used to
+  fall through to the command list, so the value had to be remembered; the
+  bash and zsh completions now offer `auto`, `ru`, `en`, `de`, `fr` and `uk`,
+  both for the global option and for `dict pack --lang`. The list comes from
+  `klyrshift.i18n.SUPPORTED_LOCALES`, so a locale added there appears in the
+  completion on the next `make cli-docs`. `--lang=` is completed too. The bash
+  test sources the generated file and drives `_klyrshift`, so a completion that
+  never runs fails the suite rather than passing on a string match.
 
 #### Changed
 
