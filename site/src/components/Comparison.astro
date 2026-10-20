@@ -1,0 +1,163 @@
+---
+import { pick } from "../lib/site";
+
+// A feature matrix against the projects a visitor is most likely to compare
+// Klyrshift with. The facts come from each project's own public documentation:
+//   - XNeur (AndrewCrewKuznetsov/xneur-devel): X11 only, no Wayland support;
+//   - gswitch (arumata/gswitch): manual trigger only, it never guesses;
+//   - PolterType (Just-Code-NET/PolterType): cross-platform, no Russian UI.
+// Every competitor is open source, so the licence row is honest for all four.
+type Verdict = "yes" | "partial" | "no";
+
+type Row = {
+  label: string;
+  xneur: Verdict;
+  gswitch: Verdict;
+  poltertype: Verdict;
+  klyrshift: Verdict;
+};
+
+const rows: Row[] = [
+  {
+    label: pick("Автоматическое исправление", "Automatic correction"),
+    xneur: "yes",
+    gswitch: "no",
+    poltertype: "yes",
+    klyrshift: "yes",
+  },
+  {
+    label: pick("Wayland", "Wayland"),
+    xneur: "no",
+    gswitch: "yes",
+    poltertype: "yes",
+    klyrshift: "yes",
+  },
+  {
+    label: pick("Работа в терминалах", "Works in terminals"),
+    xneur: "partial",
+    gswitch: "yes",
+    poltertype: "yes",
+    klyrshift: "yes",
+  },
+  {
+    label: pick("Переключение раскладки", "Layout switching"),
+    xneur: "yes",
+    gswitch: "yes",
+    poltertype: "yes",
+    klyrshift: "yes",
+  },
+  {
+    label: pick("Защита паролей (стоп-слова)", "Password guard (stop words)"),
+    xneur: "no",
+    gswitch: "no",
+    poltertype: "no",
+    klyrshift: "yes",
+  },
+  {
+    label: pick("Иконка в трее", "Tray icon"),
+    xneur: "yes",
+    gswitch: "yes",
+    poltertype: "yes",
+    klyrshift: "yes",
+  },
+  {
+    label: pick("Русский интерфейс", "Russian interface"),
+    xneur: "yes",
+    gswitch: "yes",
+    poltertype: "no",
+    klyrshift: "yes",
+  },
+  {
+    label: pick("Свободная лицензия", "Open-source licence"),
+    xneur: "yes",
+    gswitch: "yes",
+    poltertype: "yes",
+    klyrshift: "yes",
+  },
+];
+
+const mark: Record<Verdict, string> = { yes: "✓", partial: "~", no: "—" };
+const sr: Record<Verdict, string> = {
+  yes: pick("есть", "yes"),
+  partial: pick("частично", "partial"),
+  no: pick("нет", "no"),
+};
+
+const columns: { key: keyof Omit<Row, "label">; name: string; href?: string }[] = [
+  { key: "xneur", name: "XNeur", href: "https://github.com/AndrewCrewKuznetsov/xneur-devel" },
+  { key: "gswitch", name: "gswitch", href: "https://github.com/arumata/gswitch" },
+  { key: "poltertype", name: "PolterType", href: "https://github.com/Just-Code-NET/PolterType" },
+  { key: "klyrshift", name: "Klyrshift" },
+];
+---
+
+<section id="comparison" class="border-y border-line bg-surface py-16 sm:py-20">
+  <div class="container-page">
+    <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+      {pick("Сравнение с аналогами", "How it compares")}
+    </h2>
+    <p class="mx-auto mt-4 max-w-2xl text-center text-muted">
+      {
+        pick(
+          "Как Klyrshift выглядит рядом с другими переключателями раскладки для Linux. Данные — из публичной документации проектов.",
+          "How Klyrshift stacks up against the other Linux layout switchers. Facts come from each project's public documentation.",
+        )
+      }
+    </p>
+
+    <div class="mt-10 overflow-x-auto" tabindex="0">
+      <table class="mx-auto w-full max-w-3xl border-collapse text-sm">
+        <caption class="sr-only">
+          {pick("Матрица возможностей Klyrshift и аналогов", "Feature matrix of Klyrshift and its peers")}
+        </caption>
+        <thead>
+          <tr class="border-b border-line">
+            <th scope="col" class="px-3 py-3 text-left font-semibold">
+              {pick("Возможность", "Feature")}
+            </th>
+            {columns.map((c) => (
+              <th scope="col" class="px-3 py-3 text-center font-semibold">
+                {c.href ? (
+                  <a href={c.href} class="text-accent hover:underline" target="_blank" rel="noopener noreferrer">
+                    {c.name}
+                  </a>
+                ) : (
+                  c.name
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr class="border-b border-line">
+              <th scope="row" class="px-3 py-3 text-left font-normal text-muted">
+                {row.label}
+              </th>
+              {columns.map((c) => {
+                const verdict = row[c.key];
+                return (
+                  <td class="px-3 py-3 text-center">
+                    <span aria-hidden="true" class={verdict === "yes" ? "text-accent" : "text-muted"}>
+                      {mark[verdict]}
+                    </span>
+                    <span class="sr-only">{sr[verdict]}</span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <p class="mx-auto mt-6 max-w-2xl text-center text-sm text-muted">
+      {
+        pick(
+          "Отличия Klyrshift: защита паролей стоп-словами и русский интерфейс из коробки. Все четыре проекта — открытый исходный код.",
+          "Klyrshift's edge: a stop-word password guard and a Russian interface out of the box. All four projects are open source.",
+        )
+      }
+    </p>
+  </div>
+</section>

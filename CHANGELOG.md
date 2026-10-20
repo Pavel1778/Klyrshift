@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A comparison section on the landing page.** The README carried a feature
+  matrix against the other Linux layout switchers, but the page a visitor lands
+  on did not. `Comparison.astro` renders the same matrix (automatic correction,
+  Wayland, terminals, layout switching, the stop-word password guard, tray,
+  Russian interface) with each competitor linked to its repository, and the
+  header nav gains a comparison anchor. The rows come from each project's own
+  public documentation rather than from a marketing claim.
+
 - **A correction mode per application.** The global mode is one setting, but
   the right mode depends on what the user is doing: an editor with code should
   not be rewritten automatically while a chat window benefits from it. The new

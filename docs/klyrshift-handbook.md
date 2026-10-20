@@ -111,14 +111,23 @@ Caramba Switcher for Windows.
 
 ### 🎯 Сравнение с аналогами / Comparison
 
-| Возможность | XNeur | gswitch | lay | Klyrshift |
+| Возможность | XNeur | gswitch | PolterType | Klyrshift |
 |---|---|---|---|---|
-| Автоматическое исправление | ⚠️ | ❌ | ⚠️ | ✅ |
-| Wayland | ❌ | ✅ | ❌ | ✅ |
-| Работа в терминалах | ⚠️ | ✅ | ⚠️ | ✅ |
-| Переключение раскладки | ⚠️ | ❌ | ❌ | ✅ |
+| Автоматическое исправление | ✅ | ❌ | ✅ | ✅ |
+| Wayland | ❌ | ✅ | ✅ | ✅ |
+| Работа в терминалах | ⚠️ | ✅ | ✅ | ✅ |
+| Переключение раскладки | ✅ | ✅ | ✅ | ✅ |
 | Защита паролей (стоп-слова) | ❌ | ❌ | ❌ | ✅ |
-| Иконка в трее | ✅ | ❌ | ❌ | ✅ |
+| Иконка в трее | ✅ | ✅ | ✅ | ✅ |
+| Русский интерфейс | ✅ | ✅ | ❌ | ✅ |
+| Свободная лицензия | ✅ | ✅ | ✅ | ✅ |
+
+Сравнение составлено по публичной документации проектов:
+[XNeur](https://github.com/AndrewCrewKuznetsov/xneur-devel) (X11, без Wayland),
+[gswitch](https://github.com/arumata/gswitch) (только ручной триггер, без
+автодетекта) и [PolterType](https://github.com/Just-Code-NET/PolterType)
+(мультиплатформенный, без русского интерфейса). Klyrshift отличается от них
+защитой паролей стоп-словами и русским интерфейсом из коробки.
 
 ### 📋 Требования / Requirements
 
@@ -699,9 +708,12 @@ make build-deb                # собрать .deb в dist/
 
 ### 🙏 Благодарности / Acknowledgements
 
-- [gswitch](https://github.com/skroll/gswitch) — исполнитель исправлений.
-- [g3kb-switch](https://github.com/dvorka/g3kb-switch) — переключение раскладки
+- [gswitch](https://github.com/arumata/gswitch) — ручное исправление текста
+  через `evdev`/`uinput` (идея и подход к замене).
+- [g3kb-switch](https://github.com/lyokha/g3kb-switch) — переключение раскладки
   в GNOME Wayland.
+- [PolterType](https://github.com/Just-Code-NET/PolterType) — кросс-платформенный
+  детектор раскладки (идеи по UX и per-app исключениям).
 - [python-evdev](https://python-evdev.readthedocs.io/) — чтение клавиатуры
   (`evdev`) и ввод текста (`evdev.UInput`).
 - Идея вдохновлена Caramba Switcher для Windows.
@@ -3746,6 +3758,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### [Unreleased]
 
 #### Added
+
+- **A comparison section on the landing page.** The README carried a feature
+  matrix against the other Linux layout switchers, but the page a visitor lands
+  on did not. `Comparison.astro` renders the same matrix (automatic correction,
+  Wayland, terminals, layout switching, the stop-word password guard, tray,
+  Russian interface) with each competitor linked to its repository, and the
+  header nav gains a comparison anchor. The rows come from each project's own
+  public documentation rather than from a marketing claim.
 
 - **A correction mode per application.** The global mode is one setting, but
   the right mode depends on what the user is doing: an editor with code should

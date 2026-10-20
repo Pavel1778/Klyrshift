@@ -604,6 +604,15 @@ exercise the evdev → uinput correction path end to end. See `docs/TESTING.md`.
   narrow viewport, because wider ones never overflow -- which is why the earlier
   audits missed it. Prefer wrapping (`whitespace-pre-wrap break-words`) over
   scrolling for command text; `tests/test_site_a11y.py` guards the panels.
+- **The README's comparison table and the landing page's must agree.**
+  `README.md` carries a feature matrix against XNeur, gswitch and PolterType, and
+  `site/src/components/Comparison.astro` renders the same rows on the page a
+  visitor lands on. They are hand-written in two languages (Markdown and
+  Astro/TypeScript), so one can be edited while the other keeps an old claim --
+  the drift `test_demo_parity.py` guards against for the demo. Keep the column
+  order (`xneur`, `gswitch`, `poltertype`, `klyrshift`), the row order and the
+  verdicts identical; `tests/test_comparison_parity.py` fails otherwise, and it
+  also asserts the stop-word password guard stays a row Klyrshift alone wins.
 - **Audit at 320px, not just desktop widths.** Two real defects (the keyboard
   trap above, and a `grid` track refusing to shrink) appeared only at 320px.
   Sweep both themes x {320, 768, 1440}px x both pages before calling a landing

@@ -84,14 +84,23 @@ Caramba Switcher for Windows.
 
 ## 🎯 Сравнение с аналогами / Comparison
 
-| Возможность | XNeur | gswitch | lay | Klyrshift |
+| Возможность | XNeur | gswitch | PolterType | Klyrshift |
 |---|---|---|---|---|
-| Автоматическое исправление | ⚠️ | ❌ | ⚠️ | ✅ |
-| Wayland | ❌ | ✅ | ❌ | ✅ |
-| Работа в терминалах | ⚠️ | ✅ | ⚠️ | ✅ |
-| Переключение раскладки | ⚠️ | ❌ | ❌ | ✅ |
+| Автоматическое исправление | ✅ | ❌ | ✅ | ✅ |
+| Wayland | ❌ | ✅ | ✅ | ✅ |
+| Работа в терминалах | ⚠️ | ✅ | ✅ | ✅ |
+| Переключение раскладки | ✅ | ✅ | ✅ | ✅ |
 | Защита паролей (стоп-слова) | ❌ | ❌ | ❌ | ✅ |
-| Иконка в трее | ✅ | ❌ | ❌ | ✅ |
+| Иконка в трее | ✅ | ✅ | ✅ | ✅ |
+| Русский интерфейс | ✅ | ✅ | ❌ | ✅ |
+| Свободная лицензия | ✅ | ✅ | ✅ | ✅ |
+
+Сравнение составлено по публичной документации проектов:
+[XNeur](https://github.com/AndrewCrewKuznetsov/xneur-devel) (X11, без Wayland),
+[gswitch](https://github.com/arumata/gswitch) (только ручной триггер, без
+автодетекта) и [PolterType](https://github.com/Just-Code-NET/PolterType)
+(мультиплатформенный, без русского интерфейса). Klyrshift отличается от них
+защитой паролей стоп-словами и русским интерфейсом из коробки.
 
 ## 📋 Требования / Requirements
 
@@ -672,9 +681,12 @@ make build-deb                # собрать .deb в dist/
 
 ## 🙏 Благодарности / Acknowledgements
 
-- [gswitch](https://github.com/skroll/gswitch) — исполнитель исправлений.
-- [g3kb-switch](https://github.com/dvorka/g3kb-switch) — переключение раскладки
+- [gswitch](https://github.com/arumata/gswitch) — ручное исправление текста
+  через `evdev`/`uinput` (идея и подход к замене).
+- [g3kb-switch](https://github.com/lyokha/g3kb-switch) — переключение раскладки
   в GNOME Wayland.
+- [PolterType](https://github.com/Just-Code-NET/PolterType) — кросс-платформенный
+  детектор раскладки (идеи по UX и per-app исключениям).
 - [python-evdev](https://python-evdev.readthedocs.io/) — чтение клавиатуры
   (`evdev`) и ввод текста (`evdev.UInput`).
 - Идея вдохновлена Caramba Switcher для Windows.
