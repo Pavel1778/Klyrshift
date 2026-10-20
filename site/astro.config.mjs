@@ -28,12 +28,33 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   compressHTML: true,
+  // Self-hosted via the Astro Fonts API (no blocking third-party request at
+  // runtime). The display face carries the brand; Golos Text is the body face
+  // because it has a full Cyrillic set and stays legible at small sizes.
+  //
+  // All three families are *variable* fonts (a single file per subset carries a
+  // `wght` axis), so each is requested as a range rather than as a list of
+  // discrete weights. Listing discrete weights emits one `@font-face` per weight
+  // that all point at the same file, and -- worse -- a weight outside the list
+  // (the `font-bold` on a `font-mono` label) has no face at all, so the browser
+  // synthesises a smeared faux-bold instead of using the axis. The ranges are
+  // the widest the page actually asks for: Golos 400-700, Unbounded 600-800
+  // (h3/h2/h1 are semibold/bold/extrabold), JetBrains Mono 400-700.
   fonts: [
     {
       provider: fontProviders.google(),
-      name: "Inter",
-      cssVariable: "--font-inter",
-      weights: [400, 500, 700],
+      name: "Unbounded",
+      cssVariable: "--font-unbounded",
+      weights: ["600 800"],
+      styles: ["normal"],
+      subsets: ["latin", "cyrillic"],
+      fallbacks: ["system-ui", "sans-serif"],
+    },
+    {
+      provider: fontProviders.google(),
+      name: "Golos Text",
+      cssVariable: "--font-golos",
+      weights: ["400 700"],
       styles: ["normal"],
       subsets: ["latin", "cyrillic"],
       fallbacks: ["system-ui", "sans-serif"],
@@ -42,7 +63,7 @@ export default defineConfig({
       provider: fontProviders.google(),
       name: "JetBrains Mono",
       cssVariable: "--font-jetbrains",
-      weights: [400],
+      weights: ["400 700"],
       styles: ["normal"],
       subsets: ["latin", "cyrillic"],
       fallbacks: ["ui-monospace", "monospace"],
