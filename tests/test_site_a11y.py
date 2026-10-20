@@ -46,6 +46,35 @@ def _rule_bodies(css: str) -> dict[str, str]:
     }
 
 
+def _skip_link_target() -> str:
+    """Return the fragment the skip link in the layout points at."""
+    base = (SITE / "src" / "layouts" / "Base.astro").read_text(encoding="utf-8")
+    match = re.search(r'class="skip-link"[^>]*href="#([A-Za-z0-9_-]+)"', base)
+    assert match is not None, "the layout no longer renders a skip link"
+    return match.group(1)
+
+
+def test_every_page_has_the_skip_link_target() -> None:
+    """The skip link must land somewhere on every page that renders it.
+
+    The link lives in the shared layout, so a page that forgets the target id
+    keeps the link but breaks it: the browser moves the fragment, no element
+    matches it, and focus stays on the link. ``axe-core`` reports this as
+    ``skip-link`` ("The skip-link target should exist and be focusable") plus
+    ``region``, and it is invisible in a diff because the page still has a
+    ``<main>`` -- just without the id.
+    """
+    target = _skip_link_target()
+    pages = sorted((SITE / "src" / "pages").glob("*.astro"))
+    assert pages, "no pages found to check"
+    missing = [
+        page.name
+        for page in pages
+        if f'id="{target}"' not in page.read_text(encoding="utf-8")
+    ]
+    assert missing == []
+
+
 def test_command_panels_do_not_scroll_horizontally() -> None:
     """A scrollable command panel is a keyboard trap under WCAG 2.1.1."""
     css = GLOBAL_CSS.read_text(encoding="utf-8")
