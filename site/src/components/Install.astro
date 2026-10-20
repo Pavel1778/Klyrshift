@@ -1,5 +1,6 @@
 ---
 import CodeBlock from "./CodeBlock.astro";
+import { pick } from "../lib/site";
 import { DOWNLOAD_URL, INSTALL_DOC, ISSUES, REPO, REPO_NAME, RELEASES } from "../consts";
 
 // The release asset is named after the package (``klyrshift_<version>_all.deb``),
@@ -12,44 +13,68 @@ sudo apt install ./*_all.deb`;
 const srcCode = `git clone ${REPO}.git
 cd ${REPO_NAME}
 bash install.sh`;
+
+const tabs = [
+  { id: "deb", label: pick("Debian / Ubuntu / Mint", "Debian / Ubuntu / Mint") },
+  { id: "src", label: pick("Из исходников", "From source") },
+  { id: "other", label: pick("Другие", "Other") },
+];
 ---
 
-<section id="install" class="border-y border-[#e5e5e5] bg-white py-16 sm:py-20 dark:border-[#3d3d3d] dark:bg-[#242424]">
+<section id="install" class="border-y border-line bg-surface py-16 sm:py-20">
   <div class="container-page">
-    <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">Установка</h2>
-    <p class="mx-auto mt-4 max-w-2xl text-center text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-      Одна команда — и Klyrshift работает в фоне.
+    <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+      {pick("Установка", "Install")}
+    </h2>
+    <p class="mx-auto mt-4 max-w-2xl text-center text-muted">
+      {pick("Одна команда — и Klyrshift работает в фоне.", "One command and Klyrshift runs in the background.")}
     </p>
 
     <div class="mx-auto mt-10 max-w-3xl">
-      <div class="flex flex-col gap-1 rounded-lg border border-[#e5e5e5] bg-[#fafafa] p-1 sm:flex-row dark:border-[#3d3d3d] dark:bg-[#2d2d2d]" role="tablist">
-        <button type="button" class="install-tab w-full rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:flex-1 sm:py-2" data-tab="deb" role="tab" aria-selected="true">Debian / Ubuntu / Mint</button>
-        <button type="button" class="install-tab w-full rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:flex-1 sm:py-2" data-tab="src" role="tab" aria-selected="false">Из исходников</button>
-        <button type="button" class="install-tab w-full rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:flex-1 sm:py-2" data-tab="other" role="tab" aria-selected="false">Другие</button>
+      <div class="flex flex-col gap-1 rounded-xl border border-line bg-bg p-1 sm:flex-row" role="tablist" aria-label={pick("Способы установки", "Install methods")}>
+        {tabs.map((tab) => (
+          <button
+            type="button"
+            class="install-tab w-full rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:flex-1 sm:py-2"
+            data-tab={tab.id}
+            role="tab"
+            aria-selected={tab.id === "deb" ? "true" : "false"}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       <div class="mt-6" data-panel="deb">
-        <CodeBlock code={debCode} label="Установка .deb" />
+        <CodeBlock code={debCode} label={pick("Установка .deb", ".deb install")} />
         <div class="mt-4 flex flex-wrap gap-3">
-          <a href={DOWNLOAD_URL} class="btn btn-primary" target="_blank" rel="noopener noreferrer">Скачать .deb</a>
+          <a href={DOWNLOAD_URL} class="btn btn-primary" target="_blank" rel="noopener noreferrer">
+            {pick("Скачать .deb", "Download .deb")}
+          </a>
         </div>
       </div>
 
       <div class="mt-6 hidden" data-panel="src">
-        <CodeBlock code={srcCode} label="Сборка из исходников" />
+        <CodeBlock code={srcCode} label={pick("Сборка из исходников", "Build from source")} />
       </div>
 
       <div class="mt-6 hidden" data-panel="other">
-        <p class="text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-          Arch, Fedora и другие дистрибутивы пока не поддерживаются. Следите за
-          релизами на GitHub или напишите о своём дистрибутиве в
-          <a href={ISSUES} class="text-[#1c71d8] underline dark:text-[#3584e4]" target="_blank" rel="noopener noreferrer">Issues</a>.
+        <p class="text-muted">
+          {pick(
+            "Arch, Fedora и другие дистрибутивы пока не поддерживаются. Следите за релизами на GitHub или напишите о своём дистрибутиве в",
+            "Arch, Fedora and other distributions are not supported yet. Watch the releases on GitHub, or tell us about your distribution in",
+          )}{" "}
+          <a href={ISSUES} class="text-accent underline" target="_blank" rel="noopener noreferrer">Issues</a>.
         </p>
       </div>
 
       <div class="mt-8 flex flex-wrap gap-3">
-        <a href={RELEASES} class="btn btn-secondary" target="_blank" rel="noopener noreferrer">Все релизы</a>
-        <a href={INSTALL_DOC} class="btn btn-secondary" target="_blank" rel="noopener noreferrer">Документация</a>
+        <a href={RELEASES} class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+          {pick("Все релизы", "All releases")}
+        </a>
+        <a href={INSTALL_DOC} class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+          {pick("Документация", "Documentation")}
+        </a>
         <a href={REPO} class="btn btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
       </div>
     </div>
@@ -64,13 +89,10 @@ bash install.sh`;
     tabs.forEach((tab) => {
       const on = tab.dataset.tab === name;
       tab.setAttribute("aria-selected", String(on));
-      tab.classList.toggle("bg-white", on);
-      tab.classList.toggle("text-[#1c71d8]", on);
+      tab.classList.toggle("bg-surface", on);
+      tab.classList.toggle("text-accent", on);
       tab.classList.toggle("shadow-xs", on);
-      tab.classList.toggle("dark:bg-[#383838]", on);
-      tab.classList.toggle("dark:text-[#3584e4]", on);
-      tab.classList.toggle("text-[#0a0a0a]/70", !on);
-      tab.classList.toggle("dark:text-[#fafafa]/70", !on);
+      tab.classList.toggle("text-muted", !on);
     });
     panels.forEach((panel) => {
       panel.classList.toggle("hidden", panel.dataset.panel !== name);

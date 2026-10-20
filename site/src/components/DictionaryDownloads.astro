@@ -7,23 +7,25 @@
 // their own language.
 import { pick } from "../lib/site";
 import {
+  BASE_LIST_LICENSE,
   baseLanguages,
   categoryCards,
   DICTIONARY_ASSET_BASE as RAW,
   DICTIONARY_MIRROR_BASE as MIRROR,
   humanSize,
+  THEMATIC_LIST_LICENSE,
 } from "../lib/dictionaries";
 
 const showAll = Astro.props.all !== false;
 const shownCategories = showAll ? categoryCards : categoryCards.slice(0, 6);
 ---
 
-<section id="dictionaries" class="border-t border-[#e5e5e5] py-16 sm:py-20 dark:border-[#3d3d3d]">
+<section id="dictionaries" class="border-t border-line py-16 sm:py-20">
   <div class="container-page">
     <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
       {pick("Скачать словари", "Download dictionaries")}
     </h2>
-    <p class="mx-auto mt-4 max-w-2xl text-center text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
+    <p class="mx-auto mt-4 max-w-2xl text-center text-muted">
       {
         pick(
           "Базовые частотные списки и профессиональные словари по разделам. Файлы берутся из последнего GitHub Release — один клик, без сборки.",
@@ -33,7 +35,7 @@ const shownCategories = showAll ? categoryCards : categoryCards.slice(0, 6);
     </p>
 
     <h3 class="mt-12 text-xl font-semibold">{pick("Базовые частотные списки", "Base frequency lists")}</h3>
-    <p class="mt-2 text-sm text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
+    <p class="mt-2 text-sm text-muted">
       {
         pick(
           "Топ-50k самых частых слов языка. Входят в .deb, но можно скачать отдельно.",
@@ -41,26 +43,28 @@ const shownCategories = showAll ? categoryCards : categoryCards.slice(0, 6);
         )
       }
     </p>
-    <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <p class="mt-2 text-xs text-subtle">
+      {pick("Лицензия", "Licence")}: {BASE_LIST_LICENSE}
+    </p>
+
+    <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {
         baseLanguages.map((lang) => (
           <a
             href={`${RAW}/${lang.code}-50k.txt`}
-            class="card flex items-center justify-between gap-3 transition-colors hover:border-[#1c71d8]/50 dark:hover:border-[#3584e4]/50"
+            class="card flex items-center justify-between gap-3 transition-colors hover:border-accent-line"
             target="_blank"
             rel="noopener noreferrer"
           >
             <span class="font-semibold">{lang.title}</span>
-            <span class="font-mono text-xs text-[#1c71d8] dark:text-[#3584e4]">
-              {lang.code}-50k.txt ↓
-            </span>
+            <span class="font-mono text-xs text-accent">{lang.code}-50k.txt ↓</span>
           </a>
         ))
       }
     </div>
 
     <h3 class="mt-14 text-xl font-semibold">{pick("Профессиональные словари", "Professional dictionaries")}</h3>
-    <p class="mt-2 text-sm text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
+    <p class="mt-2 text-sm text-muted">
       {
         pick(
           "Тематическая лексика для IT, медицины, юриспруденции, финансов, инженерии, науки, бизнеса, электроники, медиа, образования, игр и спорта. Ставится одной командой, не входит в .deb.",
@@ -68,27 +72,35 @@ const shownCategories = showAll ? categoryCards : categoryCards.slice(0, 6);
         )
       }
     </p>
-    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <p class="mt-2 text-xs text-subtle">
+      {pick("Лицензия", "Licence")}: {THEMATIC_LIST_LICENSE}
+    </p>
+
+    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {
         shownCategories.map((cat) => (
-          <div class="card">
-            <div class="flex items-start justify-between gap-2">
-              <h4 class="font-semibold">{pick(cat.title.ru, cat.title.en)}</h4>
-              <span class="shrink-0 rounded bg-[#fafafa] px-2 py-0.5 text-xs text-[#0a0a0a]/60 dark:bg-[#2d2d2d] dark:text-[#fafafa]/60">
+          <div class="card flex flex-col">
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <h4 class="min-w-0 font-semibold">{pick(cat.title.ru, cat.title.en)}</h4>
+              <span class="shrink-0 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-xs text-subtle">
                 {cat.license}
               </span>
             </div>
-            <p class="mt-2 text-sm text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-              {pick(cat.blurb.ru, cat.blurb.en)}
-            </p>
+            <p class="mt-2 text-sm text-muted">{pick(cat.blurb.ru, cat.blurb.en)}</p>
+            {/*
+              `min-w-0` on the flex row is what stops the long "Title · N words ·
+              size" line from forcing the page wider than the viewport; without
+              it the row's min-content width won the layout and the page scrolled
+              sideways at 320px.
+            */}
             <ul class="mt-3 space-y-1 text-xs">
               {cat.files.map((file) => (
-                <li class="flex items-center justify-between gap-2">
-                  <span>
+                <li class="flex items-start justify-between gap-2">
+                  <span class="min-w-0 break-words">
                     {file.title} · {file.words} {pick("слов", "words")} · {humanSize(file.size)}
                   </span>
                   <a
-                    class="shrink-0 text-[#1c71d8] underline dark:text-[#3584e4]"
+                    class="shrink-0 text-accent underline underline-offset-2"
                     href={`${MIRROR}/${cat.slug}/${file.lang}-${cat.slug}-1k.txt`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -98,7 +110,7 @@ const shownCategories = showAll ? categoryCards : categoryCards.slice(0, 6);
                 </li>
               ))}
             </ul>
-            <pre class="mt-3 overflow-x-auto rounded bg-[#1e1e1e] p-2 text-[11px] text-[#fafafa]"><code>{`klyrshift dict install ${cat.slug} --lang ru`}</code></pre>
+            <pre class="code-panel mt-3 p-2 text-[11px]"><code>{`klyrshift dict install ${cat.slug} --lang ru`}</code></pre>
           </div>
         ))
       }
@@ -106,8 +118,8 @@ const shownCategories = showAll ? categoryCards : categoryCards.slice(0, 6);
 
     {
       showAll && (
-        <p class="mt-6 text-sm text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-          <a href="/dictionaries" class="text-[#1c71d8] underline dark:text-[#3584e4]">
+        <p class="mt-6 text-sm text-muted">
+          <a href="/dictionaries" class="text-accent underline underline-offset-2">
             {pick("Каталог словарей →", "Full dictionary catalogue →")}
           </a>
         </p>

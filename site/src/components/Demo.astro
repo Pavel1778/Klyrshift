@@ -8,61 +8,62 @@
 import { pick } from "../lib/site";
 ---
 
-<section id="demo" class="container-page py-16 sm:py-20">
-  <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-    {pick("Попробуйте сами", "Try it yourself")}
-  </h2>
-  <p class="mx-auto mt-4 max-w-2xl text-center text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-    {pick(
-      "Наберите текст не в той раскладке — демо покажет, что вы имели в виду. Правильный текст Klyrshift не трогает.",
-      "Type text in the wrong layout and the demo shows what you meant. Text that is already correct is left alone."
-    )}
-  </p>
+<section id="demo" class="border-y border-line bg-surface py-16 sm:py-20">
+  <div class="container-page">
+    <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+      {pick("Попробуйте сами", "Try it yourself")}
+    </h2>
+    <p class="mx-auto mt-4 max-w-2xl text-center text-muted">
+      {pick(
+        "Наберите текст не в той раскладке — демо покажет, что вы имели в виду. Правильный текст Klyrshift не трогает.",
+        "Type text in the wrong layout and the demo shows what you meant. Text that is already correct is left alone."
+      )}
+    </p>
 
-  <div class="mx-auto mt-10 max-w-2xl">
-    <label for="demo-input" class="mb-2 block text-sm font-medium">
-      {pick("Наберите здесь", "Type here")}
-    </label>
-    <input
-      id="demo-input"
-      type="text"
-      autocomplete="off"
-      autocapitalize="off"
-      spellcheck="false"
-      placeholder="ghbdtn"
-      class="w-full rounded-xl border border-[#e5e5e5] bg-white px-4 py-3 font-mono text-lg outline-hidden
-        transition-colors focus:border-[#1c71d8] dark:border-[#3d3d3d] dark:bg-[#2d2d2d]
-        dark:focus:border-[#3584e4]"
-    />
+    <div class="mx-auto mt-10 max-w-2xl">
+      <label for="demo-input" class="mb-2 block text-sm font-medium">
+        {pick("Наберите здесь", "Type here")}
+      </label>
+      <input
+        id="demo-input"
+        type="text"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="ghbdtn"
+        class="w-full rounded-xl border border-line bg-surface px-4 py-3 font-mono text-lg text-fg outline-hidden
+          transition-colors placeholder:text-subtle focus:border-accent"
+      />
 
-    <div class="mt-4 rounded-xl border border-[#e5e5e5] bg-white p-4 dark:border-[#3d3d3d] dark:bg-[#2d2d2d]">
-      <p class="text-sm text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-        {pick("Klyrshift исправит на:", "Klyrshift would correct it to:")}
-      </p>
-      <p
-        id="demo-output"
-        class="mt-1 min-h-[1.75rem] font-mono text-lg text-[#1c71d8] dark:text-[#3584e4]"
-      >
-        <span class="text-[#0a0a0a]/30 dark:text-[#fafafa]/30">…</span>
-      </p>
-      <p
-        id="demo-note"
-        data-note={pick(
-          "Текст уже корректен — менять нечего.",
-          "Already correct — nothing to change."
-        )}
-        class="mt-2 hidden text-xs text-[#0a0a0a]/50 dark:text-[#fafafa]/50"
-      ></p>
-    </div>
+      <div class="mt-4 rounded-xl border border-line bg-bg p-4">
+        <p class="text-sm text-muted">
+          {pick("Klyrshift исправит на:", "Klyrshift would correct it to:")}
+        </p>
+        <p
+          id="demo-output"
+          class="mt-1 min-h-[1.75rem] font-mono text-lg text-accent"
+        >
+          <span class="text-subtle">…</span>
+        </p>
+        <p
+          id="demo-note"
+          data-note={pick(
+            "Текст уже корректен — менять нечего.",
+            "Already correct — nothing to change."
+          )}
+          class="mt-2 hidden text-xs text-subtle"
+        ></p>
+      </div>
 
-    <div class="mt-5 flex flex-wrap items-center gap-2">
-      <span class="text-sm text-[#0a0a0a]/60 dark:text-[#fafafa]/60">
-        {pick("Попробуйте:", "Try:")}
-      </span>
-      <button type="button" class="badge demo-chip" data-fill="ghbdtn">ghbdtn</button>
-      <button type="button" class="badge demo-chip" data-fill="руддщ">руддщ</button>
-      <button type="button" class="badge demo-chip" data-fill="Rfr ltkf">Rfr ltkf</button>
-      <button type="button" class="badge demo-chip" data-fill="привет">привет</button>
+      <div class="mt-5 flex flex-wrap items-center gap-2">
+        <span class="text-sm text-subtle">
+          {pick("Попробуйте:", "Try:")}
+        </span>
+        <button type="button" class="badge demo-chip" data-fill="ghbdtn">ghbdtn</button>
+        <button type="button" class="badge demo-chip" data-fill="руддщ">руддщ</button>
+        <button type="button" class="badge demo-chip" data-fill="Rfr ltkf">Rfr ltkf</button>
+        <button type="button" class="badge demo-chip" data-fill="привет">привет</button>
+      </div>
     </div>
   </div>
 </section>
@@ -211,7 +212,7 @@ import { pick } from "../lib/site";
     if (!input || !output) return;
     const value = input.value;
     if (!value.trim()) {
-      output.innerHTML = '<span class="text-[#0a0a0a]/30 dark:text-[#fafafa]/30">…</span>';
+      output.innerHTML = '<span class="text-subtle">…</span>';
       if (note) note.classList.add("hidden");
       return;
     }

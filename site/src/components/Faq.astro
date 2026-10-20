@@ -1,45 +1,64 @@
 ---
+import { pick } from "../lib/site";
+
 const faq = [
   {
-    q: "Заменяет ли Klyrshift раскладку в GNOME?",
-    a: "Нет, работает параллельно. Раскладку переключает через g3kb-switch, но вы можете продолжать пользоваться хоткеем GNOME.",
+    q: pick("Заменяет ли Klyrshift раскладку в GNOME?", "Does Klyrshift replace the GNOME layout switcher?"),
+    a: pick(
+      "Нет, работает параллельно. Раскладку переключает через g3kb-switch, но вы можете продолжать пользоваться хоткеем GNOME.",
+      "No, it works alongside it. It switches the layout through g3kb-switch, and you can keep using the GNOME hotkey.",
+    ),
   },
   {
-    q: "Будет ли работать в терминале?",
-    a: "Да, но по умолчанию терминал в списке исключений: без этого команды могут «исправляться». Настраивается в GUI → Исключения.",
+    q: pick("Будет ли работать в терминале?", "Does it work in a terminal?"),
+    a: pick(
+      "Да, но по умолчанию терминал в списке исключений: без этого команды могут «исправляться». Настраивается в GUI → Исключения.",
+      "Yes, but terminals are excluded by default: without that, commands could get \u201ccorrected\u201d. Configurable in the GUI under Exceptions.",
+    ),
   },
   {
-    q: "Как быть с полями паролей?",
-    a: "v0.2.0 использует AT-SPI — если поле помечено как password, fix не срабатывает. Дополнительно работают стоп-слова.",
+    q: pick("Как быть с полями паролей?", "What about password fields?"),
+    a: pick(
+      "v0.2.0 использует AT-SPI — если поле помечено как password, fix не срабатывает. Дополнительно работают стоп-слова.",
+      "Since v0.2.0 Klyrshift uses AT-SPI: when a field is marked as a password, the fix does not fire. Stop words apply as well.",
+    ),
   },
   {
-    q: "Собирает ли Klyrshift данные обо мне?",
-    a: "Нет. Всё работает локально, текст не покидает машину. Сетевые запросы делает только сам демон при проверке обновлений (по умолчанию выключена) и команда klyrshift dict download/install, когда вы сами просите скачать словарь.",
+    q: pick("Собирает ли Klyrshift данные обо мне?", "Does Klyrshift collect data about me?"),
+    a: pick(
+      "Нет. Всё работает локально, текст не покидает машину. Сетевые запросы делает только сам демон при проверке обновлений (по умолчанию выключена) и команда klyrshift dict download/install, когда вы сами просите скачать словарь.",
+      "No. Everything runs locally and your text never leaves the machine. The only network requests are the daemon's update check (off by default) and klyrshift dict download/install when you ask for a dictionary.",
+    ),
   },
   {
-    q: "Как временно отключить?",
-    a: "Большая кнопка в GUI или systemctl --user stop klyrshift.service.",
+    q: pick("Как временно отключить?", "How do I turn it off temporarily?"),
+    a: pick(
+      "Большая кнопка в GUI или systemctl --user stop klyrshift.service.",
+      "The big button in the GUI, or systemctl --user stop klyrshift.service.",
+    ),
   },
   {
-    q: "Поддерживается ли macOS / Windows?",
-    a: "Нет. Только Linux.",
+    q: pick("Поддерживается ли macOS / Windows?", "Is macOS / Windows supported?"),
+    a: pick("Нет. Только Linux.", "No. Linux only."),
   },
 ];
 ---
 
 <section id="faq" class="container-page py-16 sm:py-20">
-  <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">Частые вопросы</h2>
+  <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+    {pick("Частые вопросы", "Frequently asked questions")}
+  </h2>
 
   <div class="mx-auto mt-10 max-w-3xl space-y-3">
     {faq.map((item) => (
-      <details class="group rounded-xl border border-[#e5e5e5] bg-white dark:border-[#3d3d3d] dark:bg-[#2d2d2d]">
+      <details class="group rounded-[var(--radius-card)] border border-line bg-surface transition-colors open:border-accent-line">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-medium">
           <span>{item.q}</span>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform group-open:rotate-180" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden="true">
             <path d="m6 9 6 6 6-6" />
           </svg>
         </summary>
-        <p class="px-5 pb-4 text-[#0a0a0a]/70 dark:text-[#fafafa]/70">{item.a}</p>
+        <p class="px-5 pb-4 text-muted">{item.a}</p>
       </details>
     ))}
   </div>

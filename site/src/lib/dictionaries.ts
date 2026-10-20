@@ -177,6 +177,23 @@ export const thematicCategories: ThematicCategory[] = [
 
 const dictRoot = path.resolve(process.cwd(), "..", "dictionaries");
 
+/**
+ * Text colour for a category chip, picked so the label stays readable on the
+ * category's own colour. The palette spans light yellows and deep purples, so a
+ * fixed white label failed WCAG AA on the light ones (white on #f5c211 is
+ * 1.8:1). Relative luminance decides: dark text on light chips, white on dark.
+ */
+export function onCategoryColor(hex: string): string {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const channel = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const contrastWithWhite = 1.05 / (luminance + 0.05);
+  const contrastWithBlack = (luminance + 0.05) / 0.05;
+  return contrastWithWhite >= contrastWithBlack ? "#ffffff" : "#111113";
+}
+
 export function humanSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;

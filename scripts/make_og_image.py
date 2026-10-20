@@ -3,9 +3,9 @@
 The previous image was produced by hand, so the ``LinguaFix`` -> ``Klyrshift``
 rename never reached it and link previews kept showing the dead name. This
 script builds the card from the landing page's own assets so the two cannot
-drift again: it reuses ``site/public/logo.svg`` and the exact self-hosted Inter
-and JetBrains Mono webfonts that Astro emits, then screenshots the result with
-headless Chromium.
+drift again: it reuses ``site/public/logo.svg`` and the exact self-hosted
+Golos Text, Unbounded and JetBrains Mono webfonts that Astro emits, then
+screenshots the result with headless Chromium.
 
 Requires a prior ``npm run build`` in ``site/`` (for the built fonts) and a
 ``chromium`` binary. Usage::
@@ -38,7 +38,11 @@ LOGO = SITE / "public" / "logo.svg"
 WIDTH, HEIGHT = 1200, 630
 
 # Family aliases so the template never depends on Astro's per-build hashes.
-FAMILY_ALIASES = {"Inter": "KlyrshiftOgSans", "JetBrains Mono": "KlyrshiftOgMono"}
+FAMILY_ALIASES = {
+    "Golos Text": "KlyrshiftOgSans",
+    "JetBrains Mono": "KlyrshiftOgMono",
+    "Unbounded": "KlyrshiftOgDisplay",
+}
 
 FOOTER = "Debian 13+ · GNOME 45+ · Wayland / X11 · MIT"
 
@@ -96,9 +100,9 @@ html, body {{ margin: 0; width: {WIDTH}px; height: {HEIGHT}px; overflow: hidden;
 body {{ background: #1e1e1e; font-family: KlyrshiftOgSans; -webkit-font-smoothing: antialiased; }}
 .logo {{ position: absolute; left: 79.15px; top: 109.15px; width: 173.4px; height: 173.4px; }}
 .logo svg {{ width: 100%; height: 100%; display: block; }}
-.title {{ position: absolute; left: 272px; top: 121px; font-size: 97.2px; font-weight: 700;
-         color: #fafafa; letter-spacing: -0.015em; line-height: 1.1; }}
-.subtitle {{ position: absolute; left: 279px; top: 252px; font-size: 41px; font-weight: 500;
+.title {{ position: absolute; left: 272px; top: 140px; font-size: 74px; font-weight: 700;
+         font-family: KlyrshiftOgDisplay; color: #fafafa; letter-spacing: -0.03em; line-height: 1.1; }}
+.subtitle {{ position: absolute; left: 279px; top: 252px; font-size: 39px; font-weight: 500;
             color: #aaaaaa; letter-spacing: -0.085em; text-transform: uppercase;
             white-space: nowrap; }}
 .card {{ position: absolute; left: 90px; top: 400px; width: 1020px; height: 120px;

@@ -1,31 +1,39 @@
 ---
-import { CONTRIBUTING, INSTALL_DOC, ISSUES, LICENSE, REPO, RELEASES } from "../consts";
+import {
+  CONTRIBUTING,
+  INSTALL_DOC,
+  ISSUES,
+  LICENSE,
+  REPO,
+  RELEASES,
+} from "../consts";
 import { pick } from "../lib/site";
 
 const columns = [
   {
-    title: "Продукт",
+    title: pick("Продукт", "Product"),
     links: [
-      { label: "Возможности", href: "#features" },
-      { label: "Установка", href: "#install" },
-      { label: "Документация", href: INSTALL_DOC },
+      { label: pick("Возможности", "Features"), href: "#features" },
+      { label: pick("Установка", "Install"), href: "#install" },
+      { label: pick("Документация", "Documentation"), href: INSTALL_DOC },
       { label: "Changelog", href: RELEASES },
     ],
   },
   {
-    title: "Сообщество",
+    title: pick("Сообщество", "Community"),
     links: [
       { label: "GitHub", href: REPO },
       { label: "Issues", href: ISSUES },
       { label: "Releases", href: RELEASES },
-      { label: "Контрибьюторам", href: CONTRIBUTING },
+      { label: pick("Контрибьюторам", "Contributing"), href: CONTRIBUTING },
     ],
   },
   {
-    title: "Ресурсы",
+    title: pick("Ресурсы", "Resources"),
     links: [
-      { label: "Лицензия", href: LICENSE },
-      { label: "Тестирование", href: `${REPO}/blob/main/docs/TESTING.md` },
+      { label: pick("Словари", "Dictionaries"), href: "/dictionaries" },
+      { label: pick("Лицензия кода", "Code licence"), href: LICENSE },
+      { label: pick("Тестирование", "Testing"), href: `${REPO}/blob/main/docs/TESTING.md` },
     ],
   },
 ];
@@ -33,28 +41,59 @@ const columns = [
 const year = new Date().getFullYear();
 ---
 
-<footer class="border-t border-[#e5e5e5] bg-white py-12 dark:border-[#3d3d3d] dark:bg-[#242424]">
+<footer class="border-t border-line bg-surface py-12">
   <div class="container-page">
-    <div class="grid gap-10 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-10 lg:grid-cols-4">
       <div>
-        <div class="flex items-center gap-2.5 font-bold">
+        <div class="flex items-center gap-2.5">
           <img src="/logo.svg" alt="" width="32" height="32" class="h-8 w-8 rounded-lg" />
-          <span class="text-lg">Klyrshift</span>
+          <span class="font-display text-lg font-bold tracking-tight">Klyrshift</span>
         </div>
-        <p class="mt-4 text-sm text-[#0a0a0a]/60 dark:text-[#fafafa]/60">
-          MIT License · © {year} Pavel
-        </p>
-        <h3 class="mt-6 text-sm font-semibold">
-          {pick("О проекте", "About")}
-        </h3>
-        <p class="mt-3 text-sm text-[#0a0a0a]/60 dark:text-[#fafafa]/60">
+
+        <h3 class="mt-6 text-sm font-semibold">{pick("О проекте", "About")}</h3>
+        <p class="mt-3 text-sm text-muted">
           {
             pick(
-              "Klyrshift — open-source инструмент для автоматического исправления раскладки клавиатуры. Работает локально, без телеметрии, под MIT лицензией. Поддерживает русский, английский, украинский, немецкий и французский языки.",
-              "Klyrshift is an open-source tool that fixes keyboard layout mistakes automatically. It runs locally, collects no telemetry, and is MIT licensed. It supports Russian, English, Ukrainian, German and French.",
+              "Klyrshift — open-source инструмент для автоматического исправления раскладки клавиатуры. Работает локально, без телеметрии. Поддерживает русский, английский, украинский, немецкий и французский языки.",
+              "Klyrshift is an open-source tool that fixes keyboard layout mistakes automatically. It runs locally and collects no telemetry. It supports Russian, English, Ukrainian, German and French.",
             )
           }
         </p>
+
+        {/*
+          Two licences cover two different kinds of file, so they are named
+          separately: the program is MIT, while the shipped base frequency lists
+          are CC-BY-SA-4.0 content. Collapsing this to "MIT" alone would drop the
+          attribution the lists require.
+        */}
+        <div class="mt-6 space-y-2 text-sm text-muted">
+          <p>
+            <span class="font-medium text-fg">{pick("Код", "Code")}:</span>{" "}
+            <a
+              href={LICENSE}
+              class="text-accent underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer">MIT</a
+            >
+            · © {year} Pavel1778
+          </p>
+          <p>
+            <span class="font-medium text-fg">{pick("Словари", "Dictionaries")}:</span>{" "}
+            <a
+              href="https://creativecommons.org/licenses/by-sa/4.0/"
+              class="text-accent underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer">CC-BY-SA-4.0</a
+            >
+            — {pick("базовые списки", "base lists")} © 2016 Hermit Dave,
+            <a
+              href="https://github.com/hermitdave/FrequencyWords"
+              class="text-accent underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer">FrequencyWords</a
+            >; {pick("тематические списки", "thematic lists")} — MIT.
+          </p>
+        </div>
       </div>
 
       {columns.map((col) => (
@@ -66,9 +105,8 @@ const year = new Date().getFullYear();
                 <a
                   href={l.href}
                   rel="noopener noreferrer"
-                  target={l.href.startsWith("#") ? undefined : "_blank"}
-                  class="text-sm text-[#0a0a0a]/60 transition-colors hover:text-[#0a0a0a] dark:text-[#fafafa]/60 dark:hover:text-[#fafafa]"
-                  >{l.label}</a
+                  target={l.href.startsWith("#") || l.href.startsWith("/") ? undefined : "_blank"}
+                  class="text-sm text-muted transition-colors hover:text-fg">{l.label}</a
                 >
               </li>
             ))}
@@ -77,11 +115,16 @@ const year = new Date().getFullYear();
       ))}
     </div>
 
-    <div class="mt-10 flex flex-col gap-2 border-t border-[#e5e5e5] pt-6 text-sm text-[#0a0a0a]/70 sm:flex-row sm:items-center sm:justify-between dark:border-[#3d3d3d] dark:text-[#fafafa]/70">
-      <p>Made with ❤ for Linux</p>
+    <div class="mt-10 flex flex-col gap-2 border-t border-line pt-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+      <p>{pick("Сделано с ❤ для Linux", "Made with ❤ for Linux")}</p>
       <p>
-        Основной сайт:
-        <a href="https://klyrshift.layero.app" class="underline" target="_blank" rel="noopener noreferrer">klyrshift.layero.app</a>
+        {pick("Основной сайт", "Main site")}:
+        <a
+          href="https://klyrshift.layero.app"
+          class="text-accent underline underline-offset-2"
+          target="_blank"
+          rel="noopener noreferrer">klyrshift.layero.app</a
+        >
       </p>
     </div>
   </div>

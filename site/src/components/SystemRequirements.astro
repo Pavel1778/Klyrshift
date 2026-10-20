@@ -1,38 +1,51 @@
 ---
+import { pick } from "../lib/site";
+
 const rows = [
-  { k: "ОС", v: "Debian 13+ (trixie) / Ubuntu 24.04+" },
-  { k: "Окружение", v: "GNOME 45+ (Wayland или X11)" },
-  { k: "Архитектура", v: "x86_64 (amd64)" },
+  { k: pick("ОС", "OS"), v: "Debian 13+ (trixie) / Ubuntu 24.04+" },
+  { k: pick("Окружение", "Environment"), v: "GNOME 45+ (Wayland " + pick("или", "or") + " X11)" },
+  { k: pick("Архитектура", "Architecture"), v: "x86_64 (amd64)" },
   {
-    k: "Зависимости",
-    v: "python3-evdev, libnotify-bin, wtype (в Depends); g3kb-switch, xdotool, python3-gi, python3-gi-cairo — в Recommends. Ставятся автоматически с .deb.",
+    k: pick("Зависимости", "Dependencies"),
+    v: pick(
+      "python3-evdev, libnotify-bin, wtype (в Depends); g3kb-switch, xdotool, python3-gi, python3-gi-cairo — в Recommends. Ставятся автоматически с .deb.",
+      "python3-evdev, libnotify-bin, wtype (Depends); g3kb-switch, xdotool, python3-gi, python3-gi-cairo (Recommends). Installed automatically with the .deb.",
+    ),
   },
-  { k: "RAM", v: "~25–50 MB" },
-  { k: "Диск", v: "~5 MB" },
+  { k: pick("RAM", "RAM"), v: "~25–50 MB" },
+  { k: pick("Диск", "Disk"), v: "~5 MB" },
 ];
 ---
 
 <section id="requirements" class="container-page py-16 sm:py-20">
-  <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">Системные требования</h2>
-  <p class="mx-auto mt-4 max-w-2xl text-center text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-    Лёгкий демон — почти не заметен на фоне остальных процессов.
+  <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+    {pick("Системные требования", "System requirements")}
+  </h2>
+  <p class="mx-auto mt-4 max-w-2xl text-center text-muted">
+    {pick(
+      "Лёгкий демон — почти не заметен на фоне остальных процессов.",
+      "A light daemon that barely registers next to your other processes.",
+    )}
   </p>
 
-  <dl class="mx-auto mt-10 max-w-3xl overflow-hidden rounded-xl border border-[#e5e5e5] dark:border-[#3d3d3d]">
+  <dl class="mx-auto mt-10 max-w-3xl overflow-hidden rounded-[var(--radius-card)] border border-line">
     {rows.map((r, i) => (
       <div
         class:list={[
           "grid gap-1 px-5 py-4 sm:grid-cols-3 sm:gap-4",
-          i % 2 === 0 ? "bg-white dark:bg-[#2d2d2d]" : "bg-[#fafafa] dark:bg-[#242424]",
+          i % 2 === 0 ? "bg-surface" : "bg-surface-2",
         ]}
       >
         <dt class="font-medium">{r.k}</dt>
-        <dd class="text-[#0a0a0a]/70 sm:col-span-2 dark:text-[#fafafa]/70">{r.v}</dd>
+        <dd class="text-muted sm:col-span-2">{r.v}</dd>
       </div>
     ))}
   </dl>
 
-  <p class="mx-auto mt-6 max-w-3xl text-center text-sm text-[#0a0a0a]/60 dark:text-[#fafafa]/60">
-    KDE, Sway, Hyprland — должно работать, но не тестировалось.
+  <p class="mx-auto mt-6 max-w-3xl text-center text-sm text-subtle">
+    {pick(
+      "KDE, Sway, Hyprland — должно работать, но не тестировалось.",
+      "KDE, Sway, Hyprland should work but are untested.",
+    )}
   </p>
 </section>

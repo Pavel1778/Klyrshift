@@ -2,6 +2,7 @@
 import { Font } from "astro:assets";
 import "../styles/global.css";
 import { LAYERO_URL, VERCEL_URL, isVercel, lang, pick, siteUrl } from "../lib/site";
+import { THEME_COLOR } from "../lib/theme";
 import { AUTHOR_URL, LATEST_RELEASE, REPO, VERSION } from "../consts";
 
 interface Props {
@@ -57,6 +58,7 @@ const schema = {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="canonical" href={canonical} />
     <meta name="robots" content="index, follow" />
 
@@ -80,15 +82,43 @@ const schema = {
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
 
-    <meta name="theme-color" content="#3584e4" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <!-- One theme-color, set by the pre-paint script below. A pair of
+         `media="(prefers-color-scheme: ...)"` metas cannot follow an explicit
+         choice: when the visitor picks the theme opposite to their system, the
+         matching meta still wins and the browser chrome keeps the wrong colour. -->
+    <meta name="theme-color" content={THEME_COLOR.light} />
 
+    <script is:inline define:vars={{ THEME_COLOR }}>
+      // Runs before first paint: pick the saved theme, else the system one, and
+      // set `.dark` on <html>. Without this the page flashes the light theme
+      // before the deferred module script could correct it.
+      (() => {
+        try {
+          const saved = localStorage.getItem("klyrshift-theme");
+          const dark = saved
+            ? saved === "dark"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.classList.toggle("dark", dark);
+          document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute("content", dark ? THEME_COLOR.dark : THEME_COLOR.light);
+        } catch {
+          /* private mode / storage disabled: fall back to the light theme */
+        }
+      })();
+    </script>
     <script type="application/ld+json" set:html={JSON.stringify(schema)} />
 
-    <Font cssVariable="--font-inter" preload />
-    <Font cssVariable="--font-jetbrains" preload />
+    <Font cssVariable="--font-golos" preload />
+    <Font cssVariable="--font-unbounded" preload />
+    <Font cssVariable="--font-jetbrains" />
   </head>
-  <body>
+  <body
+    data-copy-label={pick("Копировать", "Copy")}
+    data-copied-label={pick("Скопировано", "Copied")}
+    data-error-label={pick("Ошибка", "Failed")}
+  >
+    <a class="skip-link" href="#main">{pick("Перейти к содержимому", "Skip to content")}</a>
     <slot />
   </body>
 </html>

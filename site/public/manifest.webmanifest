@@ -1,0 +1,22 @@
+{
+  "name": "Klyrshift",
+  "short_name": "Klyrshift",
+  "description": "Автоматическое исправление раскладки клавиатуры для Linux",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#1a65c2",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

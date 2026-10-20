@@ -1,28 +1,137 @@
 @import "tailwindcss";
 
+/*
+ * Dark mode is driven by a `.dark` class on <html> rather than only by
+ * `prefers-color-scheme`, so the header's theme switch can override the system
+ * choice. The inline script in Base.astro sets the class before first paint
+ * (system preference by default, the visitor's saved choice when there is one),
+ * so there is no flash of the wrong theme.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Every colour is a token. Components never hard-code a hex value, so a palette
+ * change (or the dark override below) reaches the whole page at once -- the old
+ * stylesheet had 217 literal colours and two accent tokens, which is how a
+ * 3.77:1 button shipped unnoticed.
+ */
 @theme {
-  --color-accent-light: #1c71d8;
-  --color-accent-dark: #3584e4;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f5;
+  --color-fg: #111113;
+  --color-muted: #52525b;
+  /* 5.65:1 on `surface-2`, the tightest background it is used over. */
+  --color-subtle: #5b616e;
+  --color-line: #e4e4e7;
+  /* 5.0:1 on the hero glow (`accent-soft`), the lightest background it is
+     ever drawn over, and 5.7:1 for white text on top of it. */
+  --color-accent: #1a65c2;
+  --color-accent-strong: #17559f;
+  /* Text and icons drawn on top of `accent`. */
+  --color-accent-fg: #ffffff;
+  --color-accent-soft: #e8f1fc;
+  --color-accent-line: #a9cbf0;
+  --color-ring: #1a65c2;
+
+  --font-sans: var(--font-golos), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-unbounded), var(--font-golos), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+
+  --color-term-bg: #12141a;
+  --color-term-fg: #f5f6f7;
+
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 8px 24px -12px rgb(16 24 40 / 0.12);
+}
+
+/*
+ * Dark overrides. The accent is lightened (#78b4f5 is 8.2:1 on the dark
+ * background) and the text *on* it flips to a near-black (#0b1220), because
+ * white on a light accent is only 2.7:1 -- the exact failure pa11y caught in the
+ * old header button.
+ */
+.dark {
+  --color-bg: #16181c;
+  --color-surface: #1e2025;
+  --color-surface-2: #24272e;
+  --color-fg: #f5f6f7;
+  --color-muted: #b6bcc6;
+  --color-subtle: #9aa2ad;
+  --color-line: #2b2f36;
+  --color-accent: #78b4f5;
+  --color-accent-strong: #93c5fb;
+  --color-accent-fg: #0b1220;
+  --color-accent-soft: #1c2a3d;
+  --color-accent-line: #2f4a6b;
+  --color-ring: #78b4f5;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -16px rgb(0 0 0 / 0.6);
 }
 
 @layer base {
   :root {
-    color-scheme: light dark;
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
   }
 
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 5rem;
+    /* Clears the sticky header when an in-page anchor is followed. */
+    scroll-padding-top: 5.5rem;
   }
 
   body {
-    @apply bg-[#fafafa] text-[#0a0a0a] antialiased dark:bg-[#1e1e1e] dark:text-[#fafafa];
+    @apply bg-bg font-sans text-fg antialiased;
+  }
+
+  /*
+   * The display face is geometric and wide, so it needs tighter tracking and a
+   * line-height that does not collapse on multi-line headings.
+   */
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    letter-spacing: -0.02em;
   }
 
   ::selection {
-    @apply bg-[#1c71d8] text-white dark:bg-[#3584e4];
+    @apply bg-accent text-accent-fg;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
+  /*
+   * A keyboard visitor must reach the content without tabbing through the whole
+   * header.
+   */
+  .skip-link {
+    @apply absolute left-4 top-4 z-[60] -translate-y-24 rounded-lg bg-accent px-4 py-2 text-sm
+      font-medium text-accent-fg transition-transform;
+  }
+
+  .skip-link:focus {
+    @apply translate-y-0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -32,40 +141,58 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-medium
-      transition-colors duration-150 focus-visible:outline-solid focus-visible:outline-2
-      focus-visible:outline-offset-2 focus-visible:outline-[#1c71d8] dark:focus-visible:outline-[#3584e4];
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold
+      transition-colors duration-150;
   }
 
   .btn-primary {
-    @apply bg-[#1c71d8] text-white hover:bg-[#1a65c2] dark:bg-[#3584e4] dark:hover:bg-[#2f77cd];
+    @apply bg-accent text-accent-fg hover:bg-accent-strong;
   }
 
   .btn-secondary {
-    @apply border border-[#e5e5e5] bg-white text-[#0a0a0a] hover:bg-[#f0f0f0]
-      dark:border-[#3d3d3d] dark:bg-[#2d2d2d] dark:text-[#fafafa] dark:hover:bg-[#383838];
+    @apply border border-line bg-surface text-fg hover:bg-surface-2;
   }
 
   .btn-ghost {
-    @apply px-2 py-2 text-[#1c71d8] hover:underline dark:text-[#3584e4];
+    @apply px-2 py-2 text-accent hover:underline;
   }
 
   .card {
-    @apply rounded-xl border border-[#e5e5e5] bg-white p-6 shadow-xs
-      dark:border-[#3d3d3d] dark:bg-[#2d2d2d];
+    @apply rounded-[var(--radius-card)] border border-line bg-surface p-6 shadow-[var(--shadow-card)];
   }
 
+  /*
+   * Icon chips sit on the accent at low opacity; the soft token keeps the
+   * contrast fixed instead of relying on a `/10` blend of a moving colour.
+   */
+  .icon-chip {
+    @apply inline-flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent;
+  }
+
+  /* The command panel wraps rather than scrolls. A horizontally scrollable
+     region is a keyboard trap unless it is focusable, and axe flags it under
+     WCAG 2.1.1 (Level A) -- `scrollable-region-focusable`. The snippets here are
+     short, so wrapping shows the whole command instead of hiding its tail behind
+     a scrollbar that many platforms do not draw. */
   .code-block {
-    @apply relative overflow-x-auto rounded-xl bg-[#1e1e1e] p-4 font-mono text-sm text-[#fafafa];
+    @apply relative rounded-xl bg-term-bg p-4 font-mono text-sm text-term-fg;
+  }
+
+  /* A read-only console snippet (no copy button), used in the dictionary lists. */
+  .code-panel {
+    @apply rounded-lg bg-term-bg font-mono text-term-fg whitespace-pre-wrap break-words;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-[#e5e5e5] bg-white px-3 py-1
-      text-xs font-medium text-[#0a0a0a] dark:border-[#3d3d3d] dark:bg-[#2d2d2d] dark:text-[#fafafa];
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1
+      text-xs font-medium text-fg;
   }
 
   .demo-chip {
-    @apply cursor-pointer transition-colors hover:border-[#1c71d8] hover:text-[#1c71d8]
-      dark:hover:border-[#3584e4] dark:hover:text-[#3584e4];
+    @apply cursor-pointer transition-colors hover:border-accent-line hover:bg-accent-soft hover:text-accent;
+  }
+
+  .eyebrow {
+    @apply font-display text-xs font-semibold uppercase tracking-[0.18em] text-accent;
   }
 }

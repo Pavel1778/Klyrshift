@@ -1,38 +1,54 @@
 ---
+import { pick } from "../lib/site";
+
 const steps = [
   {
     n: "01",
-    title: "Слушает ввод",
-    text: "Читает нажатия через evdev. Не захватывает клавиатуру — система работает как обычно.",
+    title: pick("Слушает ввод", "Listens to input"),
+    text: pick(
+      "Читает нажатия через evdev. Не захватывает клавиатуру — система работает как обычно.",
+      "Reads keystrokes through evdev. It never grabs the keyboard, so the system behaves as usual.",
+    ),
   },
   {
     n: "02",
-    title: "Замечает ошибку",
-    text: "Словарь top-10k + n-граммы + контекст. Видит бессмыслицу вроде «руддщ» и понимает: это «hello».",
+    title: pick("Замечает ошибку", "Spots the mistake"),
+    text: pick(
+      "Словарь top-10k, n-граммы и контекст. Видит бессмыслицу вроде «руддщ» и понимает: это «hello».",
+      "A top-10k vocabulary, n-grams and context. It sees gibberish like \u00ab\u0440\u0443\u0434\u0434\u0449\u00bb and knows it means \u00abhello\u00bb.",
+    ),
   },
   {
     n: "03",
-    title: "Исправляет мгновенно",
-    text: "Удаляет и вводит правильный текст через uinput. Атомарно, одной транзакцией.",
+    title: pick("Исправляет мгновенно", "Fixes it instantly"),
+    text: pick(
+      "Удаляет и вводит правильный текст через uinput. Атомарно, одной транзакцией.",
+      "Deletes and retypes the correct text through uinput, atomically, in one transaction.",
+    ),
   },
 ];
 ---
 
-<section id="how" class="border-y border-[#e5e5e5] bg-white py-16 sm:py-20 dark:border-[#3d3d3d] dark:bg-[#242424]">
+<section id="how" class="border-y border-line bg-surface py-16 sm:py-20">
   <div class="container-page">
-    <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">Как это работает</h2>
-    <p class="mx-auto mt-4 max-w-2xl text-center text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-      Три шага от опечатки до исправленного текста.
+    <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+      {pick("Как это работает", "How it works")}
+    </h2>
+    <p class="mx-auto mt-4 max-w-2xl text-center text-muted">
+      {pick(
+        "Три шага от опечатки до исправленного текста.",
+        "Three steps from a typo to corrected text.",
+      )}
     </p>
 
-    <div class="mt-12 grid gap-6 md:grid-cols-3">
+    <ol class="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
       {steps.map((s) => (
-        <div class="card">
-          <span class="font-mono text-sm font-bold text-[#1c71d8] dark:text-[#3584e4]">{s.n}</span>
+        <li class="card">
+          <span class="font-mono text-sm font-medium text-accent">{s.n}</span>
           <h3 class="mt-3 text-xl font-semibold">{s.title}</h3>
-          <p class="mt-2 text-[#0a0a0a]/70 dark:text-[#fafafa]/70">{s.text}</p>
-        </div>
+          <p class="mt-2 text-muted">{s.text}</p>
+        </li>
       ))}
-    </div>
+    </ol>
   </div>
 </section>

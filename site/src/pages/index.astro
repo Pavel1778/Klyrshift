@@ -11,11 +11,12 @@ import SystemRequirements from "../components/SystemRequirements.astro";
 import Community from "../components/Community.astro";
 import Faq from "../components/Faq.astro";
 import Footer from "../components/Footer.astro";
+import { pick } from "../lib/site";
 ---
 
 <Base>
   <Header />
-  <main>
+  <main id="main">
     <Hero />
     <HowItWorks />
     <Demo />
@@ -29,16 +30,22 @@ import Footer from "../components/Footer.astro";
   <Footer />
 
   <script>
+    // One listener for every copy button on the page. The labels travel in data
+    // attributes so the RU host does not show the English "Copy".
+    const copyLabel = document.body.dataset.copyLabel ?? "Copy";
+    const copiedLabel = document.body.dataset.copiedLabel ?? "Copied";
+    const errorLabel = document.body.dataset.errorLabel ?? "Failed";
+
     document.querySelectorAll<HTMLButtonElement>(".copy-btn").forEach((button) => {
+      const reset = button.textContent;
       button.addEventListener("click", async () => {
-        const code = button.dataset.code ?? "";
         try {
-          await navigator.clipboard.writeText(code);
-          button.textContent = "Скопировано";
+          await navigator.clipboard.writeText(button.dataset.code ?? "");
+          button.textContent = copiedLabel;
         } catch {
-          button.textContent = "Ошибка";
+          button.textContent = errorLabel;
         }
-        window.setTimeout(() => (button.textContent = "Copy"), 1500);
+        window.setTimeout(() => (button.textContent = reset || copyLabel), 1500);
       });
     });
   </script>

@@ -1,39 +1,140 @@
 ---
 import { LATEST_RELEASE, REPO } from "../consts";
+import { pick } from "../lib/site";
+import { THEME_COLOR } from "../lib/theme";
 
 const links = [
-  { href: "#features", label: "Возможности" },
-  { href: "#how", label: "Как работает" },
-  { href: "#install", label: "Установка" },
-  { href: "#faq", label: "FAQ" },
-  { href: "/dictionaries", label: "Словари" },
+  { href: "#features", label: pick("Возможности", "Features") },
+  { href: "#how", label: pick("Как работает", "How it works") },
+  { href: "#install", label: pick("Установка", "Install") },
+  { href: "#faq", label: pick("FAQ", "FAQ") },
+  { href: "/dictionaries", label: pick("Словари", "Dictionaries") },
 ];
 ---
 
 <header
-  class="sticky top-0 z-50 border-b border-[#e5e5e5]/80 bg-[#fafafa]/80 backdrop-blur-md dark:border-[#3d3d3d]/80 dark:bg-[#1e1e1e]/80"
+  class="sticky top-0 z-50 border-b border-line/70 bg-bg/80 backdrop-blur-md supports-[backdrop-filter]:bg-bg/70"
 >
-  <div class="container-page flex h-16 items-center justify-between gap-4">
-    <a href="#top" class="flex items-center gap-2.5 font-bold" aria-label="Klyrshift">
+  <div class="container-page flex h-16 items-center justify-between gap-3">
+    <a href="#top" class="flex items-center gap-2.5" aria-label="Klyrshift">
       <img src="/logo.svg" alt="" width="32" height="32" class="h-8 w-8 rounded-lg" />
-      <span class="text-lg tracking-tight">Klyrshift</span>
+      <span class="font-display text-lg font-bold tracking-tight">Klyrshift</span>
     </a>
 
-    <nav class="hidden items-center gap-6 text-sm md:flex" aria-label="Основная навигация">
+    <nav class="hidden items-center gap-1 text-sm lg:flex" aria-label={pick("Основная навигация", "Main navigation")}>
       {links.map((l) => (
-        <a href={l.href} class="text-[#0a0a0a]/70 transition-colors hover:text-[#0a0a0a] dark:text-[#fafafa]/70 dark:hover:text-[#fafafa]">
+        <a
+          href={l.href}
+          class="rounded-lg px-3 py-2 text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+        >
           {l.label}
         </a>
       ))}
       <a
         href={REPO}
-        class="text-[#0a0a0a]/70 transition-colors hover:text-[#0a0a0a] dark:text-[#fafafa]/70 dark:hover:text-[#fafafa]"
+        class="rounded-lg px-3 py-2 text-muted transition-colors hover:bg-surface-2 hover:text-fg"
         target="_blank"
-        rel="noopener noreferrer"
-        >GitHub</a
+        rel="noopener noreferrer">GitHub</a
       >
     </nav>
 
-    <a href={LATEST_RELEASE} class="btn btn-primary !px-4 !py-2" target="_blank" rel="noopener noreferrer">Скачать</a>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        id="theme-toggle"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+        aria-label={pick("Переключить тему", "Toggle theme")}
+        title={pick("Переключить тему", "Toggle theme")}
+      >
+        <svg class="h-4.5 w-4.5 dark:hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+        </svg>
+        <svg class="hidden h-4.5 w-4.5 dark:block" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </svg>
+      </button>
+
+      <a href={LATEST_RELEASE} class="btn btn-primary hidden !px-4 !py-2 sm:inline-flex" target="_blank" rel="noopener noreferrer">
+        {pick("Скачать", "Download")}
+      </a>
+
+      <button
+        type="button"
+        id="nav-toggle"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-muted transition-colors hover:bg-surface-2 hover:text-fg lg:hidden"
+        aria-label={pick("Меню", "Menu")}
+        aria-expanded="false"
+        aria-controls="mobile-nav"
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+    </div>
   </div>
+
+  <nav
+    id="mobile-nav"
+    class="container-page hidden border-t border-line pb-4 pt-2 lg:hidden"
+    aria-label={pick("Мобильная навигация", "Mobile navigation")}
+  >
+    <ul class="flex flex-col">
+      {links.map((l) => (
+        <li>
+          <a href={l.href} class="block rounded-lg px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg">
+            {l.label}
+          </a>
+        </li>
+      ))}
+      <li>
+        <a
+          href={REPO}
+          class="block rounded-lg px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          target="_blank"
+          rel="noopener noreferrer">GitHub</a
+        >
+      </li>
+    </ul>
+    <a href={LATEST_RELEASE} class="btn btn-primary mt-3 w-full" target="_blank" rel="noopener noreferrer">
+      {pick("Скачать", "Download")}
+    </a>
+  </nav>
 </header>
+
+<script>
+  import { THEME_COLOR } from "../lib/theme";
+
+  const root = document.documentElement;
+  const themeToggle = document.getElementById("theme-toggle");
+  const navToggle = document.getElementById("nav-toggle");
+  const mobileNav = document.getElementById("mobile-nav");
+
+  // The inline head script already applied the saved/system theme and the
+  // matching theme-color; this only flips both and persists the choice.
+  themeToggle?.addEventListener("click", () => {
+    const dark = !root.classList.contains("dark");
+    root.classList.toggle("dark", dark);
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", dark ? THEME_COLOR.dark : THEME_COLOR.light);
+    try {
+      localStorage.setItem("klyrshift-theme", dark ? "dark" : "light");
+    } catch {
+      /* storage disabled: the choice simply does not persist */
+    }
+  });
+
+  navToggle?.addEventListener("click", () => {
+    const open = mobileNav?.classList.toggle("hidden") === false;
+    navToggle.setAttribute("aria-expanded", String(open));
+  });
+
+  // Following an in-page link should close the panel it was opened from.
+  mobileNav?.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      mobileNav.classList.add("hidden");
+      navToggle?.setAttribute("aria-expanded", "false");
+    });
+  });
+</script>

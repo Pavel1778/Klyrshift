@@ -1,34 +1,68 @@
 ---
 import { DOWNLOAD_URL, LATEST_RELEASE, REPO, VERSION } from "../consts";
+import { pick } from "../lib/site";
 import WindowMock from "./WindowMock.astro";
+
+const facts = [
+  pick("Wayland и X11", "Wayland & X11"),
+  pick("GNOME 45+", "GNOME 45+"),
+  "MIT",
+  `v${VERSION}`,
+];
 ---
 
-<section id="top" class="container-page grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-2 lg:py-28">
-  <div>
-    <h1 class="text-4xl font-bold leading-tight tracking-tight sm:text-5xl sm:leading-none">
-      Печатаете не в той раскладке?<br class="hidden sm:block" />
-      <span class="text-[#1c71d8] dark:text-[#3584e4]">Klyrshift исправит мгновенно</span>
-    </h1>
+<section id="top" class="relative overflow-hidden">
+  <!-- Ambient accent glow: pure CSS, no image, and it respects the reduced-motion
+       rule because it does not animate. -->
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-x-0 -top-40 -z-10 h-96 bg-[radial-gradient(60%_100%_at_50%_0%,var(--color-accent-soft),transparent_70%)]"
+  ></div>
 
-    <p class="mt-6 max-w-xl text-lg text-[#0a0a0a]/70 dark:text-[#fafafa]/70">
-      Автоматический корректор раскладки для Linux. Работает в фоне, не мешает вводу,
-      поддерживает Wayland и X11.
-    </p>
+  <div class="container-page grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-28">
+    <div>
+      <p class="eyebrow">{pick("Раскладка клавиатуры под контролем", "Keyboard layout, handled")}</p>
 
-    <div class="mt-8 flex flex-wrap items-center gap-3">
-      <a href={DOWNLOAD_URL} class="btn btn-primary" target="_blank" rel="noopener noreferrer">Скачать .deb</a>
-      <a href={LATEST_RELEASE} class="btn btn-secondary" target="_blank" rel="noopener noreferrer">Последний релиз</a>
-      <a href={REPO} class="btn btn-ghost" target="_blank" rel="noopener noreferrer">Смотреть на GitHub →</a>
+      <h1 class="mt-5 text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+        {pick("Печатаете не в той раскладке?", "Typing in the wrong layout?")}<br />
+        <span class="text-accent">{pick("Klyrshift исправит мгновенно", "Klyrshift fixes it instantly")}</span>
+      </h1>
+
+      <p class="mt-6 max-w-xl text-lg leading-relaxed text-muted">
+        {
+          pick(
+            "Автоматический корректор раскладки для Linux. Работает в фоне, не мешает вводу, поддерживает Wayland и X11.",
+            "An automatic layout corrector for Linux. It runs in the background, never gets in the way of typing, and works on Wayland and X11.",
+          )
+        }
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href={DOWNLOAD_URL} class="btn btn-primary" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12M7 11l5 5 5-5M5 21h14" />
+          </svg>
+          {pick("Скачать .deb", "Download .deb")}
+        </a>
+        <a href={REPO} class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+          {pick("Смотреть на GitHub", "View on GitHub")}
+        </a>
+      </div>
+
+      <ul class="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-subtle">
+        {facts.map((fact, i) => (
+          <>
+            {i > 0 && <li aria-hidden="true" class="text-line">·</li>}
+            <li>{fact}</li>
+          </>
+        ))}
+      </ul>
     </div>
 
-    <p class="mt-6 text-sm text-[#0a0a0a]/60 dark:text-[#fafafa]/60">
-      Debian 13+ · GNOME 45+ · MIT License · v{VERSION}
-    </p>
-  </div>
-
-  <div>
-    <WindowMock
-      class="aspect-[3/2] w-full rounded-2xl border border-[#e5e5e5] shadow-lg dark:border-[#3d3d3d]"
-    />
+    <div class="relative">
+      <WindowMock
+        class="aspect-[3/2] w-full rounded-2xl border border-line shadow-[var(--shadow-card)]"
+      />
+    </div>
   </div>
 </section>

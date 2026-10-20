@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Klyrshift">
-  <rect x="8" y="8" width="112" height="112" rx="28" fill="#3584e4"/>
-  <rect x="28" y="74" width="72" height="30" rx="8" fill="#ffffff"/>
-  <g fill="#3584e4">
-    <rect x="36" y="82" width="10" height="8" rx="2"/>
-    <rect x="50" y="82" width="10" height="8" rx="2"/>
-    <rect x="64" y="82" width="10" height="8" rx="2"/>
-    <rect x="78" y="82" width="10" height="8" rx="2"/>
-    <rect x="46" y="94" width="36" height="6" rx="3"/>
-  </g>
-  <g fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M34 50 h46"/>
-    <path d="M70 36 l14 14 -14 14"/>
+  <title>Klyrshift</title>
+  <defs>
+    <linearGradient id="k-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a90e8"/>
+      <stop offset="1" stop-color="#1c71d8"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="116" height="116" rx="30" fill="url(#k-tile)"/>
+  <rect x="6.75" y="6.75" width="114.5" height="114.5" rx="29.25" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.5"/>
+  <g fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 50h44"/>
+    <path d="M72 38l12 12-12 12"/>
+    <path d="M88 78H44"/>
+    <path d="M56 66L44 78l12 12"/>
   </g>
 </svg>
