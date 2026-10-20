@@ -49,3 +49,32 @@ def test_deb_depends_on_svg_icon_loader() -> None:
     depends_line = next(line for line in script.splitlines() if line.startswith("Depends:"))
     assert "librsvg2-common" in depends_line
     assert "hicolor-icon-theme" in depends_line
+
+
+# The same artwork is copied a further two times for the landing page, which is
+# the copy a visitor actually sees in the tab, the bookmark and the install
+# prompt. Four hand-maintained copies of one file is exactly the drift the tests
+# above guard against, so the pair is compared too.
+SITE_ICON_COPIES = (
+    DATA_DIR / "klyrshift.svg",
+    PACKAGE_DATA_DIR / "klyrshift.svg",
+    REPO_ROOT / "site" / "public" / "favicon.svg",
+    REPO_ROOT / "site" / "public" / "logo.svg",
+)
+
+
+def test_every_brand_icon_copy_is_identical() -> None:
+    """``data/``, the package and the two site copies must be byte-identical."""
+    reference = SITE_ICON_COPIES[0]
+    assert reference.is_file(), f"{reference} is missing"
+    payload = reference.read_bytes()
+    drifted = [
+        str(path.relative_to(REPO_ROOT))
+        for path in SITE_ICON_COPIES[1:]
+        if not path.is_file() or path.read_bytes() != payload
+    ]
+    assert not drifted, (
+        "the brand icon drifted from data/klyrshift.svg; regenerate the site "
+        "copies instead of editing one in place: " + ", ".join(drifted)
+    )
+
