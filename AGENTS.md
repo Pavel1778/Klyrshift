@@ -30,7 +30,12 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   pytest coverage ≥ 80 %.
 - GUI tests need a display: run them under `xvfb-run -a` with
   `PYTHONPATH=/usr/lib/python3/dist-packages` so `gi` (GTK4/libadwaita) is
-  importable. Without it the GUI modules fail to import, not to assert.
+  importable. Without it the GUI modules fail to import, not to assert. The
+  GUI job in CI runs the whole suite this way with a higher bar:
+  `PYTHONPATH=/usr/lib/python3/dist-packages xvfb-run -a pytest tests/ -q
+  --cov=klyrshift --cov-config=coverage-gui.rc --cov-fail-under=85`. Reproduce
+  that command before pushing anything that touches a widget or a label: a
+  broken GUI assertion is invisible to the headless suite, which skips it.
 - The pytest suite replaces the OS boundary with fakes, so it **cannot** catch
   packaging bugs. `scripts/smoke_test.sh` installs the real `.deb` into a clean
   container and is the only check that proves the package works.
