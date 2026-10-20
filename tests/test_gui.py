@@ -543,8 +543,11 @@ def test_settings_page_locale_switch(gui_state: Any, monkeypatch: pytest.MonkeyP
         assert get_locale() == "en"
         # The window is rebuilt on a locale change (GTK labels are set once at
         # construction), so a fresh page must come up in the new language.
+        # Every language is listed in its own script, so the names do not
+        # change with the active locale -- only ``auto`` does.
         rebuilt = SettingsPage(gui_state, on_saved=saved.append)
-        assert rebuilt.locale_row.get_model().get_string(1) == "Russian"
+        assert rebuilt.locale_row.get_model().get_string(0) == "Follow the system"
+        assert rebuilt.locale_row.get_model().get_string(1) == "Русский"
         assert rebuilt.locale_row.get_model().get_string(2) == "English"
     finally:
         set_locale("")
