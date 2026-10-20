@@ -265,6 +265,14 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   topics and thematic category titles keep their Russian source in the data
   structure; the widget calls `_(step.title)` when it sets the label. Do not
   translate a data structure at import time for the same reason as the labels.
+- **A partial catalogue walks a fallback chain.** `i18n._lookup` tries the
+  active catalogue, then each locale in `LOCALE_FALLBACKS` (`de`/`fr`/`uk` →
+  `en`), then the Russian source. The catalogues are translated incrementally,
+  so a German build shows an English label rather than Cyrillic; `en` and `ru`
+  have empty chains and other locales must not list themselves. Adding a
+  catalogue is a data change only: `SUPPORTED_LOCALES`/`LOCALE_NAMES` in
+  `i18n.py` are the single registry the config validator, the GUI combo and
+  `--lang` all read.
 - **A locale change rebuilds the window.** GTK labels are set once at
   construction and there is no rebind pass, so `app.reload_ui()` destroys and
   recreates the window (state and config survive). `Config.ui_locale` stores the
@@ -445,8 +453,11 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   Debian-format entry and ships `CHANGELOG.md` beside it for the real history.
 - **A `copyright` that points at a licence file Debian does not ship is worse
   than none.** `/usr/share/common-licenses/CC-BY-SA-4.0` exists on Debian 12
-  and 13; `tests/test_packaging_contract.py` checks the reference resolves
-  instead of trusting the string.
+  and 13 *because Debian's `base-files` installs it*. Ubuntu ships the
+  `/usr/share/common-licenses` directory too but omits the CC licences, so the
+  check must confirm the host is Debian (`ID=debian` in `/etc/os-release`), not
+  merely that the directory exists — otherwise it fails on the GitHub runner,
+  which is Ubuntu, not the target platform.
 - **A `Files:` glob must name a path that exists.** The first `copyright`
   draft pointed at `src/klyrshift/data/dictionaries/*.txt`, which is neither
   the repository path (`dictionaries/*-50k.txt` at the root) nor the

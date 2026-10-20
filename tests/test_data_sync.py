@@ -77,4 +77,3 @@ def test_every_brand_icon_copy_is_identical() -> None:
         "the brand icon drifted from data/klyrshift.svg; regenerate the site "
         "copies instead of editing one in place: " + ", ".join(drifted)
     )
-

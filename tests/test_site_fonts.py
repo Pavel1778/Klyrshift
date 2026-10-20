@@ -117,17 +117,16 @@ def test_display_range_covers_the_heading_weights() -> None:
     }
     missing = sorted(w for w in required if not low <= w <= high)
     assert not missing, (
-        f"{display['name']} declares {display['weights']} but headings use "
-        f"weight(s) {missing}"
+        f"{display['name']} declares {display['weights']} but headings use " f"weight(s) {missing}"
     )
 
 
 def _range_bounds(entry: dict[str, object]) -> tuple[int, int]:
     """Return the low/high weight of a range-form family."""
     weights = entry["weights"]
-    assert isinstance(weights, list) and len(weights) == 1, (
-        f"{entry['name']} must declare exactly one weight range, got {weights}"
-    )
+    assert (
+        isinstance(weights, list) and len(weights) == 1
+    ), f"{entry['name']} must declare exactly one weight range, got {weights}"
     match = _RANGE.match(str(weights[0]))
     assert match, f"{entry['name']} weights {weights[0]!r} is not a 'low high' range"
     return int(match.group(1)), int(match.group(2))

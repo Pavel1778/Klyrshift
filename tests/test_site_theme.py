@@ -59,25 +59,25 @@ def test_theme_module_matches_the_background_tokens() -> None:
     light = _css_tokens("light")
     dark = _css_tokens("dark")
     colors = _theme_colors()
-    assert colors.get("light") == light["--color-bg"], (
-        f"theme.ts light {colors.get('light')} != --color-bg {light['--color-bg']}"
-    )
-    assert colors.get("dark") == dark["--color-bg"], (
-        f"theme.ts dark {colors.get('dark')} != dark --color-bg {dark['--color-bg']}"
-    )
+    assert (
+        colors.get("light") == light["--color-bg"]
+    ), f"theme.ts light {colors.get('light')} != --color-bg {light['--color-bg']}"
+    assert (
+        colors.get("dark") == dark["--color-bg"]
+    ), f"theme.ts dark {colors.get('dark')} != dark --color-bg {dark['--color-bg']}"
 
 
 def test_manifest_theme_color_matches_the_accent_token() -> None:
     """The installed app's chrome colour must follow the accent token."""
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     accent = _css_tokens("light")["--color-accent"]
-    assert manifest["theme_color"] == accent, (
-        f"manifest theme_color {manifest['theme_color']} != --color-accent {accent}"
-    )
+    assert (
+        manifest["theme_color"] == accent
+    ), f"manifest theme_color {manifest['theme_color']} != --color-accent {accent}"
     background = _css_tokens("light")["--color-bg"]
-    assert manifest["background_color"] == background, (
-        f"manifest background_color {manifest['background_color']} != --color-bg {background}"
-    )
+    assert (
+        manifest["background_color"] == background
+    ), f"manifest background_color {manifest['background_color']} != --color-bg {background}"
 
 
 def test_manifest_icons_exist() -> None:
@@ -118,7 +118,6 @@ def test_components_use_tokens_not_literal_colors(glob: str) -> None:
             if any(marker in stripped for marker in ("fill=", "stop-color=", "stroke=")):
                 continue
             offenders.append(f"{path.relative_to(REPO_ROOT)}:{lineno}: {stripped[:90]}")
-    assert not offenders, (
-        "literal colours in components; use a --color-* token instead:\n"
-        + "\n".join(offenders)
-    )
+    assert (
+        not offenders
+    ), "literal colours in components; use a --color-* token instead:\n" + "\n".join(offenders)

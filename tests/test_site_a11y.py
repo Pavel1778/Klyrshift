@@ -68,9 +68,7 @@ def test_every_page_has_the_skip_link_target() -> None:
     pages = sorted((SITE / "src" / "pages").glob("*.astro"))
     assert pages, "no pages found to check"
     missing = [
-        page.name
-        for page in pages
-        if f'id="{target}"' not in page.read_text(encoding="utf-8")
+        page.name for page in pages if f'id="{target}"' not in page.read_text(encoding="utf-8")
     ]
     assert missing == []
 
@@ -98,9 +96,10 @@ def test_command_panels_wrap_their_text() -> None:
         for selector, source in _WRAP_SOURCES.items()
         if "whitespace-pre-wrap" not in source.read_text(encoding="utf-8")
     ]
-    assert not missing, (
-        "these command panels no longer wrap, so a long command can overflow: "
-        + ", ".join(sorted(missing))
+    assert (
+        not missing
+    ), "these command panels no longer wrap, so a long command can overflow: " + ", ".join(
+        sorted(missing)
     )
 
 
@@ -122,6 +121,5 @@ def test_no_component_creates_an_unfocusable_scroll_region() -> None:
             offenders.append(f"{path.relative_to(REPO_ROOT)}:{lineno}: {line.strip()[:90]}")
     assert not offenders, (
         "these elements create a scroll container with no keyboard access; wrap "
-        "the content or add tabindex so it can be scrolled by keyboard:\n"
-        + "\n".join(offenders)
+        "the content or add tabindex so it can be scrolled by keyboard:\n" + "\n".join(offenders)
     )

@@ -238,16 +238,31 @@ def test_copyright_names_the_upstream_source() -> None:
     assert "CC-BY-SA-4.0" in text
 
 
+def _is_debian() -> bool:
+    """Return whether the host is Debian, whose ``base-files`` adds CC licences.
+
+    The presence of ``/usr/share/common-licenses`` is not enough to tell: Ubuntu
+    ships the directory too, but its ``base-files`` carries only the GNU
+    licences, so ``CC-BY-SA-4.0`` is absent there and the check would fail on a
+    runner that is not the target platform.
+    """
+    try:
+        release = Path("/etc/os-release").read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return any(line.strip() == "ID=debian" for line in release.splitlines())
+
+
 def test_copyright_points_at_a_license_that_debian_ships() -> None:
     """A reference to a licence file that does not exist is worse than none."""
     text = COPYRIGHT.read_text(encoding="utf-8")
     referenced = re.findall(r"/usr/share/common-licenses/([A-Za-z0-9+-]+(?:\.[0-9]+)*)", text)
     assert referenced, "copyright references no on-disk licence text"
+    if not _is_debian():
+        pytest.skip("the common-licenses layout is only fixed on Debian")
     for name in referenced:
-        # Only meaningful on a Debian host; skip elsewhere (e.g. a bare runner).
         path = Path("/usr/share/common-licenses") / name
-        if Path("/usr/share/common-licenses").is_dir():
-            assert path.is_file(), f"{path} does not exist"
+        assert path.is_file(), f"{path} does not exist"
 
 
 def test_build_script_installs_copyright_and_changelog() -> None:
