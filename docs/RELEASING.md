@@ -29,6 +29,9 @@ whole list before pushing the tag: the tag is the point of no return.
 - [ ] `make check` — lint (ruff, isort, black), `mypy --strict`, and the test
   suite with coverage. The suite must stay above **80 %**.
 - [ ] `bash scripts/build_deb.sh` builds `dist/klyrshift_<version>_all.deb`.
+- [ ] `lintian --fail-on error dist/klyrshift_<version>_all.deb` is clean. The
+  `package` CI job runs this, together with a check that the man page and both
+  completions are inside the `.deb` and that the man page is compressed.
 - [ ] `python3 scripts/release_consistency.py --source` — the tree agrees with
   itself and the asset names match what the workflow uploads.
 - [ ] `python3 scripts/release_consistency.py --latest` — the newest published

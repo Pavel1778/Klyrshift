@@ -146,6 +146,35 @@ jobs:
           ( cd /tmp/root && md5sum -c --quiet /tmp/ctrl/md5sums )
           echo "md5sums covers all $(wc -l < /tmp/listed.txt) files."
 
+      # A man page and a completion that never reach the package help nobody.
+      # Assert the three generated files are present and that the man page is
+      # compressed, which is what Debian Policy 12.1 requires (lintian reports
+      # ``uncompressed-manual-page`` at error level otherwise).
+      - name: Verify the .deb ships the man page and completions
+        run: |
+          set -euo pipefail
+          deb="$(ls dist/klyrshift_*.deb | head -1)"
+          dpkg-deb -c "${deb}" > /tmp/deb-contents.txt
+          for path in \
+            ./usr/share/man/man1/klyrshift.1.gz \
+            ./usr/share/bash-completion/completions/klyrshift \
+            ./usr/share/zsh/vendor-completions/_klyrshift
+          do
+            grep -q " ${path}\$" /tmp/deb-contents.txt \
+              || { echo "::error::${deb} is missing ${path}"; exit 1; }
+          done
+          if grep -q " ./usr/share/man/man1/klyrshift.1\$" /tmp/deb-contents.txt; then
+            echo "::error::the man page is not compressed"; exit 1
+          fi
+          echo "man page and completions are packaged."
+
+      - name: Lint the package
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lintian
+          lintian --fail-on error "$(ls dist/klyrshift_*.deb | head -1)"
+
       # Build every thematic archive in the same way the release job does, and
       # assert each contains the member ``dict install`` searches for. Without
       # this a renamed category file would only fail at release time.
