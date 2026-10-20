@@ -237,7 +237,8 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
     below the `engines.node` floor fails the suite.
   - `site/public/og-image.png` (the 1200x630 link preview) is **generated** by
   `scripts/make_og_image.py`, which inlines `site/public/logo.svg` and the
-  self-hosted Inter/JetBrains Mono woff2 that Astro emits, then screenshots the
+  self-hosted Golos Text/Unbounded/JetBrains Mono woff2 that Astro emits, then
+  screenshots the
   card with headless `chromium`. It needs a prior `npm run build` in `site/`
   (the fonts are gitignored build output) and raises `SiteNotBuilt` otherwise.
   The old image was hand-made, so the `LinguaFix` -> `Klyrshift` rename never
@@ -536,3 +537,51 @@ exercise the evdev → uinput correction path end to end. See `docs/TESTING.md`.
   `tests/test_repo_urls.py` and `tests/test_version_consistency.py` pin the live
   names. A hit is only stale if it is not explicitly about the old package,
   the migration, or a past release.
+
+## Site (Astro) gotchas
+
+- **A bare `grid` leaves the mobile column at `auto`.** Its min-content floor is
+  set by the widest unbreakable child (a long "Title · N words · size" line, a
+  `<code>` line), so the track refuses to shrink below that and the whole page
+  scrolls sideways at 320-360px -- even though every section measures exactly
+  `clientWidth`. Always write `grid grid-cols-1 sm:grid-cols-2 ...`; the
+  `grid-cols-1` is what turns the track into `minmax(0, 1fr)`. Diagnose by
+  cloning the suspect node with `width: min-content` and measuring, not by
+  eyeballing the section widths.
+- **pa11y reports axe's "incomplete" nodes as errors.** A node axe cannot score
+  (text over a translucent or gradient background, e.g. `bg-bg/80` header links
+  or SVG `<text>`) lands in `incomplete`, and pa11y prints it with
+  `runnerExtras.needsFurtherReview: true` in the JSON report. Filter on that
+  flag before treating a count as real violations, or you will chase contrast
+  bugs that do not exist. Run axe-core directly
+  (`node_modules/axe-core/axe.min.js` in a puppeteer page) when the count matters.
+- **Category chip colours need a computed text colour.** The dictionary palette
+  spans light yellows and deep purples; a fixed white label is 1.7:1 on
+  `#f5c211`. `onCategoryColor()` in `site/src/lib/dictionaries.ts` picks white or
+  near-black by relative luminance and every category passes AA.
+- **`theme-color` cannot be a pair of `media="(prefers-color-scheme: ...)"`
+  metas** when the site has an explicit theme toggle: a visitor whose choice is
+  opposite to their system keeps the wrong browser-chrome colour. Use one meta
+  and set it from the same pre-paint script that toggles `.dark`.
+- **`tests/test_demo_parity.py` slices `Demo.astro` from
+  `const input = document.getElementById`.** Markup before that line (including
+  the `output.innerHTML` placeholder) is free to change; the script after it
+  must stay byte-identical, so restyle the markup and leave the logic alone.
+- **All three web fonts are variable, so request them as a range, not a list.**
+  `wght` spans 400-900 and the build emits one `.woff2` per family and subset.
+  Listing discrete weights in `astro.config.mjs` emits one `@font-face` per
+  weight that all point at the same file, and any weight *outside* the list has
+  no face at all: `.font-mono.font-bold` asks for 700 while JetBrains Mono
+  declared only 400-500, so Chromium synthesised a smeared faux-bold from the
+  500 file. Write `weights: ["400 700"]`; `tests/test_site_fonts.py` fails if a
+  range drops below a weight a component uses.
+- **A horizontally scrollable region must be keyboard-reachable.** A plain
+  `<pre>` with `overflow-x: auto` is a keyboard trap: axe reports
+  `scrollable-region-focusable`, WCAG 2.1.1 Level A. It only shows up at a
+  narrow viewport, because wider ones never overflow -- which is why the earlier
+  audits missed it. Prefer wrapping (`whitespace-pre-wrap break-words`) over
+  scrolling for command text; `tests/test_site_a11y.py` guards the panels.
+- **Audit at 320px, not just desktop widths.** Two real defects (the keyboard
+  trap above, and a `grid` track refusing to shrink) appeared only at 320px.
+  Sweep both themes x {320, 768, 1440}px x both pages before calling a landing
+  change done.
