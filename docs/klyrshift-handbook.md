@@ -3916,6 +3916,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Fixed
 
+- **The README screenshots no longer contradict their captions.** The middle
+  shot is committed as `advanced-settings.png` and both the README header and
+  `docs/screenshots/README.md` describe it as the "Продвинутые" page (detector,
+  triggers, per-application layout, exceptions), but the render script captured
+  the basic "Настройки" page under that name -- the two pages share most widgets,
+  so the mismatch was invisible in the thumbnail. It now reveals the advanced
+  page (`advanced_page.set_visible(True)`, the same call the "Показать
+  продвинутые настройки" button makes) and captures it last, so revealing it
+  does not add a tab to the switcher bar in the other two shots.
+
+- **The screenshots are current again, and a stale set now fails the suite.**
+  The committed PNGs predated the theme switch (`3f4a8cc`), which added the whole
+  "Оформление" group to the settings page, and the first-run wizard (`718d919`),
+  so a fresh render no longer matched the repository. Regenerated. The render
+  script also marked only the *tour* as seen, but the wizard is versioned
+  separately and `should_offer_wizard` still fired, so on a fresh onboarding
+  state the wizard covered the window in every shot. Both offers are now
+  suppressed. `tests/test_screenshots.py` gains a `KLYRSHIFT_RENDER_TEST=1` case
+  that renders once and compares against `docs/screenshots/`, so a GUI change
+  that is not followed by `scripts/make_screenshots.py` fails instead of leaving
+  a stale image behind, plus guards that the script captures the `advanced` page
+  and marks both first-run offers as seen.
+
 - **The daemon no longer aborts when there is no D-Bus session bus.** The
   focused-application *and* focused-element probes tried to initialise AT-SPI
   unconditionally, and GLib's `dbind` responds to a missing accessibility bus by

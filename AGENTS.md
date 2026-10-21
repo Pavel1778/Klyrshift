@@ -57,10 +57,17 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   settle window, and turns `gtk-cursor-blink` off; keep all three if you touch
   it, and note that `transition-running` alone is *not* enough -- the switcher
   underline keeps ticking after the flag clears. `tests/test_screenshots.py`
-  guards the flags, and its `KLYRSHIFT_RENDER_TEST=1` case renders twice and
-  asserts the bytes match. Do not render against the developer's real `HOME`: a
-  first-run tour offer covers the home page and the shot then depends on the
-  machine's onboarding state.
+  guards the flags, and its `KLYRSHIFT_RENDER_TEST=1` cases render twice to
+  assert byte-stability *and* compare the committed PNGs against a fresh render,
+  so a GUI change that is not followed by a regeneration fails instead of
+  leaving a stale image in the README. Do not render against the developer's
+  real `HOME`: the first-run wizard and the tour are separate offers, and either
+  one covers the window when the machine's onboarding state is fresh, so the
+  script marks both as seen before it renders. The middle shot is the
+  "Продвинутые" (`advanced`) page, not the basic "Настройки" (`settings`) page
+  that shares its widgets; it has to be revealed with
+  `advanced_page.set_visible(True)` and is captured last, so revealing it does
+  not add a tab to the switcher bar in the other two shots.
 - `tests/test_backend_integration.py` is the exception to the "fakes only" rule:
   it writes real stub executables (`g3kb-switch`, `setxkbmap`, `wtype`,
   `xdotool`) onto a throwaway `PATH` and drives the real `LayoutSwitcher` /
