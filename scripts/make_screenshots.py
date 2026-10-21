@@ -93,12 +93,24 @@ def main() -> int:
     from klyrshift.config import Config
     from klyrshift.gui.state import GuiState
     from klyrshift.gui.window import KlyrshiftWindow
-    from klyrshift.onboarding import TOUR_VERSION, OnboardingState, save_onboarding_state
+    from klyrshift.onboarding import (
+        TOUR_VERSION,
+        WIZARD_VERSION,
+        OnboardingState,
+        save_onboarding_state,
+    )
 
-    # Mark the tour as already seen so the first-run offer cannot cover the home
-    # page; the screenshots must show the window itself, not the onboarding card.
+    # Mark both first-run offers as already seen so neither can cover a page; the
+    # screenshots must show the window itself, not the wizard or the tour card.
+    # The wizard is versioned separately from the tour, so suppressing only the
+    # tour leaves the wizard to cover the window.
     save_onboarding_state(
-        OnboardingState(completed_version=TOUR_VERSION, skipped_version=TOUR_VERSION)
+        OnboardingState(
+            completed_version=TOUR_VERSION,
+            skipped_version=TOUR_VERSION,
+            wizard_completed_version=WIZARD_VERSION,
+            wizard_skipped_version=WIZARD_VERSION,
+        )
     )
 
     shots: list[str] = []
@@ -148,11 +160,19 @@ def main() -> int:
             return False
         # No cross-fade: every shot must be a settled frame, not a fade midpoint.
         window.stack.set_enable_transitions(False)
+        # ``advanced-settings.png`` is the "Продвинутые" page, which the window
+        # keeps out of the switcher until the user reveals it (see
+        # ``KlyrshiftWindow._on_show_advanced``). Revealing it adds a tab to the
+        # switcher bar, so it is captured last: the other two shots then show the
+        # default tab set the user actually starts with, instead of a switcher
+        # that grew a "Продвинутые" tab mid-run.
         for page_name, filename in (
             ("home", "main-window.png"),
-            ("settings", "advanced-settings.png"),
             ("dictionary", "dictionary.png"),
+            ("advanced", "advanced-settings.png"),
         ):
+            if page_name == "advanced":
+                window.advanced_page.set_visible(True)
             window.stack.set_visible_child_name(page_name)
             _settle()
             _render(window, out_dir / filename, renderer)

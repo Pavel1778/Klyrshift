@@ -101,6 +101,33 @@ def test_render_disables_blink_and_transitions() -> None:
     assert "set_enable_transitions(False)" in source
 
 
+def test_render_captures_the_advanced_page() -> None:
+    """``advanced-settings.png`` must be the "Продвинутые" page, not "Настройки".
+
+    The name and the ``docs/screenshots/README.md`` table promise the advanced
+    page (Детектор / Триггеры / раскладка по приложениям / исключения), but the
+    window keeps that page out of the switcher until it is revealed. Rendering
+    the plain ``settings`` page under this name produced a screenshot that
+    contradicted its own caption.
+    """
+    source = _render_script().read_text(encoding="utf-8")
+    assert '("advanced", "advanced-settings.png")' in source
+    assert '("settings", "advanced-settings.png")' not in source
+
+
+def test_render_suppresses_both_first_run_offers() -> None:
+    """Neither the wizard nor the tour may cover a page.
+
+    Both are first-run offers that ``KlyrshiftWindow`` raises on a fresh state,
+    and the wizard is versioned separately from the tour, so marking only the
+    tour as seen still let the wizard cover the window on the machine's
+    onboarding state instead of the code.
+    """
+    source = _render_script().read_text(encoding="utf-8")
+    assert "wizard_completed_version" in source
+    assert "wizard_skipped_version" in source
+
+
 @pytest.mark.skipif(
     not os.environ.get("KLYRSHIFT_RENDER_TEST"),
     reason="renders the GUI; set KLYRSHIFT_RENDER_TEST=1 under a display to run",
@@ -129,3 +156,37 @@ def test_screenshots_render_byte_identically(tmp_path: Path) -> None:
         a = (first / name).read_bytes()
         b = (second / name).read_bytes()
         assert a == b, f"{name} is not byte-stable across renders"
+
+
+@pytest.mark.skipif(
+    not os.environ.get("KLYRSHIFT_RENDER_TEST"),
+    reason="renders the GUI; set KLYRSHIFT_RENDER_TEST=1 under a display to run",
+)
+def test_committed_screenshots_match_a_fresh_render(tmp_path: Path) -> None:
+    """The committed PNGs must be current, not a stale snapshot of an older GUI.
+
+    Byte-stability alone only proves two runs of *today's* script agree; it does
+    not notice that the committed images were rendered before a GUI change (the
+    theme switch added a whole settings group, and a stale shot then contradicted
+    the README). This renders once and compares against ``docs/screenshots``, so a
+    GUI edit that is not followed by ``scripts/make_screenshots.py`` fails here.
+    """
+    if shutil.which("xvfb-run") is None:
+        pytest.skip("xvfb-run not installed")
+    fresh = tmp_path / "fresh"
+    env = dict(os.environ)
+    env["PYTHONPATH"] = "/usr/lib/python3/dist-packages"
+    subprocess.run(
+        ["xvfb-run", "-a", sys.executable, str(_render_script()), str(fresh)],
+        check=True,
+        env=env,
+        capture_output=True,
+    )
+    stale = [
+        name
+        for name in EXPECTED
+        if (fresh / name).read_bytes() != (SCREENSHOT_DIR / name).read_bytes()
+    ]
+    assert (
+        stale == []
+    ), f"{stale} differ from a fresh render; regenerate with scripts/make_screenshots.py"

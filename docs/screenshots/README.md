@@ -13,8 +13,11 @@
 ```bash
 sudo apt-get install -y xvfb python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1
 PYTHONPATH=/usr/lib/python3/dist-packages xvfb-run -a \
-    python3 scripts/make_screenshots.py docs/screenshots
+    .venv/bin/python scripts/make_screenshots.py docs/screenshots
 ```
+
+Интерпретатор должен видеть зависимости проекта (`tomli-w` и сам `klyrshift`),
+поэтому это `python` из окружения проекта, а не системный `python3`.
 
 Скрипт перезаписывает три файла ниже и завершается с ошибкой, если какой-то
 экран не удалось отрисовать.

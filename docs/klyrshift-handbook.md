@@ -71,13 +71,14 @@ Caramba Switcher for Windows.
 
 ### 📸 Скриншоты / Screenshots
 
-| Главное окно / Main window | Настройки / Advanced | Словарь / Dictionary |
+| Главное окно / Main window | Продвинутые / Advanced | Словарь / Dictionary |
 |---|---|---|
 | ![main window](docs/screenshots/main-window.png) | ![advanced settings](docs/screenshots/advanced-settings.png) | ![dictionary](docs/screenshots/dictionary.png) |
 
 > Снимки сделаны из настоящего GUI: `scripts/make_screenshots.py` строит
-> реальное окно `KlyrshiftWindow` и рендерит его виджеты в PNG. Пересобрать:
-> `PYTHONPATH=/usr/lib/python3/dist-packages xvfb-run -a python3 scripts/make_screenshots.py`.
+> реальное окно `KlyrshiftWindow` и рендерит его виджеты в PNG. Пересобрать
+> (интерпретатор должен видеть зависимости проекта, например `.venv/bin/python`):
+> `PYTHONPATH=/usr/lib/python3/dist-packages xvfb-run -a python scripts/make_screenshots.py`.
 
 ### ✨ Возможности / Features
 
