@@ -268,6 +268,9 @@ def _install_fake_atspi(monkeypatch: pytest.MonkeyPatch, desktop: _Node) -> None
     import sys
     import types
 
+    # The probes refuse to initialise AT-SPI without a session bus, so the fake
+    # stack is only reached once one is present.
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/fake")
     fake_gi = types.ModuleType("gi")
     fake_gi.require_version = lambda *_a, **_k: None
     fake_repo = types.ModuleType("gi.repository")

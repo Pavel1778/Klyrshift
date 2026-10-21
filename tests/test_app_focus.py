@@ -65,3 +65,17 @@ def test_atspi_probe_is_skipped_without_a_session_bus(
     """
     monkeypatch.delenv("DBUS_SESSION_BUS_ADDRESS", raising=False)
     assert app_focus._atspi() is None
+
+
+def test_role_probe_is_skipped_without_a_session_bus(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The focused-element probe needs the same guard as the app probe.
+
+    It is reached from ``is_password_field`` on every word too, so a TTY/ssh
+    session would abort the daemon here as well if it initialised AT-SPI.
+    """
+    monkeypatch.delenv("DBUS_SESSION_BUS_ADDRESS", raising=False)
+    assert app_focus._atspi_focused_role() is None
+    assert app_focus.get_focused_role() is None
+    assert app_focus.is_password_field() is False

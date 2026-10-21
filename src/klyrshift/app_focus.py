@@ -168,7 +168,14 @@ def _atspi_focused_descendant(node: Any, atspi: Any, depth: int = 0) -> Any:
 
 
 def _atspi_focused_role() -> str | None:
-    """Ask AT-SPI for the role of the focused element."""
+    """Ask AT-SPI for the role of the focused element.
+
+    Like :func:`_atspi`, this must not initialise AT-SPI without a session bus:
+    ``dbind`` aborts the whole process with an uncatchable ``SIGTRAP`` when no
+    accessibility bus is reachable.
+    """
+    if not os.environ.get("DBUS_SESSION_BUS_ADDRESS"):
+        return None
     try:
         import gi
 
