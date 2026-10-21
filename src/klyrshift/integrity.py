@@ -12,14 +12,27 @@ this module re-implements the comparison for the two cases dpkg cannot cover:
 * a file that is *missing* should be reported distinctly from one that is
   *modified*, because the fix differs (reinstall vs. reinstall).
 
+A manifest path may also be absent **by design**: dpkg honours
+``path-exclude``/``path-include`` globs from ``/etc/dpkg/dpkg.cfg`` and
+``/etc/dpkg/dpkg.cfg.d/*`` and silently skips the matching files at unpack
+time. Ubuntu's images, for instance, drop ``/usr/share/man/*`` and
+``/usr/share/doc/*`` (keeping only ``copyright`` and ``changelog.*``). Such a
+file is listed in the manifest yet never lands on disk, so it must not be
+reported as corruption -- that would fail every healthy install on those
+systems. Those entries are classified as :data:`EXCLUDED` and do not count
+against :attr:`VerifyReport.ok`.
+
 The check is read-only: it never rewrites a file, and it only ever reads the
 paths the package itself lists in its manifest.
 """
 
 from __future__ import annotations
 
+import contextlib
+import fnmatch
 import hashlib
 import logging
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -37,9 +50,15 @@ COMMAND_TIMEOUT = 15.0
 # ``<package>.md5sums`` for ``Architecture: all`` (ours).
 _INFO_DIR = Path("/var/lib/dpkg/info")
 
+# dpkg reads ``path-exclude``/``path-include`` globs from here (the file plus
+# every fragment in the directory) and skips the excluded files at unpack time.
+_DPKG_CFG = Path("/etc/dpkg/dpkg.cfg")
+_DPKG_CFG_D = Path("/etc/dpkg/dpkg.cfg.d")
+
 OK = "OK"
 MISSING = "MISSING"
 MODIFIED = "MODIFIED"
+EXCLUDED = "EXCLUDED"
 
 
 @dataclass
@@ -48,7 +67,8 @@ class FileStatus:
 
     Args:
         path: Absolute path of the file on disk.
-        status: One of :data:`OK`, :data:`MISSING` or :data:`MODIFIED`.
+        status: One of :data:`OK`, :data:`MISSING`, :data:`MODIFIED` or
+            :data:`EXCLUDED`.
     """
 
     path: str
@@ -70,7 +90,7 @@ class VerifyReport:
 
     @property
     def missing(self) -> list[str]:
-        """Paths the manifest lists but that are absent from disk."""
+        """Paths the manifest lists, absent from disk and not dpkg-excluded."""
         return [f.path for f in self.files if f.status == MISSING]
 
     @property
@@ -79,8 +99,22 @@ class VerifyReport:
         return [f.path for f in self.files if f.status == MODIFIED]
 
     @property
+    def matched(self) -> int:
+        """How many listed files are present and match their digest."""
+        return sum(1 for f in self.files if f.status == OK)
+
+    @property
+    def excluded(self) -> list[str]:
+        """Paths dpkg skipped by design via its ``path-exclude`` policy."""
+        return [f.path for f in self.files if f.status == EXCLUDED]
+
+    @property
     def ok(self) -> bool:
-        """``True`` when every listed file matches its recorded digest."""
+        """``True`` when no listed file is missing or modified.
+
+        Files dpkg dropped by policy are legitimately absent, so they do not
+        count against the result.
+        """
         return not self.missing and not self.modified
 
 
@@ -137,6 +171,60 @@ def _digest(path: Path) -> str | None:
     return hasher.hexdigest()
 
 
+def _config_texts() -> list[str]:
+    """Return the text of every dpkg configuration file that may set excludes."""
+    texts: list[str] = []
+    candidates = [_DPKG_CFG]
+    with contextlib.suppress(OSError):
+        candidates.extend(sorted(p for p in _DPKG_CFG_D.iterdir() if p.is_file()))
+    for path in candidates:
+        try:
+            texts.append(path.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            continue
+    return texts
+
+
+def _parse_path_rules(text: str) -> list[tuple[bool, str]]:
+    """Return ``(is_include, glob)`` for every path rule in ``text``, in order.
+
+    ``path-exclude``/``path-include`` take a shell glob; ``#`` starts a comment
+    and blank lines are ignored, matching how dpkg parses the file. dpkg accepts
+    the value after either whitespace or ``=``, and the configs that matter use
+    whitespace (``/etc/dpkg/dpkg.cfg.d/docker`` and Ubuntu's image both ship
+    ``path-exclude /usr/share/man/*``), so both separators are required.
+    """
+    rules: list[tuple[bool, str]] = []
+    keywords = {"path-exclude": False, "path-include": True}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        match = re.match(r"^(path-(?:exclude|include))\s*[=\s]\s*(\S.*)$", line)
+        if match is None:
+            continue
+        glob = match.group(2).strip()
+        if glob:
+            rules.append((keywords[match.group(1)], glob))
+    return rules
+
+
+def _excluded_by_policy(path: str) -> bool:
+    """Return whether dpkg's ``path-exclude`` policy drops ``path`` at install.
+
+    dpkg applies the rules from ``dpkg.cfg`` and every fragment in
+    ``dpkg.cfg.d`` in order; a later matching rule wins, so the *last* rule that
+    matches decides inclusion. A path that is excluded and never re-included is
+    absent from disk by design, not because it was removed after installation.
+    """
+    decision: bool | None = None
+    for text in _config_texts():
+        for is_include, glob in _parse_path_rules(text):
+            if fnmatch.fnmatchcase(path, glob):
+                decision = is_include
+    return decision is False
+
+
 def verify_package(package: str = PACKAGE) -> VerifyReport:
     """Verify every file the installed package's manifest lists.
 
@@ -144,6 +232,11 @@ def verify_package(package: str = PACKAGE) -> VerifyReport:
     install, a container) has no manifest; the report then carries
     ``manifest=None`` and no files, and :meth:`VerifyReport.ok` is true. The
     caller is expected to say so rather than claim a pass.
+
+    A listed file that is absent is reported :data:`MISSING` -- unless dpkg's
+    ``path-exclude`` policy drops it, in which case it is :data:`EXCLUDED` and
+    the report stays OK. Without that distinction every install on a system that
+    trims man pages and documentation would report a false failure.
 
     Args:
         package: Package name to verify.
@@ -164,7 +257,8 @@ def verify_package(package: str = PACKAGE) -> VerifyReport:
     for path, expected in sorted(parse_manifest(text).items()):
         target = Path(path)
         if not target.is_file():
-            files.append(FileStatus(path, MISSING))
+            status = EXCLUDED if _excluded_by_policy(path) else MISSING
+            files.append(FileStatus(path, status))
             continue
         actual = _digest(target)
         if actual is None:
@@ -217,7 +311,16 @@ def format_report(report: VerifyReport) -> str:
         )
     lines = [_("Манифест: {0}").format(report.manifest)]
     if report.ok:
-        lines.append(_("Итог: все {0} файлов совпадают с манифестом.").format(len(report.files)))
+        if report.excluded:
+            lines.append(
+                _(
+                    "Итог: все {0} файлов совпадают с манифестом ({1} пропущено политикой dpkg)."
+                ).format(report.matched, len(report.excluded))
+            )
+        else:
+            lines.append(
+                _("Итог: все {0} файлов совпадают с манифестом.").format(len(report.files))
+            )
         return "\n".join(lines)
     for path in report.missing:
         lines.append(_("❌  отсутствует: {0}").format(path))

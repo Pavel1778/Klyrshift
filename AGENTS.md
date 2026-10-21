@@ -416,6 +416,26 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   *exactly* the files `dpkg -L` lists (directories excluded), so a partial
   manifest cannot pass silently. Do not switch to `dpkg-deb`'s default and
   assume a manifest appears.
+- **The integrity check must honour dpkg's `path-exclude` policy.** dpkg reads
+  `path-exclude`/`path-include` globs from `/etc/dpkg/dpkg.cfg` and every
+  fragment in `/etc/dpkg/dpkg.cfg.d/`, and silently skips the matching files at
+  unpack time. Ubuntu's images (and the `ubuntu-latest` CI runner) drop
+  `/usr/share/man/*` and `/usr/share/doc/*`, keeping only `copyright` and
+  `changelog.*`, so the packaged man page and `CHANGELOG.md` never reach disk
+  even though the manifest lists them. A naive check reports those two as
+  `MISSING` and fails `klyrshift verify` on every healthy Ubuntu install (exit
+  1, doctor row red). `integrity._excluded_by_policy` parses the same rules
+  (last match wins, so an include can re-add a path) and classifies such files
+  as `EXCLUDED`, which does not count against `VerifyReport.ok`. `dpkg --verify`
+  prints them as `missing` but still exits 0; only a genuine mismatch is fatal.
+  dpkg accepts the value after **either whitespace or `=`**, and the configs
+  that matter use whitespace: `/etc/dpkg/dpkg.cfg.d/docker` and Ubuntu both
+  write `path-exclude /usr/share/man/*`. An `=`-only parser silently reads zero
+  rules and the check fails on exactly the systems it was written for, so
+  `_parse_path_rules` must accept both separators and its tests must cover the
+  space form. The `package` CI job installs the `.deb` under a forced
+  `path-exclude` policy and asserts `klyrshift verify` passes, so a regression
+  is caught without a real Ubuntu desktop.
 - `python3-evdev` ships in Debian and Ubuntu and is the only native runtime
   dependency; `install.sh` reuses it via `--system-site-packages` so no compiler
   is needed. `python-uinput` is **not** a dependency.

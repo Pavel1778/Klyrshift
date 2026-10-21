@@ -360,11 +360,10 @@ def check_package_integrity() -> CheckResult:
             _("не установлен из .deb — проверка не требуется"),
         )
     if report.ok:
-        return CheckResult(
-            _("Целостность пакета"),
-            OK,
-            _("{0} файлов совпадают с манифестом").format(len(report.files)),
-        )
+        detail = _("{0} файлов совпадают с манифестом").format(report.matched)
+        if report.excluded:
+            detail = _("{0} ({1} пропущено политикой dpkg)").format(detail, len(report.excluded))
+        return CheckResult(_("Целостность пакета"), OK, detail)
     return CheckResult(
         _("Целостность пакета"),
         FAIL,

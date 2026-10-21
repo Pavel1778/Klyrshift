@@ -97,6 +97,112 @@ def test_verify_package_detects_missing(fake_info: Path, tmp_path: Path) -> None
     assert not report.ok
     assert report.missing == [str(gone)]
     assert report.modified == []
+    assert report.excluded == []
+
+
+def test_parse_path_rules_reads_exclude_and_include() -> None:
+    rules = integrity._parse_path_rules(
+        "# comment\n"
+        "path-exclude=/usr/share/man/*\n"
+        "\n"
+        "path-include=/usr/share/man/man1/*\n"
+        "path-exclude = /usr/share/doc/*\n"
+    )
+    assert rules == [
+        (False, "/usr/share/man/*"),
+        (True, "/usr/share/man/man1/*"),
+        (False, "/usr/share/doc/*"),
+    ]
+
+
+def test_parse_path_rules_accepts_a_space_separator() -> None:
+    """Real dpkg configs separate the keyword from the glob with whitespace.
+
+    ``/etc/dpkg/dpkg.cfg.d/docker`` ships ``path-exclude /usr/share/man/*`` and
+    Ubuntu's image does the same, so an ``=``-only parser reads zero rules and
+    the exclusion is never recognised on the systems the check exists for.
+    """
+    rules = integrity._parse_path_rules(
+        "path-exclude /usr/share/doc/*\n"
+        "path-include /usr/share/doc/*/copyright\n"
+        "path-exclude=/usr/share/man/*\n"
+        "path-exclude\t/usr/share/info/*\n"
+    )
+    assert rules == [
+        (False, "/usr/share/doc/*"),
+        (True, "/usr/share/doc/*/copyright"),
+        (False, "/usr/share/man/*"),
+        (False, "/usr/share/info/*"),
+    ]
+
+
+def test_excluded_by_policy_last_rule_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A later matching rule decides, so an include can override an exclude."""
+    monkeypatch.setattr(
+        integrity,
+        "_config_texts",
+        lambda: [
+            "path-exclude=/usr/share/doc/*\npath-include=/usr/share/doc/*/copyright\n",
+        ],
+    )
+    assert integrity._excluded_by_policy("/usr/share/doc/klyrshift/CHANGELOG.md")
+    assert not integrity._excluded_by_policy("/usr/share/doc/klyrshift/copyright")
+
+
+def test_excluded_by_policy_uses_every_config_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        integrity,
+        "_config_texts",
+        lambda: ["path-exclude=/usr/share/man/*\n", "path-exclude=/usr/share/doc/*\n"],
+    )
+    assert integrity._excluded_by_policy("/usr/share/man/man1/klyrshift.1.gz")
+    assert integrity._excluded_by_policy("/usr/share/doc/klyrshift/CHANGELOG.md")
+    assert not integrity._excluded_by_policy("/usr/bin/klyrshift")
+
+
+def test_verify_package_excluded_file_is_not_missing(
+    fake_info: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A manifest entry dpkg's policy drops must not read as corruption.
+
+    Ubuntu's dpkg excludes ``/usr/share/man/*`` and ``/usr/share/doc/*``, so the
+    packaged man page and CHANGELOG never reach disk. Before the fix that made a
+    healthy install fail ``klyrshift verify`` with two phantom "missing" files.
+    """
+    monkeypatch.setattr(
+        integrity,
+        "_config_texts",
+        lambda: ["path-exclude=/usr/share/man/*\npath-exclude=/usr/share/doc/*\n"],
+    )
+    present = tmp_path / "installed.py"
+    present.write_text("x", encoding="utf-8")
+    gone_man = "/usr/share/man/man1/klyrshift.1.gz"
+    gone_doc = "/usr/share/doc/klyrshift/CHANGELOG.md"
+    _write_manifest(
+        fake_info,
+        "klyrshift",
+        {str(present): _md5(present), gone_man: "0" * 32, gone_doc: "0" * 32},
+    )
+
+    report = integrity.verify_package("klyrshift")
+    assert report.ok
+    assert report.missing == []
+    assert sorted(report.excluded) == sorted([gone_man, gone_doc])
+    assert report.matched == 1
+    assert integrity.run_verify("klyrshift") == 0
+
+
+def test_verify_package_still_reports_a_deleted_installed_file(
+    fake_info: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An excluded path is tolerated, but a real file removed after install is not."""
+    monkeypatch.setattr(integrity, "_config_texts", lambda: ["path-exclude=/usr/share/man/*\n"])
+    gone = str(tmp_path / "usr" / "lib" / "klyrshift" / "cli.py")
+    _write_manifest(fake_info, "klyrshift", {gone: "0" * 32})
+    report = integrity.verify_package("klyrshift")
+    assert not report.ok
+    assert report.missing == [gone]
+    assert report.excluded == []
 
 
 def test_verify_package_without_manifest_is_not_a_claim(fake_info: Path) -> None:
@@ -113,6 +219,20 @@ def test_format_report_names_reinstall(fake_info: Path, tmp_path: Path) -> None:
     text = integrity.format_report(integrity.verify_package("klyrshift"))
     assert "отсутствует" in text
     assert "reinstall" in text
+
+
+def test_format_report_mentions_excluded_files(
+    fake_info: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A healthy install with policy-dropped files says so, and never says "missing"."""
+    monkeypatch.setattr(integrity, "_config_texts", lambda: ["path-exclude=/usr/share/man/*\n"])
+    gone = "/usr/share/man/man1/klyrshift.1.gz"
+    _write_manifest(fake_info, "klyrshift", {gone: "0" * 32})
+    report = integrity.verify_package("klyrshift")
+    text = integrity.format_report(report)
+    assert report.ok
+    assert "отсутствует" not in text
+    assert "пропущено политикой dpkg" in text
 
 
 def test_format_report_without_manifest_says_so(fake_info: Path) -> None:

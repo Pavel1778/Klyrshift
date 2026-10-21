@@ -175,6 +175,35 @@ jobs:
           sudo apt-get install -y -qq lintian
           lintian --fail-on error "$(ls dist/klyrshift_*.deb | head -1)"
 
+      # ``dpkg`` honours the ``path-exclude`` rules in ``/etc/dpkg/dpkg.cfg.d``
+      # and skips the matching files at unpack time. Ubuntu's runner excludes
+      # ``/usr/share/man/*`` and ``/usr/share/doc/*``, so the packaged man page
+      # and CHANGELOG are never written to disk even though the manifest lists
+      # them. Install for real and assert ``klyrshift verify`` still passes: a
+      # check that ignores the policy reports those two files as corruption and
+      # fails every healthy Ubuntu install. This runs only on the ubuntu runner,
+      # which is exactly the case that regressed.
+      - name: Install the .deb and verify integrity under dpkg path-exclude
+        run: |
+          set -euo pipefail
+          # Force the policy instead of trusting the runner's config, so the
+          # guard reproduces the Ubuntu case (man pages and docs dropped) on any
+          # image and proves the exclusion is really in effect before asserting.
+          # Use the space-separated form real configs ship (``dpkg.cfg.d/docker``
+          # and Ubuntu both write ``path-exclude /usr/share/man/*``); the ``=``
+          # form is accepted by dpkg but hid a parser that only understood it.
+          printf 'path-exclude /usr/share/man/*\npath-exclude /usr/share/doc/*\npath-include /usr/share/doc/*/copyright\npath-include /usr/share/doc/*/changelog.*\n' \
+            | sudo tee /etc/dpkg/dpkg.cfg.d/zz-klyrshift-guard >/dev/null
+          sudo apt-get install -y -qq "$(ls "$PWD"/dist/klyrshift_*.deb | head -1)"
+          # The excluded files must really be absent, or the guard proves nothing.
+          for gone in /usr/share/man/man1/klyrshift.1.gz /usr/share/doc/klyrshift/CHANGELOG.md; do
+            [ -e "${gone}" ] && { echo "::error::${gone} was unpacked; the guard would not exercise the bug"; exit 1; }
+          done
+          klyrshift verify || { echo "::error::klyrshift verify failed on a healthy install"; exit 1; }
+          klyrshift doctor || true
+          sudo apt-get remove -y -qq klyrshift
+          sudo rm -f /etc/dpkg/dpkg.cfg.d/zz-klyrshift-guard
+
       # Build every thematic archive in the same way the release job does, and
       # assert each contains the member ``dict install`` searches for. Without
       # this a renamed category file would only fail at release time.

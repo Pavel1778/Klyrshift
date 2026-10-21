@@ -101,18 +101,25 @@ echo "--- doctor (expected to report failures in a bare container) ---"
 klyrshift doctor || true
 
 echo "--- package integrity (the .deb ships an md5sums manifest) ---"
+# ``klyrshift verify`` must pass on a fresh install even where dpkg trims man
+# pages and docs (the Ubuntu path-exclude policy), so a healthy install never
+# reads as corrupt.
 klyrshift verify || { echo "klyrshift verify failed on a fresh install"; exit 1; }
-# The manifest must cover every regular file dpkg installed, not a subset: a
+# The manifest must list exactly the files the package owns, not a subset: a
 # partial manifest would silently pass and leave the uncovered files
-# uncheckable. dpkg -L also lists directories, which the manifest omits.
+# uncheckable. Compare against ``dpkg -L`` (every owned path, whether or not
+# dpkg unpacked it) rather than the files on disk, so a policy-excluded file is
+# still required to be in the manifest. ``dpkg -L`` also lists directories,
+# which the manifest omits, so drop anything that is a directory.
 dpkg -L klyrshift | while read -r path; do
-    [ -f "${path}" ] && printf "%s\n" "${path#/}"
+    [ -d "${path}" ] || printf "%s\n" "${path#/}"
 done | sort > /tmp/dpkg-files.txt
 # A manifest line is "<32 hex><two spaces><path>"; cut drops the digest.
 cut -c35- /var/lib/dpkg/info/klyrshift.md5sums | sort > /tmp/manifest-files.txt
 diff /tmp/dpkg-files.txt /tmp/manifest-files.txt \
-    || { echo "md5sums does not cover exactly the installed files"; exit 1; }
-# And the dpkg verifier must agree.
+    || { echo "md5sums does not cover exactly the packaged files"; exit 1; }
+# And the dpkg verifier must agree. It reports a policy-excluded file as
+# "missing" and still exits 0; only a genuine mismatch is fatal.
 dpkg --verify klyrshift || { echo "dpkg --verify reported changes"; exit 1; }
 
 echo "--- collect-logs ---"

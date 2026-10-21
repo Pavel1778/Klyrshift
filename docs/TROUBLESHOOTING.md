@@ -40,6 +40,15 @@ the manifest; its output uses a single-letter marker per changed attribute.
 A source checkout or a `pip install` has no manifest — `verify` says so and
 exits 0 rather than claiming a pass it cannot support.
 
+Some distributions tell dpkg to drop files at install time. Ubuntu, for
+instance, excludes `/usr/share/man/*` and `/usr/share/doc/*` through
+`path-exclude` rules in `/etc/dpkg/dpkg.cfg.d/`, so the packaged man page and
+`CHANGELOG.md` never land on disk. `klyrshift verify` recognises those paths as
+excluded by policy — not missing — and still exits 0, printing how many files
+were skipped. `dpkg --verify` lists them as `missing` but also exits 0; a
+non-zero `klyrshift verify` therefore still means a real problem: reinstall the
+package as above.
+
 ## The daemon does not fix anything
 
 1. Check that it is running:

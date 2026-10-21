@@ -1163,6 +1163,15 @@ the manifest; its output uses a single-letter marker per changed attribute.
 A source checkout or a `pip install` has no manifest — `verify` says so and
 exits 0 rather than claiming a pass it cannot support.
 
+Some distributions tell dpkg to drop files at install time. Ubuntu, for
+instance, excludes `/usr/share/man/*` and `/usr/share/doc/*` through
+`path-exclude` rules in `/etc/dpkg/dpkg.cfg.d/`, so the packaged man page and
+`CHANGELOG.md` never land on disk. `klyrshift verify` recognises those paths as
+excluded by policy — not missing — and still exits 0, printing how many files
+were skipped. `dpkg --verify` lists them as `missing` but also exits 0; a
+non-zero `klyrshift verify` therefore still means a real problem: reinstall the
+package as above.
+
 ### The daemon does not fix anything
 
 1. Check that it is running:
@@ -3905,6 +3914,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registry disagree again.
 
 #### Fixed
+
+- **`klyrshift verify` no longer fails on a healthy Ubuntu install.** dpkg
+  honours `path-exclude` rules in `/etc/dpkg/dpkg.cfg.d/` and skips the matching
+  files at unpack time; Ubuntu drops `/usr/share/man/*` and `/usr/share/doc/*`
+  (keeping only `copyright` and `changelog.*`). The packaged man page and
+  `CHANGELOG.md` are therefore listed in the `md5sums` manifest but never reach
+  disk, and the integrity check reported both as *missing* -- `klyrshift verify`
+  exited 1 and `doctor` showed a red "Package integrity" row on an installation
+  that was perfectly fine. The check now parses the same policy (last matching
+  rule wins, so a `path-include` can re-add a path) and classifies those files
+  as excluded by design, which does not count against the result. `dpkg --verify`
+  behaves the same way: it names the files but exits 0.
+
+  dpkg accepts the rule value after whitespace **or** `=`, and the configs that
+  matter use whitespace -- `/etc/dpkg/dpkg.cfg.d/docker` and Ubuntu both ship
+  `path-exclude /usr/share/man/*`. The first cut of the parser split on `=` only,
+  so it read *zero* rules from those files and the check still failed on exactly
+  the systems it was written for; it now accepts both separators, and a test
+  pins the space form. A new `package` CI step installs the `.deb` under a
+  forced `path-exclude` policy and asserts the check passes, so the regression
+  cannot return unnoticed.
 
 - **The shipped `.deb` had no licence statement.** Debian Policy 12.5 requires
   a `copyright` file under `/usr/share/doc/<package>`, and the package shipped
