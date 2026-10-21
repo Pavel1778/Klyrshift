@@ -156,6 +156,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The daemon no longer aborts when there is no D-Bus session bus.** The
+  focused-application probe tried to initialise AT-SPI unconditionally, and
+  GLib's `dbind` responds to a missing accessibility bus by aborting the process
+  with `SIGTRAP` -- not a Python exception, so no `except` can catch it. The
+  probe runs on every word, so a TTY or `ssh` session (where
+  `DBUS_SESSION_BUS_ADDRESS` is unset and `get_active_app` is called anyway)
+  could take the whole daemon down. It now returns early when there is no
+  session bus, before importing `Atspi`.
+
 - **`klyrshift verify` no longer fails on a healthy Ubuntu install.** dpkg
   honours `path-exclude` rules in `/etc/dpkg/dpkg.cfg.d/` and skips the matching
   files at unpack time; Ubuntu drops `/usr/share/man/*` and `/usr/share/doc/*`

@@ -51,3 +51,17 @@ def test_xprop_returns_none_when_missing(monkeypatch: pytest.MonkeyPatch) -> Non
 
     monkeypatch.setattr(app_focus.subprocess, "run", fake_run)
     assert app_focus._xprop() is None
+
+
+def test_atspi_probe_is_skipped_without_a_session_bus(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No session bus means AT-SPI is not even initialised.
+
+    Importing ``Atspi`` and calling ``get_desktop`` makes GLib's ``dbind`` abort
+    the process with ``SIGTRAP`` when no accessibility bus is reachable, so the
+    probe must return early. ``get_active_app`` runs on every word in the
+    daemon; a TTY/ssh session would otherwise take the whole process down.
+    """
+    monkeypatch.delenv("DBUS_SESSION_BUS_ADDRESS", raising=False)
+    assert app_focus._atspi() is None

@@ -9,6 +9,7 @@ back to normal behaviour. Nothing here ever reads window contents or typed text.
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 from collections.abc import Callable
 from typing import Any, Final
@@ -58,7 +59,15 @@ def _gnome_introspect() -> str | None:
 
 
 def _atspi() -> str | None:
-    """Ask AT-SPI for the focused application's toolkit name."""
+    """Ask AT-SPI for the focused application's toolkit name.
+
+    AT-SPI can only answer over the session bus. Without one (a TTY or ssh
+    session) initialising it makes GLib's ``dbind`` abort the process -- an
+    uncatchable ``SIGTRAP``, not a Python exception -- so the probe is skipped
+    outright rather than allowed to bring the daemon down.
+    """
+    if not os.environ.get("DBUS_SESSION_BUS_ADDRESS"):
+        return None
     try:
         import gi
 

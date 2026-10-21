@@ -406,6 +406,14 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   runs in filename order and only processes rules that guard the `remove` event,
   so a `99-*` rule without the guard is silently skipped and `/dev/input` stays
   unreadable. The shipped rule is `data/71-klyrshift.rules`.
+- **The AT-SPI focus probe must not run without a session bus.** `app_focus._atspi`
+  imports `Atspi` and calls `get_desktop(0)`, which makes GLib's `dbind` abort the
+  *process* with `SIGTRAP` when no accessibility bus is reachable — an abort, not a
+  Python exception, so no `try/except` around it helps. `get_active_app` runs on
+  every word, so a TTY or `ssh` session would take the daemon down. The probe
+  returns early when `DBUS_SESSION_BUS_ADDRESS` is unset. This also bit the test
+  suite: `tests/test_boundary_flush.py` and friends SIGTRAPed under bare `pytest`
+  but passed under `dbus-run-session`, which is how the guard was found.
 - **`dpkg-deb --build` does not write `DEBIAN/md5sums`** (verified against dpkg
   1.22.22). Without it `dpkg --verify klyrshift` has nothing to check and passes
   vacuously. `scripts/build_deb.sh` writes the manifest itself — one
