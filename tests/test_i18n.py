@@ -19,6 +19,7 @@ import ast
 import json
 import re
 from collections.abc import Iterator
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
@@ -42,7 +43,8 @@ def _catalogue() -> dict[str, object]:
     return data
 
 
-def _source_literals() -> set[str]:
+@lru_cache(maxsize=1)
+def _source_literals() -> frozenset[str]:
     """Return every Cyrillic string literal in the source, minus docstrings.
 
     Both wrapping styles are covered because the check looks at the literals
@@ -50,6 +52,9 @@ def _source_literals() -> set[str]:
     ``_(MSG_FOO)``, and a value translated where it is rendered (a tour step's
     ``title``, a ``LazyLabels`` entry). A string is either wrapped somewhere or
     it is a gap -- the check does not care which call site does the work.
+
+    Cached: the scan parses every source file, and the orphan check calls it
+    once per catalogue key, which without the cache is quadratic (~5 minutes).
     """
     literals: set[str] = set()
     for path in SOURCE_ROOT.rglob("*.py"):
@@ -70,7 +75,7 @@ def _source_literals() -> set[str]:
                 continue
             if CYRILLIC.search(node.value):
                 literals.add(node.value)
-    return literals
+    return frozenset(literals)
 
 
 @pytest.fixture(autouse=True)
