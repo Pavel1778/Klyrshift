@@ -43,13 +43,20 @@ class RecordingUInput:
         self.name = name
         self.written: list[tuple[int, int, int]] = []
         self.synced = 0
+        # The events of each flush (``syn``) in order. The injector reuses one
+        # device, so the deletion and the replacement are its first two batches.
+        self.batches: list[list[tuple[int, int, int]]] = []
+        self._pending: list[tuple[int, int, int]] = []
         RecordingUInput.instances.append(self)
 
     def write(self, event_type: int, code: int, value: int) -> None:
         self.written.append((event_type, code, value))
+        self._pending.append((event_type, code, value))
 
     def syn(self) -> None:
         self.synced += 1
+        self.batches.append(self._pending)
+        self._pending = []
 
     def close(self) -> None:
         return None
@@ -58,6 +65,11 @@ class RecordingUInput:
     def presses(self) -> list[tuple[int, int, int]]:
         """Only the key-down events (value == 1)."""
         return [event for event in self.written if event[2] == 1]
+
+
+def _presses(batch: list[tuple[int, int, int]]) -> list[tuple[int, int, int]]:
+    """Only the key-down events (value == 1) of one flushed batch."""
+    return [event for event in batch if event[2] == 1]
 
 
 class FakeSwitcher:
@@ -153,15 +165,13 @@ def test_space_boundary_emits_six_backspaces_and_hello(
     _press(daemon, RU_WORD_KEYS)
     _press(daemon, ["KEY_SPACE"])
 
-    assert len(RecordingUInput.instances) == 2
-    backspace_device, text_device = RecordingUInput.instances
+    (device,) = RecordingUInput.instances
+    deletion, replacement = device.batches
     # Six Backspaces: the five word keys and the triggering Space. The first
     # character must not survive.
-    assert backspace_device.presses == [(EV_KEY, BACKSPACE, 1)] * 6
-    assert backspace_device.synced == 1
-    assert text_device.synced == 1
+    assert _presses(deletion) == [(EV_KEY, BACKSPACE, 1)] * 6
     # ``hello`` retyped, followed by the Space that was consumed.
-    assert [code for _etype, code, _value in text_device.presses] == [
+    assert [code for _etype, code, _value in _presses(replacement)] == [
         int(evdev.ecodes.KEY_H),
         int(evdev.ecodes.KEY_E),
         int(evdev.ecodes.KEY_L),

@@ -22,7 +22,7 @@ from pathlib import Path
 from .config import Config, config_path, load_config
 from .i18n import _
 from .injector import TextInjector
-from .switcher import LayoutSwitcher
+from .switcher import LayoutSwitcher, key_sender_for
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +222,7 @@ def check_tools() -> CheckResult:
     """Check availability of the external layout/injection tools."""
     found: list[str] = []
     missing: list[str] = []
-    for tool in ("g3kb-switch", "wtype", "xdotool", "setxkbmap"):
+    for tool in ("g3kb-switch", "gsettings", "wtype", "xdotool", "setxkbmap"):
         if shutil.which(tool) is not None:
             found.append(tool)
         else:
@@ -230,7 +230,9 @@ def check_tools() -> CheckResult:
     detail = _("найдены: ") + (", ".join(found) if found else _("нет"))
     if missing:
         detail += _("; нет: ") + ", ".join(missing)
-    if "g3kb-switch" not in found and "setxkbmap" not in found:
+    # gsettings drives the built-in ``gnome-shortcut`` switcher, which needs
+    # nothing else on GNOME (it presses the input-source shortcut via uinput).
+    if not {"g3kb-switch", "gsettings", "setxkbmap"} & set(found):
         return CheckResult(
             _("Внешние утилиты"),
             FAIL,
@@ -302,8 +304,12 @@ def check_gnome_version() -> CheckResult:
 def check_backends(config: Config) -> list[CheckResult]:
     """Resolve the switcher and injector backends and report them."""
     session = _session_type()
-    switcher = LayoutSwitcher(layouts=config.layouts, switch_method=config.switch_method)
     injector = TextInjector(backend=config.backend)
+    switcher = LayoutSwitcher(
+        layouts=config.layouts,
+        switch_method=config.switch_method,
+        key_sender=key_sender_for(injector),
+    )
 
     switcher_result = CheckResult(
         _("Переключение раскладки"),

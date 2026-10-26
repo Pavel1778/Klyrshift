@@ -59,7 +59,7 @@ from .injector import TextInjector
 from .learning import LearningEngine, LearningStore
 from .punctuation import PunctuationCorrector
 from .selection_fix import SelectionFix
-from .switcher import LayoutSwitcher
+from .switcher import LayoutSwitcher, key_sender_for
 from .text_expander import TextExpander
 from .tray import TrayIcon
 from .typo import TypoCorrector
@@ -288,14 +288,15 @@ class KlyrshiftDaemon:
             extended_dictionary_dir=config.extended_dictionary_dir,
             thematic_categories=config.installed_dict_categories,
         )
-        self.switcher = switcher or LayoutSwitcher(
-            layouts=config.layouts,
-            switch_method=config.switch_method,
-        )
         self.injector = injector or TextInjector(
             converter=self.converter,
             backend=config.backend,
             settle_ms=config.backspace_settle_ms,
+        )
+        self.switcher = switcher or LayoutSwitcher(
+            layouts=config.layouts,
+            switch_method=config.switch_method,
+            key_sender=key_sender_for(self.injector),
         )
         self._devices = devices
         self._code_to_pair, self._name_to_code = _load_ecodes()
@@ -1156,9 +1157,7 @@ class KlyrshiftDaemon:
             logger.info("Shutdown requested; skipping replacement")
             return False
         backspace_count = len(word)
-        self.switcher.switch_to(target)
-        time.sleep(0.05)
-        if not self.injector.replace_text(backspace_count, converted, target):
+        if not self._switch_and_replace(backspace_count, converted, target):
             logger.warning("Applying the withheld suggestion failed to replace text")
             return False
         self._last_fixed_from = word
@@ -1494,11 +1493,9 @@ class KlyrshiftDaemon:
             current,
             target,
         )
-        self.switcher.switch_to(target)
-        time.sleep(0.05)
         # The fixed text has the same length as the original word; deleting that
         # many characters and retyping the original restores the screen exactly.
-        if not self.injector.replace_text(backspace_count, original, target):
+        if not self._switch_and_replace(backspace_count, original, target):
             logger.warning("Undo failed to replace text")
             return False
         # The user restored their own text: never re-fix this word this session.
@@ -1554,9 +1551,7 @@ class KlyrshiftDaemon:
             logger.info("Shutdown requested; skipping replacement")
             return False
 
-        self.switcher.switch_to(target)
-        time.sleep(0.05)
-        if not self.injector.replace_text(backspace_count, converted, target):
+        if not self._switch_and_replace(backspace_count, converted, target):
             logger.warning("Manual layout toggle failed to replace text")
             return False
         self._last_fixed_from = word
@@ -2046,9 +2041,6 @@ class KlyrshiftDaemon:
             logger.debug("Trigger settle: waiting %d ms", self.config.trigger_settle_ms)
             time.sleep(self.config.trigger_settle_ms / 1000.0)
 
-        self.switcher.switch_to(target)
-        time.sleep(0.05)
-
         # The word-boundary key (Space/Enter/Tab) that triggered the flush is
         # already on screen right after the word, so the on-screen text is
         # ``buffer + boundary_char``. A Space is the only boundary that is both
@@ -2072,7 +2064,7 @@ class KlyrshiftDaemon:
             target,
             boundary_char if backspace_total != backspace_count else "",
         )
-        if self.injector.replace_text(backspace_total, replacement, target):
+        if self._switch_and_replace(backspace_total, replacement, target):
             self.learning.observe_corrected(buffer)
             # Remember the pre-fix text so a bare Ctrl+Z can suppress exactly the
             # word the user restored (only set on a real fix, so an unrelated
@@ -2235,6 +2227,12 @@ class KlyrshiftDaemon:
                 logger.debug("Cannot register the control socket: %s", exc)
                 self._stop_control()
 
+        # Create the virtual keyboard now, not on the first fix, so the
+        # compositor is already listening to it when the first word is retyped.
+        warm_up = getattr(self.injector, "warm_up", None)
+        if callable(warm_up):
+            warm_up()
+
         logger.info(
             "Klyrshift started (%d device(s), %s, %s%s)",
             len(devices),
@@ -2269,10 +2267,32 @@ class KlyrshiftDaemon:
                     device.close()
             self._stop_tray()
             self._stop_control()
+            close_injector = getattr(self.injector, "close", None)
+            if callable(close_injector):
+                with contextlib.suppress(OSError):
+                    close_injector()
             self.learning.persist(force=True)
             self.release_lock()
         logger.info("Klyrshift stopped")
         return 0
+
+    def _switch_and_replace(self, backspace_count: int, text: str, target: str) -> bool:
+        """Switch to ``target`` and replace the last ``backspace_count`` chars.
+
+        The deletion does not depend on the layout, so with the real switcher
+        and injector the switch is started first and only finished before the
+        new text is typed (:meth:`LayoutSwitcher.start_switch`): with the
+        ``gnome-shortcut`` backend GNOME applies the new layout while the
+        Backspaces are processed instead of before them. Other backends switch
+        synchronously inside ``start_switch``, which keeps their order and
+        timing unchanged. Test doubles take the plain sequential path.
+        """
+        if isinstance(self.switcher, LayoutSwitcher) and isinstance(self.injector, TextInjector):
+            finish = self.switcher.start_switch(target)
+            return self.injector.replace_text(backspace_count, text, target, before_typing=finish)
+        self.switcher.switch_to(target)
+        time.sleep(0.05)
+        return self.injector.replace_text(backspace_count, text, target)
 
     def _start_tray(self) -> None:
         """Start the optional tray icon when enabled in the configuration."""

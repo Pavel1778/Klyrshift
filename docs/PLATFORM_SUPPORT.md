@@ -21,7 +21,7 @@ not been exercised.
 | Wrong-layout detection | ✅ | ✅ | Pure logic; platform-independent |
 | Automatic text replacement | 🟡 `xdotool` / `uinput` | 🟡 `uinput` / `wtype` | Needs `/dev/input` + `/dev/uinput` |
 | Atomic replacement | 🟡 `uinput` only | 🟡 `uinput` only | `wtype`/`xdotool` delete and retype separately |
-| Layout switching | 🟡 `setxkbmap` | 🟡 `g3kb-switch` | `g3kb-switch` is not in the Debian repos |
+| Layout switching | 🟡 `setxkbmap` / `gnome-shortcut` | ✅ `gnome-shortcut` (GNOME), 🟡 `g3kb-switch` | `gnome-shortcut` needs only GNOME and the `uinput` injector; `g3kb-switch` is not in the Debian repos |
 | Password-field detection | ⛔ | ⛔ | Both hide the focused widget from unprivileged clients |
 | Focused-application exceptions | 🟡 | 🟡 | Best-effort; depends on the compositor |
 | System tray | 🟡 | 🟡 | Optional AppIndicator |

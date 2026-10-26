@@ -16,10 +16,12 @@ one through the configuration.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import shutil
 import subprocess
 import time
+from collections.abc import Callable
 from typing import Any, Final
 
 from .converter import LayoutConverter
@@ -160,6 +162,39 @@ class TextInjector:
         self._requested_backend = backend
         self._backend = self._resolve_backend(backend)
         self._settle_ms = max(0, int(settle_ms))
+        # The uinput backend keeps one virtual keyboard open for its lifetime.
+        # Creating ``evdev.UInput`` costs ~100 ms (python-evdev polls until the
+        # new event node is readable) and the compositor needs a moment to start
+        # listening to a new device, so a device per call made every fix pay
+        # both, twice.
+        self._device: Any | None = None
+        self._device_codes: frozenset[int] = frozenset()
+
+    def warm_up(self) -> None:
+        """Create the shared virtual keyboard ahead of the first fix.
+
+        The daemon calls this at start-up so the compositor already knows the
+        device when the first correction is typed. A failure is not fatal: the
+        device is created on first use instead.
+        """
+        if self._backend != BACKEND_UINPUT:
+            return
+        try:
+            import evdev
+        except ImportError:
+            return
+        try:
+            self._acquire_uinput(evdev, set())
+        except (OSError, PermissionError, ValueError):
+            logger.debug("Could not pre-create the uinput device", exc_info=True)
+
+    def close(self) -> None:
+        """Destroy the shared virtual keyboard, if one is open."""
+        if self._device is not None:
+            device, self._device = self._device, None
+            self._device_codes = frozenset()
+            with contextlib.suppress(OSError):
+                self._close_uinput(device)
 
     def _uinput_available(self) -> bool:
         """Return ``True`` when a writable ``/dev/uinput`` exists."""
@@ -205,7 +240,13 @@ class TextInjector:
             return False
         return self._char_to_key(char, layout) is not None
 
-    def replace_text(self, backspace_count: int, new: str, layout: str) -> bool:
+    def replace_text(
+        self,
+        backspace_count: int,
+        new: str,
+        layout: str,
+        before_typing: Callable[[], bool] | None = None,
+    ) -> bool:
         """Delete ``backspace_count`` characters and type ``new``.
 
         The caller passes a *count* rather than the old text: the daemon tracks
@@ -218,6 +259,12 @@ class TextInjector:
             backspace_count: How many Backspace presses to emit.
             new: The corrected text to type.
             layout: The layout that will be active while typing ``new``.
+            before_typing: Called after the deletion and before ``new`` is
+                typed. The daemon passes the second half of a layout switch
+                here (:meth:`LayoutSwitcher.start_switch`), so waiting for the
+                compositor to apply the new layout overlaps the deletion. A
+                ``False`` result is logged; the text is typed regardless,
+                exactly as when a synchronous switch fails.
 
         Returns:
             ``True`` when the replacement succeeded.
@@ -231,14 +278,21 @@ class TextInjector:
         # crash window in which the daemon had deleted the old text but not yet
         # typed the replacement, which would leave the user with truncated text.
         if self._backend == BACKEND_UINPUT:
-            return self._uinput_batch(backspace_count, new, layout)
+            return self._uinput_batch(backspace_count, new, layout, before_typing)
 
         if not self._send_backspaces(backspace_count):
             logger.warning("Failed to send backspaces; aborting replacement")
             return False
 
         time.sleep(SETTLE_DELAY)
+        self._run_before_typing(before_typing)
         return self._type_text(new, layout)
+
+    @staticmethod
+    def _run_before_typing(before_typing: Callable[[], bool] | None) -> None:
+        """Run the pre-typing hook, logging (not failing) a ``False`` result."""
+        if before_typing is not None and not before_typing():
+            logger.warning("Layout switch did not complete before typing")
 
     def _send_backspaces(self, count: int) -> bool:
         """Send ``count`` backspace presses."""
@@ -303,30 +357,29 @@ class TextInjector:
         shift_code = evdev.ecodes.KEY_LEFTSHIFT
         ev_key = evdev.ecodes.EV_KEY
         try:
-            device = self._open_uinput(evdev, {key_code, shift_code})
-            try:
-                for _ in range(count):
-                    device.write(ev_key, key_code, 1)
-                    device.write(ev_key, key_code, 0)
-                    device.syn()
-                    if delay:
-                        time.sleep(delay)
-            finally:
-                self._close_uinput(device)
+            device = self._acquire_uinput(evdev, {key_code, shift_code})
+            for _ in range(count):
+                device.write(ev_key, key_code, 1)
+                device.write(ev_key, key_code, 0)
+                device.syn()
+                if delay:
+                    time.sleep(delay)
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
         return True
 
-    def tap_combo(self, key_names: list[str]) -> bool:
+    def tap_combo(self, key_names: list[str], taps: int = 1) -> bool:
         """Press ``key_names`` together (in order) through a virtual keyboard.
 
         Used for shortcuts such as ``Ctrl+C``. ``key_names`` are evdev names
         (``"KEY_LEFTCTRL"``, ``"KEY_C"``); modifiers are held while the last key
-        is tapped. Only the ``uinput`` backend is supported; other backends
-        return ``False``.
+        is tapped ``taps`` times (GNOME's input-source switcher, for example,
+        selects the *k*-th layout when Space is tapped *k* times under Super).
+        Only the ``uinput`` backend is supported; other backends return
+        ``False``.
         """
-        if not key_names or self._backend != BACKEND_UINPUT:
+        if not key_names or taps < 1 or self._backend != BACKEND_UINPUT:
             return False
         try:
             import evdev
@@ -343,19 +396,17 @@ class TextInjector:
         code_set = set(resolved)
         ev_key = evdev.ecodes.EV_KEY
         try:
-            device = self._open_uinput(evdev, code_set)
-            try:
-                for code in resolved[:-1]:
-                    device.write(ev_key, code, 1)
+            device = self._acquire_uinput(evdev, code_set)
+            for code in resolved[:-1]:
+                device.write(ev_key, code, 1)
+            for _ in range(taps):
                 device.write(ev_key, resolved[-1], 1)
                 device.write(ev_key, resolved[-1], 0)
-                for code in reversed(resolved[:-1]):
-                    device.write(ev_key, code, 0)
-                device.syn()
-            finally:
-                self._close_uinput(device)
+            for code in reversed(resolved[:-1]):
+                device.write(ev_key, code, 0)
+            device.syn()
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
         return True
 
@@ -403,6 +454,36 @@ class TextInjector:
         capabilities = {int(evdev.ecodes.EV_KEY): sorted(int(code) for code in key_codes)}
         return evdev.UInput(capabilities, name="klyrshift")
 
+    def _acquire_uinput(self, evdev: Any, key_codes: set[int]) -> Any:
+        """Return the shared virtual keyboard, creating it when needed.
+
+        The device is created once with every key the uinput backend can type
+        (all of :data:`_BASE_KEYS` plus Shift and Backspace) and reused for
+        every later call. A request for a key outside that set (a ``tap_combo``
+        with Ctrl, for example) recreates it with the union, so the set only
+        grows and the device is rebuilt at most a handful of times.
+        """
+        wanted = frozenset(int(code) for code in key_codes)
+        if self._device is not None and wanted <= self._device_codes:
+            return self._device
+        codes = wanted | self._device_codes | self._baseline_codes(evdev)
+        self.close()
+        self._device = self._open_uinput(evdev, set(codes))
+        self._device_codes = codes
+        return self._device
+
+    @staticmethod
+    def _baseline_codes(evdev: Any) -> frozenset[int]:
+        """Return the key codes every shared device is created with."""
+        names = {*_BASE_KEYS.values(), "KEY_LEFTSHIFT", "KEY_BACKSPACE"}
+        codes = (getattr(evdev.ecodes, name, None) for name in names)
+        return frozenset(int(code) for code in codes if code is not None)
+
+    def _uinput_failed(self) -> None:
+        """Log a failed write and drop the device so the next call rebuilds it."""
+        logger.error("Could not write to the uinput device", exc_info=True)
+        self.close()
+
     @staticmethod
     def _close_uinput(device: Any) -> None:
         """Close ``device``, tolerating backends that only implement ``close``."""
@@ -429,24 +510,27 @@ class TextInjector:
         ev_key = evdev.ecodes.EV_KEY
 
         try:
-            device = self._open_uinput(evdev, codes)
-            try:
-                for code, shift in resolved:
-                    if shift:
-                        device.write(ev_key, shift_code, 1)
-                    device.write(ev_key, code, 1)
-                    device.write(ev_key, code, 0)
-                    if shift:
-                        device.write(ev_key, shift_code, 0)
-                    device.syn()
-            finally:
-                self._close_uinput(device)
+            device = self._acquire_uinput(evdev, codes)
+            for code, shift in resolved:
+                if shift:
+                    device.write(ev_key, shift_code, 1)
+                device.write(ev_key, code, 1)
+                device.write(ev_key, code, 0)
+                if shift:
+                    device.write(ev_key, shift_code, 0)
+                device.syn()
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
         return True
 
-    def _uinput_batch(self, backspace_count: int, text: str, layout: str) -> bool:
+    def _uinput_batch(
+        self,
+        backspace_count: int,
+        text: str,
+        layout: str,
+        before_typing: Callable[[], bool] | None = None,
+    ) -> bool:
         """Delete ``backspace_count`` chars and type ``text``.
 
         The backspaces are written and flushed with a single ``syn`` so a crash
@@ -474,36 +558,31 @@ class TextInjector:
         ev_key = evdev.ecodes.EV_KEY
 
         try:
-            device = self._open_uinput(evdev, codes)
-            try:
-                for _ in range(backspace_count):
-                    device.write(ev_key, backspace_code, 1)
-                    device.write(ev_key, backspace_code, 0)
-                device.syn()
-            finally:
-                self._close_uinput(device)
+            device = self._acquire_uinput(evdev, codes)
+            for _ in range(backspace_count):
+                device.write(ev_key, backspace_code, 1)
+                device.write(ev_key, backspace_code, 0)
+            device.syn()
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
 
         if self._settle_ms > 0:
             time.sleep(self._settle_ms / 1000.0)
+        self._run_before_typing(before_typing)
 
         try:
-            device = self._open_uinput(evdev, codes)
-            try:
-                for code, shift in resolved:
-                    if shift:
-                        device.write(ev_key, shift_code, 1)
-                    device.write(ev_key, code, 1)
-                    device.write(ev_key, code, 0)
-                    if shift:
-                        device.write(ev_key, shift_code, 0)
-                device.syn()
-            finally:
-                self._close_uinput(device)
+            device = self._acquire_uinput(evdev, codes)
+            for code, shift in resolved:
+                if shift:
+                    device.write(ev_key, shift_code, 1)
+                device.write(ev_key, code, 1)
+                device.write(ev_key, code, 0)
+                if shift:
+                    device.write(ev_key, shift_code, 0)
+            device.syn()
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
         return True
 

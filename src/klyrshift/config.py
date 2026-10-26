@@ -197,7 +197,12 @@ MAX_DOUBLE_TAP_MS: Final[int] = 3000
 # miss. A config still on the old value migrates to the wider default.
 LEGACY_DOUBLE_TAP_MS: Final[int] = 300
 VALID_BACKENDS: Final[tuple[str, ...]] = ("auto", "uinput", "wtype", "xdotool")
-VALID_SWITCH_METHODS: Final[tuple[str, ...]] = ("auto", "g3kb-switch", "setxkbmap")
+VALID_SWITCH_METHODS: Final[tuple[str, ...]] = (
+    "auto",
+    "g3kb-switch",
+    "gnome-shortcut",
+    "setxkbmap",
+)
 VALID_LOG_LEVELS: Final[tuple[str, ...]] = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 VALID_MODES: Final[tuple[str, ...]] = ("auto", "manual", "hybrid")
 # The GUI colour scheme: follow the desktop, or force light/dark.

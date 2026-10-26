@@ -111,8 +111,11 @@ Caramba Switcher for Windows.
 - X11 или Wayland
 - Python 3.10+
 - Пакеты: `python3-evdev`, `wtype` (Wayland) или `xdotool` (X11)
-- Для переключения раскладки: `x11-xkb-utils` (X11, даёт `setxkbmap`; есть в
-  Debian) или `g3kb-switch` (Wayland; **в репозиториях Debian отсутствует**)
+- Для переключения раскладки: в GNOME ничего ставить не нужно — встроенный
+  бэкенд `gnome-shortcut` нажимает сочетание переключения раскладки GNOME
+  (по умолчанию Super+Пробел) через uinput. Иначе: `x11-xkb-utils` (X11, даёт
+  `setxkbmap`; есть в Debian) или `g3kb-switch` (**в репозиториях Debian
+  отсутствует**)
 - Для GUI (вкладка настроек): `python3-gi`, `python3-gi-cairo`, `gir1.2-gtk-4.0`, `gir1.2-adw-1`
 - Для трея (опционально): `python3-gi`, `gir1.2-appindicator3-0.1`
 
@@ -218,7 +221,7 @@ min_word_length = 3        # не анализировать короткие с
 max_buffer_size = 200      # верхняя граница буфера нажатий
 layouts = ["us", "ru"]     # порядок раскладок
 backend = "auto"           # auto | uinput | wtype | xdotool
-switch_method = "auto"     # auto | g3kb-switch | setxkbmap
+switch_method = "auto"     # auto | g3kb-switch | gnome-shortcut | setxkbmap
 notify_on_fix = false      # уведомление при исправлении
 tray_enabled = true        # иконка в трее
 hotkey = "SHIFT+SHIFT"     # ручной триггер исправления (двойной Shift)
@@ -578,7 +581,7 @@ Klyrshift включён «в режиме обучения» всегда: он
 | Нет иконки в трее | Установите `python3-gi gir1.2-appindicator3-0.1` |
 | Сообщаете о баге | Приложите `klyrshift collect-logs` — в архиве нет набранного текста |
 | Конфликт с IBus/Fcitx | Отключите их, если не используете |
-| Не переключает раскладку в Wayland | Установите `g3kb-switch` |
+| Не переключает раскладку в Wayland | В GNOME проверьте сочетание переключения раскладки (Настройки → Клавиатура); вне GNOME установите `g3kb-switch` |
 
 Полностью: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
@@ -649,7 +652,9 @@ make build-deb                # собрать .deb в dist/
 - В некоторых играх и Java-приложениях замена текста может не работать.
 - Доступ через `uaccess` применяется при входе в сессию: если пакет установлен
   в уже активной сессии, права появятся после следующего входа/перезагрузки.
-- Переключение раскладки в GNOME Wayland требует `g3kb-switch`.
+- Встроенное переключение раскладки (`gnome-shortcut`) работает только в GNOME
+  и нажимает сочетание из `switch-input-source`; если сочетание убрано или
+  содержит клавиши, которые бэкенд не умеет нажимать, нужен `g3kb-switch`.
 - Замена текста атомарна только на бэкенде `uinput`. На фолбэках `wtype` и
   `xdotool` удаление и ввод идут отдельными вызовами, поэтому при аварийном
   завершении посреди замены текст может остаться обрезанным. Используйте

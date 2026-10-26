@@ -334,14 +334,27 @@ fcitx5-remote -e
 
 ## The layout does not switch on Wayland
 
-Klyrshift uses `g3kb-switch` on GNOME Wayland. Install it and verify:
+On GNOME, Klyrshift switches with the built-in `gnome-shortcut` backend unless
+`g3kb-switch` is installed. It reads and presses GNOME's own input-source
+shortcut, so check that one is set and that both layouts are configured:
+
+```bash
+gsettings get org.gnome.desktop.wm.keybindings switch-input-source
+# expected: ['<Super>space', 'XF86Keyboard'] or another <Modifier>key chord
+gsettings get org.gnome.desktop.input-sources sources
+# expected: [('xkb', 'us'), ('xkb', 'ru')]
+klyrshift status   # "Переключение: backend=gnome-shortcut ..."
+```
+
+The backend needs the `uinput` injector (only a virtual keyboard can hold the
+modifier). Outside GNOME, install `g3kb-switch` and verify:
 
 ```bash
 g3kb-switch -p     # prints the current layout index
 g3kb-switch -s 1   # switches to the second layout
 ```
 
-If `g3kb-switch` is missing, Klyrshift can still replace text but cannot change
+Without a working backend Klyrshift can still replace text but cannot change
 the active layout.
 
 ## A stray first letter remains after a correction (`рhello`)

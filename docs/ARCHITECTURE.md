@@ -160,13 +160,31 @@ Two details are easy to get wrong and both are load-bearing:
 still use the `input` group) is not reported as broken, but the packaged path
 never touches group membership.
 
-## Why g3kb-switch
+## Why g3kb-switch, and the built-in gnome-shortcut backend
 
 On GNOME Wayland there is no portable CLI to change the layout. `g3kb-switch`
-talks to GNOME Shell over D-Bus and is the de-facto standard tool for this.
-On X11 the daemon falls back to `setxkbmap`. The `LayoutSwitcher` abstracts the
-two and caches the current layout for a short period to avoid spawning a
-subprocess on every keystroke.
+talks to GNOME Shell over D-Bus and is the de-facto standard tool for this, but
+it is not in the Debian/Ubuntu archives and its Shell extension has to follow
+every GNOME release. On X11 the daemon falls back to `setxkbmap`.
+
+The `gnome-shortcut` backend needs neither. GNOME keeps the input sources in
+`org.gnome.desktop.input-sources`: `mru-sources` lists them most recently used
+first, so its first entry is the active layout. Switching presses the
+input-source shortcut (`org.gnome.desktop.wm.keybindings switch-input-source`,
+`<Super>space` by default) on the daemon's own uinput keyboard: holding the
+modifiers and tapping the key *k* times selects the *k*-th most recent source.
+`auto` picks it on GNOME when `g3kb-switch` is not installed and the injector is
+`uinput` (only a virtual keyboard can hold the modifier).
+
+Because deleting the mistyped word does not depend on the layout, the daemon
+starts the switch before the Backspaces and waits for GNOME to report the new
+layout only before typing the replacement (`LayoutSwitcher.start_switch` and
+`TextInjector.replace_text(before_typing=...)`). GNOME applies the switch in
+roughly 50-100 ms, which then overlaps the `backspace_settle_ms` pause instead
+of adding to it. The other backends switch synchronously as before.
+
+The `LayoutSwitcher` abstracts the backends and caches the current layout for a
+short period to avoid spawning a subprocess on every keystroke.
 
 ## Wayland limitations
 

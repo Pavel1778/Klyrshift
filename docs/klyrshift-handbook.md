@@ -138,8 +138,11 @@ Caramba Switcher for Windows.
 - X11 или Wayland
 - Python 3.10+
 - Пакеты: `python3-evdev`, `wtype` (Wayland) или `xdotool` (X11)
-- Для переключения раскладки: `x11-xkb-utils` (X11, даёт `setxkbmap`; есть в
-  Debian) или `g3kb-switch` (Wayland; **в репозиториях Debian отсутствует**)
+- Для переключения раскладки: в GNOME ничего ставить не нужно — встроенный
+  бэкенд `gnome-shortcut` нажимает сочетание переключения раскладки GNOME
+  (по умолчанию Super+Пробел) через uinput. Иначе: `x11-xkb-utils` (X11, даёт
+  `setxkbmap`; есть в Debian) или `g3kb-switch` (**в репозиториях Debian
+  отсутствует**)
 - Для GUI (вкладка настроек): `python3-gi`, `python3-gi-cairo`, `gir1.2-gtk-4.0`, `gir1.2-adw-1`
 - Для трея (опционально): `python3-gi`, `gir1.2-appindicator3-0.1`
 
@@ -245,7 +248,7 @@ min_word_length = 3        # не анализировать короткие с
 max_buffer_size = 200      # верхняя граница буфера нажатий
 layouts = ["us", "ru"]     # порядок раскладок
 backend = "auto"           # auto | uinput | wtype | xdotool
-switch_method = "auto"     # auto | g3kb-switch | setxkbmap
+switch_method = "auto"     # auto | g3kb-switch | gnome-shortcut | setxkbmap
 notify_on_fix = false      # уведомление при исправлении
 tray_enabled = true        # иконка в трее
 hotkey = "SHIFT+SHIFT"     # ручной триггер исправления (двойной Shift)
@@ -605,7 +608,7 @@ Klyrshift включён «в режиме обучения» всегда: он
 | Нет иконки в трее | Установите `python3-gi gir1.2-appindicator3-0.1` |
 | Сообщаете о баге | Приложите `klyrshift collect-logs` — в архиве нет набранного текста |
 | Конфликт с IBus/Fcitx | Отключите их, если не используете |
-| Не переключает раскладку в Wayland | Установите `g3kb-switch` |
+| Не переключает раскладку в Wayland | В GNOME проверьте сочетание переключения раскладки (Настройки → Клавиатура); вне GNOME установите `g3kb-switch` |
 
 Полностью: [docs/TROUBLESHOOTING.md](#contents).
 
@@ -676,7 +679,9 @@ make build-deb                # собрать .deb в dist/
 - В некоторых играх и Java-приложениях замена текста может не работать.
 - Доступ через `uaccess` применяется при входе в сессию: если пакет установлен
   в уже активной сессии, права появятся после следующего входа/перезагрузки.
-- Переключение раскладки в GNOME Wayland требует `g3kb-switch`.
+- Встроенное переключение раскладки (`gnome-shortcut`) работает только в GNOME
+  и нажимает сочетание из `switch-input-source`; если сочетание убрано или
+  содержит клавиши, которые бэкенд не умеет нажимать, нужен `g3kb-switch`.
 - Замена текста атомарна только на бэкенде `uinput`. На фолбэках `wtype` и
   `xdotool` удаление и ввод идут отдельными вызовами, поэтому при аварийном
   завершении посреди замены текст может остаться обрезанным. Используйте
@@ -1458,14 +1463,27 @@ fcitx5-remote -e
 
 ### The layout does not switch on Wayland
 
-Klyrshift uses `g3kb-switch` on GNOME Wayland. Install it and verify:
+On GNOME, Klyrshift switches with the built-in `gnome-shortcut` backend unless
+`g3kb-switch` is installed. It reads and presses GNOME's own input-source
+shortcut, so check that one is set and that both layouts are configured:
+
+```bash
+gsettings get org.gnome.desktop.wm.keybindings switch-input-source
+## expected: ['<Super>space', 'XF86Keyboard'] or another <Modifier>key chord
+gsettings get org.gnome.desktop.input-sources sources
+## expected: [('xkb', 'us'), ('xkb', 'ru')]
+klyrshift status   # "Переключение: backend=gnome-shortcut ..."
+```
+
+The backend needs the `uinput` injector (only a virtual keyboard can hold the
+modifier). Outside GNOME, install `g3kb-switch` and verify:
 
 ```bash
 g3kb-switch -p     # prints the current layout index
 g3kb-switch -s 1   # switches to the second layout
 ```
 
-If `g3kb-switch` is missing, Klyrshift can still replace text but cannot change
+Without a working backend Klyrshift can still replace text but cannot change
 the active layout.
 
 ### A stray first letter remains after a correction (`рhello`)
@@ -1932,7 +1950,7 @@ not been exercised.
 | Wrong-layout detection | ✅ | ✅ | Pure logic; platform-independent |
 | Automatic text replacement | 🟡 `xdotool` / `uinput` | 🟡 `uinput` / `wtype` | Needs `/dev/input` + `/dev/uinput` |
 | Atomic replacement | 🟡 `uinput` only | 🟡 `uinput` only | `wtype`/`xdotool` delete and retype separately |
-| Layout switching | 🟡 `setxkbmap` | 🟡 `g3kb-switch` | `g3kb-switch` is not in the Debian repos |
+| Layout switching | 🟡 `setxkbmap` / `gnome-shortcut` | ✅ `gnome-shortcut` (GNOME), 🟡 `g3kb-switch` | `gnome-shortcut` needs only GNOME and the `uinput` injector; `g3kb-switch` is not in the Debian repos |
 | Password-field detection | ⛔ | ⛔ | Both hide the focused widget from unprivileged clients |
 | Focused-application exceptions | 🟡 | 🟡 | Best-effort; depends on the compositor |
 | System tray | 🟡 | 🟡 | Optional AppIndicator |
@@ -2413,13 +2431,31 @@ Two details are easy to get wrong and both are load-bearing:
 still use the `input` group) is not reported as broken, but the packaged path
 never touches group membership.
 
-### Why g3kb-switch
+### Why g3kb-switch, and the built-in gnome-shortcut backend
 
 On GNOME Wayland there is no portable CLI to change the layout. `g3kb-switch`
-talks to GNOME Shell over D-Bus and is the de-facto standard tool for this.
-On X11 the daemon falls back to `setxkbmap`. The `LayoutSwitcher` abstracts the
-two and caches the current layout for a short period to avoid spawning a
-subprocess on every keystroke.
+talks to GNOME Shell over D-Bus and is the de-facto standard tool for this, but
+it is not in the Debian/Ubuntu archives and its Shell extension has to follow
+every GNOME release. On X11 the daemon falls back to `setxkbmap`.
+
+The `gnome-shortcut` backend needs neither. GNOME keeps the input sources in
+`org.gnome.desktop.input-sources`: `mru-sources` lists them most recently used
+first, so its first entry is the active layout. Switching presses the
+input-source shortcut (`org.gnome.desktop.wm.keybindings switch-input-source`,
+`<Super>space` by default) on the daemon's own uinput keyboard: holding the
+modifiers and tapping the key *k* times selects the *k*-th most recent source.
+`auto` picks it on GNOME when `g3kb-switch` is not installed and the injector is
+`uinput` (only a virtual keyboard can hold the modifier).
+
+Because deleting the mistyped word does not depend on the layout, the daemon
+starts the switch before the Backspaces and waits for GNOME to report the new
+layout only before typing the replacement (`LayoutSwitcher.start_switch` and
+`TextInjector.replace_text(before_typing=...)`). GNOME applies the switch in
+roughly 50-100 ms, which then overlaps the `backspace_settle_ms` pause instead
+of adding to it. The other backends switch synchronously as before.
+
+The `LayoutSwitcher` abstracts the backends and caches the current layout for a
+short period to avoid spawning a subprocess on every keystroke.
 
 ### Wayland limitations
 

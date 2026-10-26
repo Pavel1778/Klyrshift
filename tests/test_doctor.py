@@ -228,3 +228,10 @@ def test_collect_checks_runs_all(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "Тип сессии" in names
     assert "Конфигурация" in names
     assert len(results) >= 8
+
+
+def test_check_tools_accepts_gsettings_alone(monkeypatch: pytest.MonkeyPatch) -> None:
+    """On GNOME, gsettings is enough: the gnome-shortcut switcher needs nothing else."""
+    available = {"gsettings": "/usr/bin/gsettings"}
+    monkeypatch.setattr(doctor.shutil, "which", lambda name: available.get(name))
+    assert doctor.check_tools().status != doctor.FAIL

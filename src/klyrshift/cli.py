@@ -33,7 +33,7 @@ from .dictionary import load_user_dictionary
 from .doctor import run_doctor
 from .i18n import SUPPORTED_LOCALES, _, set_locale
 from .injector import TextInjector
-from .switcher import LayoutSwitcher
+from .switcher import LayoutSwitcher, key_sender_for
 
 logger = logging.getLogger(__name__)
 
@@ -189,8 +189,12 @@ def cmd_status(_args: argparse.Namespace) -> int:
     else:
         print(_(MSG_NOT_RUNNING))
 
-    switcher = LayoutSwitcher(layouts=config.layouts, switch_method=config.switch_method)
     injector = TextInjector(backend=config.backend)
+    switcher = LayoutSwitcher(
+        layouts=config.layouts,
+        switch_method=config.switch_method,
+        key_sender=key_sender_for(injector),
+    )
     print(_("Раскладки: {0}").format(", ".join(config.layouts)))
     print(_("Текущая раскладка: {0}").format(switcher.get_current_layout(force=True)))
     print(_("Режим: {0}").format(config.mode))
@@ -884,8 +888,12 @@ def cmd_fix(args: argparse.Namespace) -> int:
     # Match the daemon: taught words must make an otherwise unknown token (a
     # brand such as ``vercel``) a valid target, or ``fix`` disagrees with it.
     detector.set_user_words(load_user_dictionary(config.dictionary_custom_path))
-    switcher = LayoutSwitcher(layouts=config.layouts, switch_method=config.switch_method)
     injector = TextInjector(converter=converter, backend=config.backend)
+    switcher = LayoutSwitcher(
+        layouts=config.layouts,
+        switch_method=config.switch_method,
+        key_sender=key_sender_for(injector),
+    )
 
     current = switcher.get_current_layout(force=True)
     target = detector.target_layout(text, current)
@@ -1056,7 +1064,11 @@ def cmd_explain(args: argparse.Namespace) -> int:
         thematic_categories=config.installed_dict_categories,
     )
     detector.set_user_words(load_user_dictionary(config.dictionary_custom_path))
-    switcher = LayoutSwitcher(layouts=config.layouts, switch_method=config.switch_method)
+    switcher = LayoutSwitcher(
+        layouts=config.layouts,
+        switch_method=config.switch_method,
+        key_sender=key_sender_for(TextInjector(backend=config.backend)),
+    )
     current = args.layout or switcher.get_current_layout(force=True)
 
     target = detector.target_layout(text, current)
