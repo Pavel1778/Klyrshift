@@ -140,7 +140,8 @@ always to make udev re-apply the rule, not to change group membership.
 
    ```bash
    cat /usr/lib/udev/rules.d/71-klyrshift.rules      # or /etc/udev/rules.d/
-   # expected: KERNEL=="event*", TAG+="uaccess"
+   # expected: KERNEL=="event*", ENV{ID_INPUT_KEYBOARD}=="1", TAG+="uaccess"
+   #           KERNEL=="event*", ATTRS{name}=="klyrshift*", TAG+="uaccess"
    #           KERNEL=="uinput", TAG+="uaccess", OPTIONS+="static_node=uinput"
    ```
 

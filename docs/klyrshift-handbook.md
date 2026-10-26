@@ -1264,7 +1264,8 @@ always to make udev re-apply the rule, not to change group membership.
 
    ```bash
    cat /usr/lib/udev/rules.d/71-klyrshift.rules      # or /etc/udev/rules.d/
-   # expected: KERNEL=="event*", TAG+="uaccess"
+   # expected: KERNEL=="event*", ENV{ID_INPUT_KEYBOARD}=="1", TAG+="uaccess"
+   #           KERNEL=="event*", ATTRS{name}=="klyrshift*", TAG+="uaccess"
    #           KERNEL=="uinput", TAG+="uaccess", OPTIONS+="static_node=uinput"
    ```
 
@@ -2393,9 +2394,16 @@ process belonging to a logged-out user does not keep keyboard access. The
 packaged rule is:
 
 ```
-ACTION!="remove", KERNEL=="event*", TAG+="uaccess"
+ACTION!="remove", KERNEL=="event*", ENV{ID_INPUT_KEYBOARD}=="1", TAG+="uaccess"
+ACTION!="remove", KERNEL=="event*", ATTRS{name}=="klyrshift*", TAG+="uaccess"
 ACTION!="remove", KERNEL=="uinput", TAG+="uaccess", OPTIONS+="static_node=uinput"
 ```
+
+Only keyboards are opened: the daemon reads nothing else, so the mouse, touchpad
+and joysticks stay closed to the rest of the session. The second line covers
+Klyrshift's own virtual keyboards, which declare only the keys they emit and so
+may not be classified as keyboards; without read access python-evdev waits ~2 s
+for every such device it creates.
 
 `OPTIONS+="static_node=uinput"` makes udev create `/dev/uinput` at boot once the
 module is loaded, so the node exists before the daemon starts.

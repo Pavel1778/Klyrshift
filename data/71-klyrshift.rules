@@ -16,8 +16,17 @@
 #   sudo udevadm control --reload-rules && sudo udevadm trigger
 # after editing.
 
-# Read access to keyboard event devices for the active session user.
-ACTION!="remove", KERNEL=="event*", TAG+="uaccess"
+# Read access to keyboard event devices for the active session user. Only
+# keyboards: the daemon reads nothing else, so the mouse, touchpad, joysticks
+# and other input devices stay closed to other processes of the session.
+# ID_INPUT_KEYBOARD is set earlier by 60-input-id.rules.
+ACTION!="remove", KERNEL=="event*", ENV{ID_INPUT_KEYBOARD}=="1", TAG+="uaccess"
+
+# Klyrshift's own virtual keyboards. They declare only the keys they emit, so
+# udev may not classify them as keyboards; without read access python-evdev
+# waits ~2 s for every device it creates. They carry only what Klyrshift itself
+# types, so reading them exposes nothing new.
+ACTION!="remove", KERNEL=="event*", ATTRS{name}=="klyrshift*", TAG+="uaccess"
 
 # Write access to the virtual keyboard used to rewrite text. static_node creates
 # /dev/uinput on boot when the uinput module is already loaded.
