@@ -302,20 +302,152 @@ def test_uinput_batch_is_atomic(
     fake_evdev_mod = sys.modules["evdev"]
     monkeypatch.setattr(fake_evdev_mod, "UInput", RecordingUInput)
 
+    synced_at: list[int] = []
+
+    class SynRecordingUInput(RecordingUInput):
+        def syn(self) -> None:
+            super().syn()
+            synced_at.append(len(self.events))
+
+    monkeypatch.setattr(fake_evdev_mod, "UInput", SynRecordingUInput)
+
     injector = TextInjector(backend="uinput")
     assert injector.replace_text(6, "привет", "ru") is True
 
-    # One device for the backspace batch, one for the replacement text.
-    assert len(created) == 2
-    backspace_device, text_device = created
-    assert backspace_device.synced == 1
-    assert text_device.synced == 1
-    # The backspace device emits exactly six Backspaces (press + release each)
+    # One shared device, flushed twice: once after the backspaces, once after
+    # the replacement text.
+    assert len(created) == 1
+    (device,) = created
+    assert device.synced == 2
+    first_flush = synced_at[0]
+    # The first flush carries exactly six Backspaces (press + release each)
     # and nothing else: the deletion is complete before the text is typed.
-    backspaces = [e for e in backspace_device.events if e[1] == _KNOWN_FAKE_KEYS["KEY_BACKSPACE"]]
-    assert len(backspaces) == 12
-    assert all(e[1] == _KNOWN_FAKE_KEYS["KEY_BACKSPACE"] for e in backspace_device.events)
-    assert not any(e[1] == _KNOWN_FAKE_KEYS["KEY_BACKSPACE"] for e in text_device.events)
+    deletion, typing = device.events[:first_flush], device.events[first_flush:]
+    assert len(deletion) == 12
+    assert all(e[1] == _KNOWN_FAKE_KEYS["KEY_BACKSPACE"] for e in deletion)
+    assert typing
+    assert not any(e[1] == _KNOWN_FAKE_KEYS["KEY_BACKSPACE"] for e in typing)
+
+
+def test_uinput_device_is_reused_across_fixes(
+    monkeypatch: pytest.MonkeyPatch, fake_uinput: type[_FakeUInputDevice]
+) -> None:
+    """Every call shares one virtual keyboard instead of creating its own.
+
+    Creating ``evdev.UInput`` costs ~100 ms and the compositor needs time to
+    pick up a new device, so a device per call made every fix pay that twice.
+    """
+    created: list[_FakeUInputDevice] = []
+
+    class RecordingUInput(_FakeUInputDevice):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            created.append(self)
+
+    monkeypatch.setattr(TextInjector, "_uinput_available", lambda self: True)
+    monkeypatch.setattr(sys.modules["evdev"], "UInput", RecordingUInput)
+
+    injector = TextInjector(backend="uinput")
+    assert injector.replace_text(6, "привет", "ru") is True
+    assert injector.replace_text(5, "hello", "us") is True
+    assert injector._type_uinput("Qq ", "us") is True
+    assert injector._uinput_tap("KEY_BACKSPACE", count=2) is True
+    assert len(created) == 1
+
+
+def test_uinput_device_grows_for_an_unknown_key(
+    monkeypatch: pytest.MonkeyPatch, fake_uinput: type[_FakeUInputDevice]
+) -> None:
+    """A key outside the shared set grows the device once, then it is reused."""
+    created: list[set[int]] = []
+
+    class RecordingUInput(_FakeUInputDevice):
+        def __init__(self, capabilities: dict[int, list[int]], **kwargs: object) -> None:
+            super().__init__(capabilities, **kwargs)
+            created.append(set(capabilities[1]))
+
+    monkeypatch.setattr(TextInjector, "_uinput_available", lambda self: True)
+    monkeypatch.setattr(sys.modules["evdev"], "UInput", RecordingUInput)
+    ctrl = sys.modules["evdev"].ecodes.KEY_LEFTCTRL
+
+    injector = TextInjector(backend="uinput")
+    assert injector.replace_text(1, "a", "us") is True
+    assert injector.tap_combo(["KEY_LEFTCTRL", "KEY_C"]) is True
+    # Whether Ctrl needed a rebuild depends on the fake key codes; either way
+    # the live device can now press it, and nothing is rebuilt afterwards.
+    assert ctrl in created[-1]
+    devices = len(created)
+    assert devices <= 2
+    assert injector.tap_combo(["KEY_LEFTCTRL", "KEY_C"]) is True
+    assert injector.replace_text(1, "b", "us") is True
+    assert len(created) == devices
+
+
+def test_uinput_device_is_rebuilt_after_a_failed_write(
+    monkeypatch: pytest.MonkeyPatch, fake_uinput: type[_FakeUInputDevice]
+) -> None:
+    """A write error drops the shared device; the next call creates a new one."""
+    created: list[_FakeUInputDevice] = []
+
+    class BreakableUInput(_FakeUInputDevice):
+        broken = False
+
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            created.append(self)
+
+        def write(self, event_type: int, code: int, value: int) -> None:
+            if self.broken:
+                raise OSError("device went away")
+            super().write(event_type, code, value)
+
+    monkeypatch.setattr(TextInjector, "_uinput_available", lambda self: True)
+    monkeypatch.setattr(sys.modules["evdev"], "UInput", BreakableUInput)
+
+    injector = TextInjector(backend="uinput")
+    assert injector._uinput_tap("KEY_BACKSPACE") is True
+    created[0].broken = True
+    assert injector._uinput_tap("KEY_BACKSPACE") is False
+    assert injector._uinput_tap("KEY_BACKSPACE") is True
+    assert len(created) == 2
+
+
+def test_uinput_warm_up_and_close(
+    monkeypatch: pytest.MonkeyPatch, fake_uinput: type[_FakeUInputDevice]
+) -> None:
+    """``warm_up`` creates the shared device early; ``close`` destroys it."""
+    created: list[_FakeUInputDevice] = []
+    closed: list[_FakeUInputDevice] = []
+
+    class ClosableUInput(_FakeUInputDevice):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            created.append(self)
+
+        def close(self) -> None:
+            closed.append(self)
+
+    monkeypatch.setattr(TextInjector, "_uinput_available", lambda self: True)
+    monkeypatch.setattr(sys.modules["evdev"], "UInput", ClosableUInput)
+
+    injector = TextInjector(backend="uinput")
+    injector.warm_up()
+    assert len(created) == 1
+    assert injector.replace_text(2, "gh", "us") is True
+    assert len(created) == 1
+    injector.close()
+    assert closed == created
+    injector.close()  # idempotent
+    assert closed == created
+
+
+def test_warm_up_is_a_no_op_for_other_backends(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(TextInjector, "_uinput_available", lambda self: False)
+    monkeypatch.setattr(injector_module, "_which", lambda name: "/usr/bin/" + name)
+    injector = TextInjector(backend="wtype")
+    injector.warm_up()
+    injector.close()
+    assert injector._device is None
 
 
 def test_uinput_batch_no_syn_means_nothing_applied(

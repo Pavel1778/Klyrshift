@@ -2235,6 +2235,12 @@ class KlyrshiftDaemon:
                 logger.debug("Cannot register the control socket: %s", exc)
                 self._stop_control()
 
+        # Create the virtual keyboard now, not on the first fix, so the
+        # compositor is already listening to it when the first word is retyped.
+        warm_up = getattr(self.injector, "warm_up", None)
+        if callable(warm_up):
+            warm_up()
+
         logger.info(
             "Klyrshift started (%d device(s), %s, %s%s)",
             len(devices),
@@ -2269,6 +2275,10 @@ class KlyrshiftDaemon:
                     device.close()
             self._stop_tray()
             self._stop_control()
+            close_injector = getattr(self.injector, "close", None)
+            if callable(close_injector):
+                with contextlib.suppress(OSError):
+                    close_injector()
             self.learning.persist(force=True)
             self.release_lock()
         logger.info("Klyrshift stopped")

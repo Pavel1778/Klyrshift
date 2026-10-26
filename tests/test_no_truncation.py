@@ -43,13 +43,20 @@ class RecordingUInput:
         self.name = name
         self.written: list[tuple[int, int, int]] = []
         self.synced = 0
+        # The events of each flush (``syn``) in order. The injector reuses one
+        # device, so the deletion and the replacement are its first two batches.
+        self.batches: list[list[tuple[int, int, int]]] = []
+        self._pending: list[tuple[int, int, int]] = []
         RecordingUInput.instances.append(self)
 
     def write(self, event_type: int, code: int, value: int) -> None:
         self.written.append((event_type, code, value))
+        self._pending.append((event_type, code, value))
 
     def syn(self) -> None:
         self.synced += 1
+        self.batches.append(self._pending)
+        self._pending = []
 
     def close(self) -> None:
         return None
@@ -58,6 +65,11 @@ class RecordingUInput:
     def presses(self) -> list[tuple[int, int, int]]:
         """Only the key-down events (value == 1)."""
         return [event for event in self.written if event[2] == 1]
+
+
+def _presses(batch: list[tuple[int, int, int]]) -> list[tuple[int, int, int]]:
+    """Only the key-down events (value == 1) of one flushed batch."""
+    return [event for event in batch if event[2] == 1]
 
 
 class FakeSwitcher:
@@ -175,17 +187,17 @@ def test_uinput_emits_five_backspaces_and_five_letters(monkeypatch: pytest.Monke
     injector = TextInjector(backend="uinput")
     assert injector.replace_text(5, "hello", "us") is True
 
-    assert len(RecordingUInput.instances) == 2
-    backspace_device, text_device = RecordingUInput.instances
+    (device,) = RecordingUInput.instances
+    deletion, replacement = device.batches
 
     # The deletion is a complete, self-contained batch: five Backspaces
     # (press + release each) and one syn.
-    assert backspace_device.presses == [(EV_KEY, BACKSPACE, 1)] * 5
-    assert backspace_device.synced == 1
+    assert _presses(deletion) == [(EV_KEY, BACKSPACE, 1)] * 5
+    assert all(code == BACKSPACE for _etype, code, _value in deletion)
 
     # The replacement is exactly the five letters of "hello" (no Shift for
     # lowercase), flushed with its own syn.
-    letters = [code for _etype, code, _value in text_device.presses]
+    letters = [code for _etype, code, _value in _presses(replacement)]
     assert letters == [
         int(evdev.ecodes.KEY_H),
         int(evdev.ecodes.KEY_E),
@@ -193,8 +205,7 @@ def test_uinput_emits_five_backspaces_and_five_letters(monkeypatch: pytest.Monke
         int(evdev.ecodes.KEY_L),
         int(evdev.ecodes.KEY_O),
     ]
-    assert text_device.synced == 1
-    assert not any(code == BACKSPACE for _etype, code, _value in text_device.written)
+    assert not any(code == BACKSPACE for _etype, code, _value in replacement)
 
 
 def test_backspace_batch_is_flushed_before_the_text_is_typed(
@@ -208,13 +219,11 @@ def test_backspace_batch_is_flushed_before_the_text_is_typed(
     injector = TextInjector(backend="uinput", settle_ms=0)
     assert injector.replace_text(5, "hello", "us") is True
 
-    backspace_device, text_device = RecordingUInput.instances
-    assert backspace_device.synced == 1
-    assert text_device.synced == 1
-    # The text device is created only after the backspace batch was flushed.
-    assert RecordingUInput.instances.index(backspace_device) < RecordingUInput.instances.index(
-        text_device
-    )
+    (device,) = RecordingUInput.instances
+    # Two flushes: every Backspace is in the first, every letter in the second.
+    deletion, replacement = device.batches
+    assert {code for _etype, code, _value in deletion} == {BACKSPACE}
+    assert BACKSPACE not in {code for _etype, code, _value in replacement}
 
 
 def test_settle_delay_is_applied_between_the_batches(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -281,14 +290,12 @@ def test_daemon_with_real_uinput_injector_emits_exact_batch(
     _press(daemon, RU_WORD_KEYS)
     _press(daemon, ["KEY_SPACE"])
 
-    assert len(RecordingUInput.instances) == 2
-    backspace_device, text_device = RecordingUInput.instances
+    (device,) = RecordingUInput.instances
+    deletion, replacement = device.batches
     # Six Backspaces: the five word keys and the triggering Space.
-    assert backspace_device.presses == [(EV_KEY, BACKSPACE, 1)] * 6
-    assert backspace_device.synced == 1
-    assert text_device.synced == 1
+    assert _presses(deletion) == [(EV_KEY, BACKSPACE, 1)] * 6
     # The Space is retyped last, after "hello".
-    assert [code for _etype, code, _value in text_device.presses] == [
+    assert [code for _etype, code, _value in _presses(replacement)] == [
         int(evdev.ecodes.KEY_H),
         int(evdev.ecodes.KEY_E),
         int(evdev.ecodes.KEY_L),

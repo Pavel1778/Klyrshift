@@ -16,6 +16,7 @@ one through the configuration.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import shutil
 import subprocess
@@ -160,6 +161,39 @@ class TextInjector:
         self._requested_backend = backend
         self._backend = self._resolve_backend(backend)
         self._settle_ms = max(0, int(settle_ms))
+        # The uinput backend keeps one virtual keyboard open for its lifetime.
+        # Creating ``evdev.UInput`` costs ~100 ms (python-evdev polls until the
+        # new event node is readable) and the compositor needs a moment to start
+        # listening to a new device, so a device per call made every fix pay
+        # both, twice.
+        self._device: Any | None = None
+        self._device_codes: frozenset[int] = frozenset()
+
+    def warm_up(self) -> None:
+        """Create the shared virtual keyboard ahead of the first fix.
+
+        The daemon calls this at start-up so the compositor already knows the
+        device when the first correction is typed. A failure is not fatal: the
+        device is created on first use instead.
+        """
+        if self._backend != BACKEND_UINPUT:
+            return
+        try:
+            import evdev
+        except ImportError:
+            return
+        try:
+            self._acquire_uinput(evdev, set())
+        except (OSError, PermissionError, ValueError):
+            logger.debug("Could not pre-create the uinput device", exc_info=True)
+
+    def close(self) -> None:
+        """Destroy the shared virtual keyboard, if one is open."""
+        if self._device is not None:
+            device, self._device = self._device, None
+            self._device_codes = frozenset()
+            with contextlib.suppress(OSError):
+                self._close_uinput(device)
 
     def _uinput_available(self) -> bool:
         """Return ``True`` when a writable ``/dev/uinput`` exists."""
@@ -303,18 +337,15 @@ class TextInjector:
         shift_code = evdev.ecodes.KEY_LEFTSHIFT
         ev_key = evdev.ecodes.EV_KEY
         try:
-            device = self._open_uinput(evdev, {key_code, shift_code})
-            try:
-                for _ in range(count):
-                    device.write(ev_key, key_code, 1)
-                    device.write(ev_key, key_code, 0)
-                    device.syn()
-                    if delay:
-                        time.sleep(delay)
-            finally:
-                self._close_uinput(device)
+            device = self._acquire_uinput(evdev, {key_code, shift_code})
+            for _ in range(count):
+                device.write(ev_key, key_code, 1)
+                device.write(ev_key, key_code, 0)
+                device.syn()
+                if delay:
+                    time.sleep(delay)
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
         return True
 
@@ -343,19 +374,16 @@ class TextInjector:
         code_set = set(resolved)
         ev_key = evdev.ecodes.EV_KEY
         try:
-            device = self._open_uinput(evdev, code_set)
-            try:
-                for code in resolved[:-1]:
-                    device.write(ev_key, code, 1)
-                device.write(ev_key, resolved[-1], 1)
-                device.write(ev_key, resolved[-1], 0)
-                for code in reversed(resolved[:-1]):
-                    device.write(ev_key, code, 0)
-                device.syn()
-            finally:
-                self._close_uinput(device)
+            device = self._acquire_uinput(evdev, code_set)
+            for code in resolved[:-1]:
+                device.write(ev_key, code, 1)
+            device.write(ev_key, resolved[-1], 1)
+            device.write(ev_key, resolved[-1], 0)
+            for code in reversed(resolved[:-1]):
+                device.write(ev_key, code, 0)
+            device.syn()
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
         return True
 
@@ -403,6 +431,36 @@ class TextInjector:
         capabilities = {int(evdev.ecodes.EV_KEY): sorted(int(code) for code in key_codes)}
         return evdev.UInput(capabilities, name="klyrshift")
 
+    def _acquire_uinput(self, evdev: Any, key_codes: set[int]) -> Any:
+        """Return the shared virtual keyboard, creating it when needed.
+
+        The device is created once with every key the uinput backend can type
+        (all of :data:`_BASE_KEYS` plus Shift and Backspace) and reused for
+        every later call. A request for a key outside that set (a ``tap_combo``
+        with Ctrl, for example) recreates it with the union, so the set only
+        grows and the device is rebuilt at most a handful of times.
+        """
+        wanted = frozenset(int(code) for code in key_codes)
+        if self._device is not None and wanted <= self._device_codes:
+            return self._device
+        codes = wanted | self._device_codes | self._baseline_codes(evdev)
+        self.close()
+        self._device = self._open_uinput(evdev, set(codes))
+        self._device_codes = codes
+        return self._device
+
+    @staticmethod
+    def _baseline_codes(evdev: Any) -> frozenset[int]:
+        """Return the key codes every shared device is created with."""
+        names = {*_BASE_KEYS.values(), "KEY_LEFTSHIFT", "KEY_BACKSPACE"}
+        codes = (getattr(evdev.ecodes, name, None) for name in names)
+        return frozenset(int(code) for code in codes if code is not None)
+
+    def _uinput_failed(self) -> None:
+        """Log a failed write and drop the device so the next call rebuilds it."""
+        logger.error("Could not write to the uinput device", exc_info=True)
+        self.close()
+
     @staticmethod
     def _close_uinput(device: Any) -> None:
         """Close ``device``, tolerating backends that only implement ``close``."""
@@ -429,20 +487,17 @@ class TextInjector:
         ev_key = evdev.ecodes.EV_KEY
 
         try:
-            device = self._open_uinput(evdev, codes)
-            try:
-                for code, shift in resolved:
-                    if shift:
-                        device.write(ev_key, shift_code, 1)
-                    device.write(ev_key, code, 1)
-                    device.write(ev_key, code, 0)
-                    if shift:
-                        device.write(ev_key, shift_code, 0)
-                    device.syn()
-            finally:
-                self._close_uinput(device)
+            device = self._acquire_uinput(evdev, codes)
+            for code, shift in resolved:
+                if shift:
+                    device.write(ev_key, shift_code, 1)
+                device.write(ev_key, code, 1)
+                device.write(ev_key, code, 0)
+                if shift:
+                    device.write(ev_key, shift_code, 0)
+                device.syn()
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
         return True
 
@@ -474,36 +529,30 @@ class TextInjector:
         ev_key = evdev.ecodes.EV_KEY
 
         try:
-            device = self._open_uinput(evdev, codes)
-            try:
-                for _ in range(backspace_count):
-                    device.write(ev_key, backspace_code, 1)
-                    device.write(ev_key, backspace_code, 0)
-                device.syn()
-            finally:
-                self._close_uinput(device)
+            device = self._acquire_uinput(evdev, codes)
+            for _ in range(backspace_count):
+                device.write(ev_key, backspace_code, 1)
+                device.write(ev_key, backspace_code, 0)
+            device.syn()
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
 
         if self._settle_ms > 0:
             time.sleep(self._settle_ms / 1000.0)
 
         try:
-            device = self._open_uinput(evdev, codes)
-            try:
-                for code, shift in resolved:
-                    if shift:
-                        device.write(ev_key, shift_code, 1)
-                    device.write(ev_key, code, 1)
-                    device.write(ev_key, code, 0)
-                    if shift:
-                        device.write(ev_key, shift_code, 0)
-                device.syn()
-            finally:
-                self._close_uinput(device)
+            device = self._acquire_uinput(evdev, codes)
+            for code, shift in resolved:
+                if shift:
+                    device.write(ev_key, shift_code, 1)
+                device.write(ev_key, code, 1)
+                device.write(ev_key, code, 0)
+                if shift:
+                    device.write(ev_key, shift_code, 0)
+            device.syn()
         except (OSError, PermissionError, ValueError):
-            logger.error("Could not create uinput device", exc_info=True)
+            self._uinput_failed()
             return False
         return True
 
