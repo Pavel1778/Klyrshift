@@ -47,6 +47,65 @@ def test_unit_has_no_scheduling_directives() -> None:
     assert not any(line.startswith("CPUSchedulingPolicy") for line in active)
 
 
+def _active_unit_lines() -> list[str]:
+    text = UNIT.read_text(encoding="utf-8")
+    return [
+        line.strip()
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+
+def test_unit_is_sandboxed() -> None:
+    """The daemon reads every keystroke, so its unit drops what it never needs."""
+    active = _active_unit_lines()
+    for directive in (
+        "NoNewPrivileges=yes",
+        "LockPersonality=yes",
+        "RestrictRealtime=yes",
+        "RestrictNamespaces=yes",
+        "SystemCallArchitectures=native",
+    ):
+        assert directive in active
+    families = next(line for line in active if line.startswith("RestrictAddressFamilies="))
+    allowed = set(families.split("=", 1)[1].split())
+    # D-Bus and the control socket, device hotplug, and the opt-in update check.
+    assert allowed == {"AF_UNIX", "AF_NETLINK", "AF_INET", "AF_INET6"}
+
+
+def test_unit_avoids_directives_that_need_user_namespaces() -> None:
+    """File-system sandboxing needs a user namespace in a *user* unit.
+
+    Ubuntu restricts unprivileged user namespaces through AppArmor, so
+    ``ProtectSystem=``, ``PrivateTmp=`` and friends would make the unit fail
+    to start there -- the same restart loop as a negative ``Nice=``.
+    """
+    active = _active_unit_lines()
+    for prefix in (
+        "ProtectSystem=",
+        "ProtectHome=",
+        "PrivateTmp=",
+        "PrivateUsers=",
+        "PrivateDevices=",
+    ):
+        assert not any(line.startswith(prefix) for line in active)
+
+
+def test_offline_drop_in_resets_the_address_families() -> None:
+    """The documented offline drop-in must reset the unit's allow-list first.
+
+    systemd merges repeated ``RestrictAddressFamilies=`` allow-lists, so a
+    drop-in that only lists ``AF_UNIX AF_NETLINK`` would keep the unit's
+    ``AF_INET AF_INET6`` -- the network would stay open.
+    """
+    doc = (REPO_ROOT / "docs" / "OFFLINE_AND_PRIVACY.md").read_text(encoding="utf-8")
+    snippet = doc.split("offline.conf <<'UNIT'", 1)[1].split("UNIT", 1)[0]
+    lines = [line.strip() for line in snippet.splitlines() if line.strip()]
+    families = [line for line in lines if line.startswith("RestrictAddressFamilies=")]
+    assert families[0] == "RestrictAddressFamilies="
+    assert families[-1] == "RestrictAddressFamilies=AF_UNIX AF_NETLINK"
+
+
 def test_unit_restarts_and_runs_in_foreground() -> None:
     text = UNIT.read_text(encoding="utf-8")
     assert "Restart=always" in text

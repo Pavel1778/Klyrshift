@@ -89,6 +89,42 @@ any of those surfaces fails the test.
 `tests/test_learning.py` asserts the learning profile holds counters only and no
 typed word.
 
+## Enforcing it with systemd
+
+The user unit (`klyrshift.service`) also sandboxes the daemon, so the
+guarantees above do not rest on the code alone: it runs with
+`NoNewPrivileges=yes`, `LockPersonality=yes`, `RestrictRealtime=yes`,
+`RestrictNamespaces=yes` and `SystemCallArchitectures=native`, and may only open
+Unix, netlink and IPv4/IPv6 sockets. IPv4/IPv6 stay allowed only for the opt-in
+update check.
+
+If you never enable the update check, you can take the network away from the
+daemon entirely. Create a drop-in:
+
+```bash
+mkdir -p ~/.config/systemd/user/klyrshift.service.d
+cat > ~/.config/systemd/user/klyrshift.service.d/offline.conf <<'UNIT'
+[Service]
+RestrictAddressFamilies=
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+IPAddressDeny=any
+UNIT
+systemctl --user daemon-reload
+systemctl --user restart klyrshift.service
+```
+
+The empty `RestrictAddressFamilies=` line matters: systemd *merges* repeated
+allow-lists, so without it the unit's `AF_INET AF_INET6` would stay allowed.
+Check the result with
+`systemctl --user show -p RestrictAddressFamilies klyrshift.service`; it must
+list only `AF_NETLINK AF_UNIX`.
+
+Any attempt by the daemon to open an internet socket then fails with
+`EAFNOSUPPORT`; D-Bus, the tray, notifications and the control socket keep
+working. `klyrshift dict download` and the GUI run outside the unit, so they
+are not affected. To undo, delete `offline.conf` and run the last two commands
+again.
+
 ## What would break the guarantee
 
 Adding any of the following would violate this document and must not be merged:
