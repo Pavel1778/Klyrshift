@@ -285,3 +285,27 @@ def test_mode_matrix_manual_is_silent_auto_is_not() -> None:
             assert run_scenario(f"mode {mode}, {scenario}").replacements, (mode, scenario)
     for scenario in words.values():
         assert run_scenario(f"mode manual, {scenario}").replacements == []
+
+
+@pytest.mark.parametrize("mode", ["auto", "hybrid"])
+@pytest.mark.parametrize(
+    "boundary,char,extra",
+    [
+        ("space", " ", ""),
+        ("enter", "\n", ""),
+        ("tab", "\t", "config on_tab=true, "),
+        ("dot", ".", "config on_punctuation=true, "),
+        ("comma", ",", "config on_punctuation=true, "),
+    ],
+)
+def test_boundary_never_eats_a_character(mode: str, boundary: str, char: str, extra: str) -> None:
+    """Every boundary leaves the *whole* corrected word plus the boundary.
+
+    This is the anti-corruption invariant: the deletion counts back from the
+    caret, so a boundary left out of the count eats the word's last character
+    (`ghbdtn` + Enter -> `gпривет`). The screen must be exactly ``привет`` +
+    the boundary, for every boundary type and every correcting mode.
+    """
+    result = run_scenario(f"mode {mode}, {extra}type ghbdtn, {boundary}")
+    assert result.replacements, (mode, boundary)
+    assert result.screen == "привет" + char, (mode, boundary, result.screen)
