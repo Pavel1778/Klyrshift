@@ -29,6 +29,7 @@ Unix-сокет `SOCKET_STREAM`, который демон создаёт при
 | Команда | Ответ | Смысл |
 |---|---|---|
 | `{"cmd": "learn.list"}` | `{"words": [...]}` | список выученных слов сессии |
+| `{"cmd": "learn.rejected"}` | `{"words": [...]}` | слова, отклонённые Ctrl+Z (не исправляются в этой сессии) |
 | `{"cmd": "learn.promote", "word": "vercel"}` | `{"ok": true, "changed": true}` | закрепить слово |
 | `{"cmd": "learn.forget", "word": "vercel"}` | `{"ok": true, "changed": true}` | забыть слово (и снять подавление) |
 

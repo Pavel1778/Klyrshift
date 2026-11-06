@@ -127,16 +127,22 @@ def test_typo_is_silent_in_manual_mode_by_default() -> None:
     assert _injector(daemon).replacements == []
 
 
-def test_typo_runs_in_manual_mode_when_mode_is_auto() -> None:
-    """The T9 mode is independent of the layout mode.
+def test_manual_layout_mode_silences_automatic_typo_correction() -> None:
+    """``mode = manual`` is the master switch; T9 obeys it too.
 
-    A user who wants manual *layout* switching but automatic typo correction
-    sets ``typo_mode = "auto"`` while the global ``mode`` stays ``manual``.
+    The working mode decides *whether* anything happens automatically, and the
+    per-feature mode decides *which* pass may run. A user on ``manual`` who also
+    set ``typo_mode = "auto"`` still asked for "only when I ask": correcting
+    them on every word boundary is the reported "the app fixes me without my
+    command". The explicit hotkey is the user asking, so it still works.
     """
     daemon = _make_daemon(typo_mode="auto", mode="manual")
     _press(daemon, "langauge")
     _press(daemon, " ")
-    assert _injector(daemon).replacements == [(9, "language ", "us")]
+    assert _injector(daemon).replacements == []
+    # The explicit hotkey reaches back to the flushed word and corrects it.
+    daemon._force_typo_fix()
+    assert _injector(daemon).replacements == [(8, "language", "us")]
 
 
 def test_typo_still_runs_on_explicit_fix_in_manual_mode() -> None:

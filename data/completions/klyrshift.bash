@@ -31,7 +31,7 @@ _klyrshift() {
     done
 
     if [[ -z "$cmd" ]]; then
-        COMPREPLY=( $(compgen -W "app-mode collect-logs config dict doctor explain export fix gui hotkeys import install-autostart kill learn logs mode restart start status stop undo uninstall-autostart verify version -h --help --version --lang" -- "$cur") )
+        COMPREPLY=( $(compgen -W "app-mode collect-logs config dict doctor explain export fix gui hotkeys import install-autostart kill learn logs mode restart simulate start status stop undo uninstall-autostart verify version -h --help --version --lang" -- "$cur") )
         return 0
     fi
 
@@ -89,7 +89,7 @@ _klyrshift() {
             ;;
         learn)
             if [[ "$cur" != -* ]] && (( COMP_CWORD == i + 1 )); then
-                COMPREPLY=( $(compgen -W "list promote forget" -- "$cur") )
+                COMPREPLY=( $(compgen -W "list list-rejected promote forget" -- "$cur") )
             else
                 COMPREPLY=( $(compgen -W "--on --off --reset -h --help" -- "$cur") )
             fi
@@ -106,6 +106,9 @@ _klyrshift() {
             ;;
         restart)
             COMPREPLY=( $(compgen -W "-h --help" -- "$cur") )
+            ;;
+        simulate)
+            COMPREPLY=( $(compgen -W "--json --layout -h --help" -- "$cur") )
             ;;
         start)
             COMPREPLY=( $(compgen -W "--foreground --dry-run -h --help" -- "$cur") )

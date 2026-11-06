@@ -146,9 +146,56 @@ def test_typo_mode_auto_triggers_on_boundary() -> None:
     assert _injector(daemon).replacements == [(9, "language ", "us")]
 
 
-def test_typo_mode_independent_of_layout_mode() -> None:
-    """Manual layout mode with automatic T9: the two modes do not interfere."""
+def test_manual_layout_mode_silences_automatic_t9() -> None:
+    """``mode = manual`` is the master gate: no automatic T9 either.
+
+    The per-feature mode selects *which* pass may run, but the working mode
+    decides *whether* anything runs automatically. A ``manual`` user who also
+    set ``typo_mode = "auto"`` still wants "only when I ask" -- correcting them
+    on every boundary is the reported "the app fixes me without my command".
+    """
     daemon = _make_daemon(mode="manual", typo_mode="auto")
+    _press(daemon, "langauge")
+    _press(daemon, " ")
+    assert _injector(daemon).replacements == []
+    # The explicit hotkey is the user asking, so it still corrects.
+    daemon._force_typo_fix()
+    assert _injector(daemon).replacements == [(8, "language", "us")]
+
+
+def test_typo_hotkey_reaches_a_word_suspended_by_ctrl() -> None:
+    """``CTRL+SHIFT+F`` must fix the live word, not an empty buffer.
+
+    Pressing Ctrl begins a chord, so the daemon suspends the word being typed.
+    The lexical hotkeys used to run without restoring it, so they acted on
+    nothing and ``CTRL+SHIFT+F`` silently did nothing on a live word.
+    """
+    daemon = _make_daemon(typo_mode="manual", typo_hotkey="CTRL+SHIFT+F")
+    _press(daemon, "langauge")
+    assert daemon.buffer == "langauge"
+    # Ctrl suspends the buffer; the hotkey must put it back before correcting.
+    daemon._handle_event(FakeEvent(EV_KEY, int(evdev.ecodes.KEY_LEFTCTRL), 1))
+    assert daemon.buffer == ""
+    daemon._handle_event(FakeEvent(EV_KEY, int(evdev.ecodes.KEY_LEFTSHIFT), 1))
+    _press(daemon, "f")
+    assert _injector(daemon).replacements == [(8, "language", "us")]
+
+
+def test_manual_layout_mode_silences_automatic_punctuation() -> None:
+    """The punctuation pass obeys the working mode exactly like T9."""
+    daemon = _make_daemon(mode="manual", punctuation_mode="auto")
+    _feed(daemon, "текст--", "ru")
+    assert _injector(daemon).replacements == []
+    daemon._force_punctuation_fix()
+    assert _injector(daemon).replacements == [(7, "текст\u2014", "ru")]
+
+
+def test_per_app_auto_override_re_enables_automatic_t9(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A per-app override naming a correcting mode re-enables the passes."""
+    monkeypatch.setattr("klyrshift.daemon.get_active_app", lambda: "telegram")
+    daemon = _make_daemon(mode="manual", typo_mode="auto", app_modes={"telegram": "auto"})
     _press(daemon, "langauge")
     _press(daemon, " ")
     assert _injector(daemon).replacements == [(9, "language ", "us")]
