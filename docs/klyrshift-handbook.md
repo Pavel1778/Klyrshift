@@ -3069,12 +3069,17 @@ klyrshift simulate 'type ghbdtn, space, ctrl z, type ghbdtn, space'  # stays ghb
 klyrshift simulate --json 'type ghbdtn, space'              # machine-readable
 ```
 
-Steps are comma-separated: `type <text>`, a named `key`/`press`, the boundary
-shorthands `space`/`enter`/`tab`/`backspace`, a chord (`ctrl+z`, `shift+f12`),
-`dblshift`/`dblctrl`/`dblalt`, `layout <name>`, `mode <auto|manual|hybrid>`,
-`config key=value; ...` and `wait` (the idle flush). ``type`` presses the physical
-keys that produce the text on a US keyboard, so the active layout decides the
-glyphs on screen — that is how the wrong-layout case is reproduced.
+Steps are comma-separated: `type <text>`, a named `key`/`press` (letters, digits,
+punctuation by name — `dot`, `comma`, `minus`, `slash`, … — and
+`space`/`enter`/`tab`/`backspace`/`esc`/arrows/`f1`..`f24`), a chord (`ctrl+z`,
+`shift+f12`), `dblshift`/`dblctrl`/`dblalt`, `layout <name>`,
+`mode <auto|manual|hybrid>`, `app <name>` (pretend that application is focused,
+for the per-app mode/exception rules), `config key=value; ...` (bools, ints,
+`[a, b]` lists and `{k: v}` dicts) and `wait` (the idle flush). ``type`` presses
+the physical keys that produce the text on a US keyboard, so the active layout
+decides the glyphs on screen — that is how the wrong-layout case is reproduced.
+The simulator also renders the *screen* by applying each replacement, so a
+scenario asserts what the user would see, not just the raw replacement calls.
 
 ### Level 2: package smoke test
 
