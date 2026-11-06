@@ -113,6 +113,22 @@ def learn_list() -> list[str] | None:
     return [str(w) for w in words]
 
 
+def learn_rejected() -> list[str] | None:
+    """Return the words the user rejected with Ctrl+Z, or ``None``.
+
+    These are the words the daemon will not correct again this session. They
+    live in the daemon's memory only, so a one-shot CLI asks the running daemon
+    for them over the control socket.
+    """
+    response = _request({"cmd": "learn.rejected"})
+    if response is None:
+        return None
+    words = response.get("words")
+    if not isinstance(words, list):
+        return None
+    return [str(w) for w in words]
+
+
 def learn_promote(word: str) -> bool | None:
     """Ask the daemon to promote ``word``; ``None`` when it is not running."""
     response = _request({"cmd": "learn.promote", "word": word})

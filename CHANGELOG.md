@@ -143,6 +143,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   test sources the generated file and drives `_klyrshift`, so a completion that
   never runs fails the suite rather than passing on a string match.
 
+- **A headless scenario simulator: `klyrshift simulate`.** The daemon reads a
+  keyboard and injects synthetic keys, so it could only be exercised end to end
+  on a real desktop — which an automated agent does not have. `klyrshift
+  simulate 'type ghbdtn, space'` replaces the keyboard, the layout switcher and
+  the text injector with in-process fakes, drives the **real** daemon with a
+  scripted scenario and prints what the user would see (the screen text, each
+  replacement, the rejected words). Steps are comma-separated: `type <text>`,
+  a named `key`/`press`, `space`/`enter`/`tab`/`backspace`, a chord (`ctrl+z`,
+  `shift+f12`), `dblshift`/`dblctrl`/`dblalt`, `layout <name>`,
+  `mode <auto|manual|hybrid>`, `config key=value` and `wait`. `--json` gives a
+  machine-readable result. It also models the *application's* own `Ctrl+Z`
+  undo, which the daemon only observes, so the "rejected word stays rejected"
+  behaviour is reproduced faithfully. `tests/test_simulate.py` pins it.
+
+- **`klyrshift learn list-rejected`.** The words the user undid with `Ctrl+Z`
+  (never corrected again this session) are now listable, over the local control
+  socket (`{"cmd": "learn.rejected"}`), alongside the learned-word list. Like
+  the learned vocabulary they live in the daemon's memory only.
+
 ### Changed
 
 - **The interface language is now configurable.** `Config.ui_locale`
@@ -155,6 +174,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registry disagree again.
 
 ### Fixed
+
+- **Manual mode no longer corrects without a command.** The reported bug: with
+  `mode = manual`, Klyrshift still rewrote words on its own. The layout pass was
+  gated on the working mode, but the layout-neutral T9 and punctuation passes
+  were not, so `mode = manual` with `typo_mode = "auto"` corrected every word
+  boundary. `manual` is now the master gate for every automatic pass; the
+  explicit hotkeys (`SHIFT+SHIFT`, `CTRL+SHIFT+F`/`P`) and a per-application
+  override naming a correcting mode still work. Quiet hours silence the
+  layout-neutral passes too, not only the layout pass.
+
+- **`Ctrl+Z` reliably suppresses the word it undid.** `_last_undone_word` was
+  sticky: once set by the first rejection it shadowed the word of every later
+  fix, so after the first `Ctrl+Z` the *next* correction was never suppressed and
+  kept coming back however often it was undone. Every fix now clears the
+  previous undone word, so `Ctrl+Z` rejects the word actually under the caret.
+  A rejected token that is not a plain word (a punctuation fix such as
+  `текст--`) is suppressed too, instead of being dropped by the word-only guard.
+
+- **The lexical and reverse-conversion hotkeys reach a live word.** Pressing
+  Ctrl or Alt begins a chord and suspends the word being typed, so `Ctrl+C`
+  cannot leave a stale fragment. The fix hotkey restored it, but `CTRL+SHIFT+F`
+  (T9), `CTRL+SHIFT+P` (punctuation) and `CTRL+SHIFT+T` (reverse conversion) did
+  not, so on a live word they acted on an empty buffer and silently did nothing.
+  All three now restore the suspended word first.
+
+- **The GUI CI job runs its GTK tests again.** `ubuntu-latest` moved to 26.04
+  (Python 3.14) while `setup-python` still installed 3.12; the distribution
+  PyGObject the tests import is built for the distro interpreter's ABI, so
+  `import gi` failed, every GTK test skipped and the job failed on
+  `--cov-fail-under=85` (measured 63 %). The job pins `ubuntu-24.04`.
 
 - **The README screenshots no longer contradict their captions.** The middle
   shot is committed as `advanced-settings.png` and both the README header and

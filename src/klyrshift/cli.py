@@ -328,6 +328,21 @@ def _cmd_learn_words(action: str, args: argparse.Namespace) -> int:
             print(f"  {word}")
         return 0
 
+    if action == "list-rejected":
+        words = control.learn_rejected()
+        if words is None:
+            print(
+                _("Демон не запущен: список отклонённых слов доступен только у работающего демона.")
+            )
+            return 1
+        if not words:
+            print(_("Отклонённых слов пока нет."))
+            return 0
+        print(_("Отклонённые слова ({0}) — больше не исправляются:").format(len(words)))
+        for word in words:
+            print(f"  {word}")
+        return 0
+
     word = (args.word or "").strip()
     if not word:
         print(_("Укажите слово: klyrshift learn {0} <слово>").format(action))
@@ -360,7 +375,7 @@ def cmd_learn(args: argparse.Namespace) -> int:
     from .learning import LearningStore
 
     action = getattr(args, "learn_action", None)
-    if action in {"list", "promote", "forget"}:
+    if action in {"list", "list-rejected", "promote", "forget"}:
         return _cmd_learn_words(action, args)
 
     config = load_config()
@@ -1074,6 +1089,39 @@ def cmd_explain(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_simulate(args: argparse.Namespace) -> int:
+    """Run a keystroke scenario through the real daemon, headlessly.
+
+    The daemon cannot be exercised end to end without a keyboard and a
+    compositor. This command replaces those two boundaries with in-memory fakes
+    and replays a scripted scenario, printing what the user would see. It is how
+    the daemon is tested without a real desktop -- see ``klyrshift.simulate``.
+    """
+    import json
+
+    from .simulate import ScenarioError, run_scenario
+
+    config = load_config()
+    try:
+        result = run_scenario(args.scenario, config=config, start_layout=args.layout)
+    except ScenarioError as exc:
+        print(_("Ошибка сценария: {0}").format(exc))
+        return 2
+
+    if args.json:
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0
+    print(_("Экран: {0}").format(result.screen))
+    print(_("Режим: {0} · раскладка: {1}").format(result.mode, result.layout))
+    for backspaces, text, layout in result.replacements:
+        print(_("  замена −{0} +{1} @{2}").format(backspaces, repr(text), layout))
+    if result.suppressed:
+        print(_("Отклонено (Ctrl+Z): {0}").format(", ".join(result.suppressed)))
+    if result.learned:
+        print(_("Выучено: {0}").format(", ".join(result.learned)))
+    return 0
+
+
 def cmd_doctor(_args: argparse.Namespace) -> int:
     """Run environment self-diagnosis and print a status table."""
     return run_doctor()
@@ -1165,8 +1213,11 @@ def build_parser() -> argparse.ArgumentParser:
     learn.add_argument(
         "learn_action",
         nargs="?",
-        choices=["list", "promote", "forget"],
-        help=_("list — показать выученные слова; promote/forget — закрепить/забыть слово"),
+        choices=["list", "list-rejected", "promote", "forget"],
+        help=_(
+            "list — выученные слова; list-rejected — отклонённые (Ctrl+Z); "
+            "promote/forget — закрепить/забыть слово"
+        ),
     )
     learn.add_argument("word", nargs="?", help=_("слово для promote/forget"))
     learn.add_argument("--on", action="store_true", help=_("включить обучение"))
@@ -1265,6 +1316,14 @@ def build_parser() -> argparse.ArgumentParser:
     explain.add_argument("--text", help=_("текст для анализа (иначе читается из stdin)"))
     explain.add_argument("--layout", default="", help=_("текущая раскладка (иначе определяется)"))
     explain.set_defaults(func=cmd_explain)
+
+    simulate = subparsers.add_parser(
+        "simulate", help=_("прогнать сценарий нажатий без клавиатуры (тестирование)")
+    )
+    simulate.add_argument("scenario", help=_("шаги через запятую, например 'type ghbdtn, space'"))
+    simulate.add_argument("--json", action="store_true", help=_("вывести результат в JSON"))
+    simulate.add_argument("--layout", default="us", help=_("раскладка в начале сценария"))
+    simulate.set_defaults(func=cmd_simulate)
 
     doctor = subparsers.add_parser("doctor", help=_("самодиагностика окружения"))
     doctor.set_defaults(func=cmd_doctor)

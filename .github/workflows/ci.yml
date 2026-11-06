@@ -64,7 +64,17 @@ jobs:
 
   gui:
     name: GUI (GTK4 under xvfb)
-    runs-on: ubuntu-latest
+    # Pinned to 24.04 on purpose. The GUI tests import the *distribution*
+    # PyGObject (``python3-gi``) from ``/usr/lib/python3/dist-packages`` because
+    # building PyGObject from source needs ``girepository-2.0``, which the
+    # Ubuntu dev packages do not provide. That distro ``gi`` is a compiled
+    # extension built for the distro interpreter's ABI. When ``ubuntu-latest``
+    # moved to 26.04 (Python 3.14) while ``setup-python`` still installed 3.12,
+    # ``import gi`` failed, every GTK test skipped, the GUI modules dropped to
+    # 0% coverage and the job failed on ``--cov-fail-under=85`` (measured: 63%).
+    # The pin keeps the distro ABI and the test interpreter in step; bump it
+    # together with the ``python-version`` below.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7

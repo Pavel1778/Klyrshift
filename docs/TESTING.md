@@ -7,8 +7,36 @@ works on a real desktop.
 | Level | What it runs | How to run | Proves |
 |---|---|---|---|
 | 1. Unit / integration | Real code, faked OS boundary | `make test` | Logic, parsing, config, conversion |
+| 1b. Headless scenario | Real daemon, faked keyboard and injector | `klyrshift simulate '...'` | End-to-end keystroke behaviour without a keyboard |
 | 2. Package smoke test | The built `.deb`, installed into a clean `debian:12` container | `make smoke-test` | The package installs, all runtime imports resolve, the CLI starts |
 | 3. Manual desktop test | A real GNOME session (Wayland and X11) | This document | Permissions, D-Bus, `uinput`, real applications |
+
+## Level 1b: the headless scenario simulator
+
+The daemon reads a keyboard and injects synthetic keys, so exercising it end to
+end normally needs a desktop. `klyrshift simulate` replaces the keyboard, the
+layout switcher and the text injector with in-process fakes and drives the
+**real** daemon with a scripted scenario, then prints what the user would see.
+It is what makes the correction logic testable without a keyboard — by a person
+or by an automated agent:
+
+```bash
+klyrshift simulate 'type ghbdtn, space'
+# Экран: привет
+# Режим: auto · раскладка: ru
+#   замена −7 +'привет ' @ru
+
+klyrshift simulate 'mode manual, type langauge, space'      # nothing happens
+klyrshift simulate 'type ghbdtn, space, ctrl z, type ghbdtn, space'  # stays ghbdtn
+klyrshift simulate --json 'type ghbdtn, space'              # machine-readable
+```
+
+Steps are comma-separated: `type <text>`, a named `key`/`press`, the boundary
+shorthands `space`/`enter`/`tab`/`backspace`, a chord (`ctrl+z`, `shift+f12`),
+`dblshift`/`dblctrl`/`dblalt`, `layout <name>`, `mode <auto|manual|hybrid>`,
+`config key=value; ...` and `wait` (the idle flush). ``type`` presses the physical
+keys that produce the text on a US keyboard, so the active layout decides the
+glyphs on screen — that is how the wrong-layout case is reproduced.
 
 ## Level 2: package smoke test
 

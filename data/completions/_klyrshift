@@ -22,6 +22,7 @@ _klyrshift() {
         'logs:show the daemon log'
         'mode:show or change the mode (auto/manual/hybrid)'
         'restart:restart the daemon'
+        'simulate:replay a keystroke scenario without a keyboard (testing)'
         'start:start the daemon'
         'status:show the status'
         'stop:stop the daemon'
@@ -110,7 +111,7 @@ _klyrshift() {
                 '--on[enable learning]' \
                 '--off[disable learning]' \
                 '--reset[reset the learning counters]' \
-                '1: :(list promote forget)'
+                '1: :(list list-rejected promote forget)'
                 ;;
             logs)
                 _arguments \
@@ -125,6 +126,11 @@ _klyrshift() {
             restart)
                 _arguments \
                 '*: :_default'
+                ;;
+            simulate)
+                _arguments \
+                '--json[print the result as JSON]' \
+                '--layout[the layout active at the start of the scenario]'
                 ;;
             start)
                 _arguments \

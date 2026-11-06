@@ -306,6 +306,25 @@ def test_control_handler_lists_promotes_and_forgets() -> None:
     assert daemon.learning.learned_words() == []
 
 
+def test_control_handler_lists_rejected_words() -> None:
+    """``learn.rejected`` exposes the words the user undid (Ctrl+Z)."""
+    daemon = make_daemon()
+    assert daemon._handle_control_request({"cmd": "learn.rejected"}) == {"words": []}
+    daemon.learning.observe_rejected("ghbdtn")
+    assert daemon._handle_control_request({"cmd": "learn.rejected"}) == {"words": ["ghbdtn"]}
+    # Forgetting the word clears the rejection too, so it is corrected again.
+    daemon._handle_control_request({"cmd": "learn.forget", "word": "ghbdtn"})
+    assert daemon._handle_control_request({"cmd": "learn.rejected"}) == {"words": []}
+
+
+def test_suppressed_words_are_listed_sorted() -> None:
+    engine = LearningEngine(store=LearningStore(path=Path("/nonexistent")))
+    for word in ("zeta", "alpha", "mid"):
+        engine.observe_rejected(word)
+    assert engine.suppressed_words() == ["alpha", "mid", "zeta"]
+    assert engine.suppressed_count() == 3
+
+
 def test_control_handler_rejects_a_missing_word() -> None:
     daemon = make_daemon()
     assert daemon._handle_control_request({"cmd": "learn.promote"}) == {"error": "missing word"}
