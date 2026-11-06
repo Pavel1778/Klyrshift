@@ -135,7 +135,8 @@ def test_typo_mode_manual_only_hotkey() -> None:
     _press(daemon, " ")
     assert _injector(daemon).replacements == []
     daemon._force_typo_fix()
-    assert _injector(daemon).replacements == [(8, "language", "us")]
+    # The Space that flushed the word is consumed and retyped with it.
+    assert _injector(daemon).replacements == [(9, "language ", "us")]
 
 
 def test_typo_mode_auto_triggers_on_boundary() -> None:
@@ -160,7 +161,8 @@ def test_manual_layout_mode_silences_automatic_t9() -> None:
     assert _injector(daemon).replacements == []
     # The explicit hotkey is the user asking, so it still corrects.
     daemon._force_typo_fix()
-    assert _injector(daemon).replacements == [(8, "language", "us")]
+    # The Space that flushed the word is consumed and retyped with it.
+    assert _injector(daemon).replacements == [(9, "language ", "us")]
 
 
 def test_typo_hotkey_reaches_a_word_suspended_by_ctrl() -> None:
@@ -187,7 +189,7 @@ def test_manual_layout_mode_silences_automatic_punctuation() -> None:
     _feed(daemon, "текст--", "ru")
     assert _injector(daemon).replacements == []
     daemon._force_punctuation_fix()
-    assert _injector(daemon).replacements == [(7, "текст\u2014", "ru")]
+    assert _injector(daemon).replacements == [(8, "текст\u2014 ", "ru")]
 
 
 def test_per_app_auto_override_re_enables_automatic_t9(

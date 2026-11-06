@@ -134,7 +134,29 @@ def test_enter_triggers_fix_and_clears_buffer() -> None:
     daemon = make_daemon()
     press(daemon, "ghbdtn")
     daemon._handle_event(make_event("KEY_ENTER", 1))
+    # The fake injector reports only Space as typable, so Enter keeps its place
+    # (the safe fallback) and is not part of the replacement.
     assert _injector(daemon).replacements == [(6, "привет", "ru")]
+    assert daemon.buffer == ""
+
+
+def test_enter_is_consumed_and_retyped_when_typable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A backend that can type Enter must consume and retype it.
+
+    Otherwise the deletion (which counts back from the caret, past the Enter)
+    eats the newline *and* the word's first character (``ghbdtn`` + Enter ->
+    ``gпривет``).
+    """
+    daemon = make_daemon()
+    injector = _injector(daemon)
+    # Model a backend that can type the boundary (the real uinput backend now
+    # has a key for Enter and Tab).
+    monkeypatch.setattr(
+        type(injector), "can_type", lambda self, char, layout: char in {" ", "\n", "\t"}
+    )
+    press(daemon, "ghbdtn")
+    daemon._handle_event(make_event("KEY_ENTER", 1))
+    assert injector.replacements == [(7, "привет\n", "ru")]
     assert daemon.buffer == ""
 
 

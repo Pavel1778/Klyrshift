@@ -361,8 +361,13 @@ class KlyrshiftDaemon:
         # the toggle converts what the user actually sees; ``_last_flushed_corrected``
         # records whether a correction was already applied, so a late double
         # Shift does not re-fix (and thereby revert) an already-corrected word.
+        # ``_last_flushed_boundary`` is the word-boundary character (Space/Enter/
+        # Tab/punctuation) that sits on screen *after* that word: a reach-back
+        # hotkey must delete it too, or the deletion eats one extra character of
+        # the word (``ghbdtn`` + Space + double Shift -> ``gпривет``).
         self._last_flushed_word: str = ""
         self._last_flushed_corrected: bool = False
+        self._last_flushed_boundary: str = ""
         self.detector.set_context_weight(config.context_weight if config.context_analysis else 0.0)
         self.detector.set_dictionary_size(config.dictionary_size)
         user_words = load_user_dictionary(config.dictionary_custom_path)
@@ -748,9 +753,13 @@ class KlyrshiftDaemon:
             return
 
         if self.config.on_punctuation and char in self.config.punctuation_chars:
-            # A punctuation boundary ends the word. The character itself is not
-            # buffered: it is not part of the word and must not be deleted.
-            self._process_buffer(boundary=True)
+            # A punctuation boundary ends the word. The character is not part of
+            # the word buffer, but it *is* on screen right after the word, so it
+            # is passed as the boundary character: the replacement consumes and
+            # retypes it, exactly like a Space. Without that the deletion eats
+            # the punctuation *and* the first character of the word
+            # (``ghbdtn.`` -> ``gпривет``).
+            self._process_buffer(boundary=True, boundary_char=char)
             return
 
         with self._lock:
@@ -1181,14 +1190,21 @@ class KlyrshiftDaemon:
         if self._shutdown_requested:
             logger.info("Shutdown requested; skipping replacement")
             return False
-        backspace_count = len(word)
+        # The withheld word is still on screen with its boundary character after
+        # it, so consume and retype that boundary too (same reason as a normal
+        # fix), or the deletion would eat the word's last character.
+        boundary = self._last_flushed_boundary
+        backspace_count = len(word) + len(boundary)
+        replacement = converted
+        if boundary and self.injector.can_type(boundary, target):
+            replacement = converted + boundary
         self.switcher.switch_to(target)
         time.sleep(0.05)
-        if not self.injector.replace_text(backspace_count, converted, target):
+        if not self.injector.replace_text(backspace_count, replacement, target):
             logger.warning("Applying the withheld suggestion failed to replace text")
             return False
         self._remember_fix_source(word)
-        self._record_undo(word, current, backspace_count, source=current, target=target)
+        self._record_undo(word + boundary, current, backspace_count, source=current, target=target)
         with self._lock:
             self._last_flushed_word = converted
             self._last_flushed_corrected = True
@@ -1236,15 +1252,19 @@ class KlyrshiftDaemon:
         its physical scancodes are gone, so the buffer is seeded with the text
         and a synthetic scancode count. ``_process_buffer`` deletes exactly that
         many characters and retypes the corrected word, matching the on-screen
-        word.
+        word. The boundary character that followed the word is passed as
+        ``boundary_char`` (without ``boundary=True``, so no settle pause), which
+        makes the replacement consume and retype it -- otherwise the fix would
+        eat the word's last character and drop the boundary
+        (``ghbdtn`` + Space + double Shift -> ``gпривет``).
         """
-        word = self._last_flushed_word
+        word, _span, boundary = self._memory_word_span()
         if not word:
             return
         with self._lock:
             self.buffer = word
             self._scancodes = [0] * len(word)
-        self._process_buffer(force=True)
+        self._process_buffer(force=True, boundary_char=boundary)
 
     def _load_snippets(self, config: Config) -> None:
         """(Re)load the snippet file named by ``config``, best-effort."""
@@ -1423,6 +1443,22 @@ class KlyrshiftDaemon:
         self._last_fixed_from = word
         self._last_undone_word = ""
 
+    def _memory_word_span(self) -> tuple[str, int, str]:
+        """Return ``(word, backspace_count, boundary)`` for the last flushed word.
+
+        The reach-back hotkeys (double Shift, toggle-layout, T9/punctuation,
+        accept-suggestion) act on a word that a boundary already consumed, so
+        the live buffer is empty. The deletion counts characters back from the
+        caret, and the boundary character (Space/Enter/Tab/punctuation) sits
+        between the caret and the word, so it must be included in the count --
+        otherwise the deletion eats the word's last character
+        (``ghbdtn`` + Space + double Shift -> ``gпривет``). The boundary is
+        returned too so the caller can retype it after the corrected word.
+        """
+        word = self._last_flushed_word
+        boundary = self._last_flushed_boundary
+        return word, len(word) + len(boundary), boundary
+
     def _record_undo(
         self,
         original: str,
@@ -1563,10 +1599,10 @@ class KlyrshiftDaemon:
             if self.buffer:
                 word = self.buffer.strip()
                 backspace_count = len(self._scancodes)
+                boundary = ""
                 from_buffer = True
             else:
-                word = self._last_flushed_word
-                backspace_count = len(word)
+                word, backspace_count, boundary = self._memory_word_span()
                 from_buffer = False
         if not word:
             logger.debug("Toggle-layout hotkey ignored: no word to convert")
@@ -1593,11 +1629,17 @@ class KlyrshiftDaemon:
 
         self.switcher.switch_to(target)
         time.sleep(0.05)
-        if not self.injector.replace_text(backspace_count, converted, target):
+        # Consume and retype the boundary character that followed the word, so
+        # the deletion covers it and the space/newline/punctuation keeps its
+        # place (only when the backend can type it back).
+        replacement = converted
+        if boundary and self.injector.can_type(boundary, target):
+            replacement = converted + boundary
+        if not self.injector.replace_text(backspace_count, replacement, target):
             logger.warning("Manual layout toggle failed to replace text")
             return False
         self._remember_fix_source(word)
-        self._record_undo(word, current, backspace_count, source=current, target=target)
+        self._record_undo(word + boundary, current, backspace_count, source=current, target=target)
         # The on-screen word is now the converted one; keep the memory in step
         # so pressing the hotkey again flips it back.
         with self._lock:
@@ -1637,10 +1679,10 @@ class KlyrshiftDaemon:
             if self.buffer:
                 word = self.buffer.strip()
                 backspace_count = len(self._scancodes)
+                boundary = ""
                 from_buffer = True
             else:
-                word = self._last_flushed_word
-                backspace_count = len(word)
+                word, backspace_count, boundary = self._memory_word_span()
                 from_buffer = False
         if not word:
             logger.debug("%s hotkey ignored: no word to correct", label)
@@ -1657,11 +1699,16 @@ class KlyrshiftDaemon:
         if self._shutdown_requested:
             logger.info("Shutdown requested; skipping replacement")
             return False
-        if not self.injector.replace_text(backspace_count, fixed, current):
+        # Consume and retype the boundary that followed the word (same reason as
+        # the automatic fix), so the deletion covers it and it keeps its place.
+        replacement = fixed
+        if boundary and self.injector.can_type(boundary, current):
+            replacement = fixed + boundary
+        if not self.injector.replace_text(backspace_count, replacement, current):
             logger.warning("Manual %s fix failed to replace text", label)
             return False
         self._remember_fix_source(word)
-        self._record_undo(word, current, backspace_count, source=current, target=current)
+        self._record_undo(word + boundary, current, backspace_count, source=current, target=current)
         with self._lock:
             if from_buffer:
                 self.buffer = ""
@@ -1911,7 +1958,7 @@ class KlyrshiftDaemon:
         if boundary:
             logger.debug(
                 "Boundary flush: trigger=%s scancodes=%d buffer_len=%d",
-                "space/enter/tab",
+                repr(boundary_char) if boundary_char else "boundary",
                 backspace_count,
                 len(buffer),
             )
@@ -1923,6 +1970,10 @@ class KlyrshiftDaemon:
         # non-empty buffer, so an empty hotkey flush does not erase the memory.
         self._last_flushed_word = buffer
         self._last_flushed_corrected = False
+        # The boundary character is on screen right after the word; a reach-back
+        # hotkey (double Shift, toggle-layout, T9/punctuation) deletes from the
+        # caret, so it must include this character or it eats one extra.
+        self._last_flushed_boundary = boundary_char
         # A new word supersedes any offer made for the previous one. Clearing
         # here (not after a successful fix) means a stale suggestion can never
         # be applied to text the user has since moved past.
@@ -2098,21 +2149,25 @@ class KlyrshiftDaemon:
         self.switcher.switch_to(target)
         time.sleep(0.05)
 
-        # The word-boundary key (Space/Enter/Tab) that triggered the flush is
-        # already on screen right after the word, so the on-screen text is
-        # ``buffer + boundary_char``. A Space is the only boundary that is both
-        # layout-invariant and reliably typable by every backend, so only a
-        # Space is consumed and retyped: the replacement deletes one extra
-        # character and types the corrected word followed by the Space again.
-        # That is what stops the Space from being stranded in front of the word
-        # (``hello`` -> ``рhello``). Enter/Tab keep their place after the
-        # corrected text, because deleting them without being able to retype
-        # them would silently drop the user's newline or tab.
+        # The word-boundary key (Space/Enter/Tab/punctuation) that triggered the
+        # flush is already on screen right after the word, so the on-screen text
+        # is ``buffer + boundary_char``. That key must be part of the deletion:
+        # deleting only the word keys would strand it in front of the correction
+        # (``руддщ `` -> ``рhello``), because the deletion counts characters from
+        # the caret backwards and the boundary sits between the caret and the
+        # word. When the backend can type the boundary back, it is consumed and
+        # retyped so it keeps its place. The ``uinput`` backend can now type
+        # Space, Enter, Tab and punctuation; a backend that cannot type it leaves
+        # the boundary alone (its previous behaviour), which is the safe failure:
+        # a stranded character is recoverable, a dropped newline is not. Retyping
+        # means the application may see the boundary twice (the original key and
+        # the retyped one); Space has always made that trade-off, and the
+        # alternative -- not counting the boundary -- corrupts the word.
         replacement = converted
         backspace_total = backspace_count
-        if boundary_char == " " and self.injector.can_type(boundary_char, target):
+        if boundary_char and self.injector.can_type(boundary_char, target):
             replacement = converted + boundary_char
-            backspace_total = backspace_count + 1
+            backspace_total = backspace_count + len(boundary_char)
 
         logger.debug(
             "Sending %d backspaces, then injecting %d chars into %s (boundary=%r)",

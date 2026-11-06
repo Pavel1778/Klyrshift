@@ -1202,6 +1202,12 @@ package as above.
    on_tab = false
    on_punctuation = false
    ```
+   The boundary key is part of the correction: it is deleted and retyped, so it
+   keeps its place. In an application that *acts* on Enter (a chat that sends on
+   Enter), that means the key may be seen twice -- once by the application and
+   once by the correction. Turn `on_enter = false` in such an application (or
+   list it in `exceptions_apps`) and let Space or the idle timeout flush the
+   word instead.
    If you type a word without ever pressing a boundary, the idle fallback
    `analysis_timeout` (default `0.8` s) flushes it. With
    `analysis_timeout_adaptive = true` (the default) that timeout follows your
@@ -1493,10 +1499,14 @@ Klyrshift avoids this in three ways, all on by default:
 
 - The daemon counts *physical keys*, not characters, so the number of
   Backspaces always equals the number of keys pressed.
-- When the trigger is a Space, the Space is already on screen: the daemon
-  deletes it too and retypes it after the corrected word, so it is never
-  stranded in front of the text. (Enter and Tab keep their place after the
-  corrected word instead, so a newline or tab is never dropped.)
+- When the trigger is a word-boundary key (Space, Enter, Tab or punctuation),
+  that key is already on screen after the word: the daemon deletes it too and
+  retypes it after the corrected word, so it is never stranded in front of the
+  text. (The deletion counts characters back from the caret, so a boundary that
+  was left out of the count would eat the word's last character:
+  `ghbdtn` + Enter -> `gпривет`. The `uinput` backend can type Space, Enter,
+  Tab and punctuation back; a backend that cannot type the boundary leaves it
+  in place, which is the safe failure.)
 - The `uinput` backend flushes the backspaces, waits `backspace_settle_ms`, then
   types the replacement. Keys you press during that pause are queued and
   replayed afterwards, so nothing is lost.
@@ -2351,12 +2361,14 @@ lets the compositor apply the deletion before the new text arrives. The
 backspace batch is still flushed with a single `syn`, so a crash before that
 point leaves the text untouched instead of half-deleted.
 
-When the flush is triggered by a word-boundary key (Space/Enter/Tab), the daemon
-waits an additional `trigger_settle_ms` (default 50 ms) *before* the deletion.
-The boundary key that ended the word is still being processed by the compositor
-at that instant; deleting immediately races it and leaves the first character
-behind (`руддщ ` -> `рhello`). The idle fallback and an explicit hotkey skip this
-pause, because no boundary key is in flight.
+When the flush is triggered by a word-boundary key (Space/Enter/Tab/punctuation),
+the daemon waits an additional `trigger_settle_ms` (default 50 ms) *before* the
+deletion. The boundary key that ended the word is still being processed by the
+compositor at that instant; deleting immediately races it and leaves the first
+character behind (`руддщ ` -> `рhello`). The boundary key is then part of the
+deletion and is retyped with the corrected word, so it keeps its place. The idle
+fallback and an explicit hotkey skip this pause, because no boundary key is in
+flight.
 
 A word-boundary trigger is the practical limit of "real time": a word cannot be
 corrected before it is finished, because until then the detector does not know
@@ -3974,6 +3986,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registry disagree again.
 
 #### Fixed
+
+- **Enter, Tab and punctuation no longer eat the first character of a word.**
+  Only a Space boundary consumed and retyped its key; Enter, Tab and the
+  punctuation trigger left the boundary character on screen, so the deletion
+  (which counts back from the caret, past that character) removed it *and* the
+  word's last character: `ghbdtn` + Enter produced `gпривет`. `on_enter` is on
+  by default, so this hit ordinary typing. The daemon now consumes and retypes
+  any boundary the backend can type (the `uinput` backend learned keys for
+  Enter and Tab), and a backend that cannot type it leaves it in place, which
+  is the safe failure.
+
+- **A reach-back hotkey no longer eats a character after a boundary.** Double
+  Shift, toggle-layout, the T9/punctuation hotkeys and accept-suggestion all
+  delete the last flushed word, but used `len(word)` backspaces while the
+  boundary character was still on screen: `manual` mode + `ghbdtn` + Space +
+  double Shift produced `gпривет`. They now delete the word *and* the trailing
+  boundary and retype both, via `_memory_word_span()`.
 
 - **Manual mode no longer corrects without a command.** The reported bug: with
   `mode = manual`, Klyrshift still rewrote words on its own. The layout pass was

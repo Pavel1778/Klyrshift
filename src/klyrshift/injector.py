@@ -37,7 +37,15 @@ BACKSPACE_DELAY: Final[float] = 0.005
 SETTLE_DELAY: Final[float] = 0.05
 
 # Canonical US character -> (evdev key name, requires shift).
+#
+# ``\n`` and ``\t`` are included so a word-boundary fix can consume and retype
+# the Enter/Tab that triggered it. The daemon deletes from the end of the line,
+# so the boundary key must be part of the deletion and be typed back; without a
+# key for it the deletion would eat the boundary character and the first
+# character of the word (``ghbdtn`` + Enter -> ``gпривет``).
 _BASE_KEYS: Final[dict[str, str]] = {
+    "\n": "KEY_ENTER",
+    "\t": "KEY_TAB",
     "`": "KEY_GRAVE",
     "1": "KEY_1",
     "2": "KEY_2",

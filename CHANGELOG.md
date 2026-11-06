@@ -175,6 +175,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Enter, Tab and punctuation no longer eat the first character of a word.**
+  Only a Space boundary consumed and retyped its key; Enter, Tab and the
+  punctuation trigger left the boundary character on screen, so the deletion
+  (which counts back from the caret, past that character) removed it *and* the
+  word's last character: `ghbdtn` + Enter produced `gпривет`. `on_enter` is on
+  by default, so this hit ordinary typing. The daemon now consumes and retypes
+  any boundary the backend can type (the `uinput` backend learned keys for
+  Enter and Tab), and a backend that cannot type it leaves it in place, which
+  is the safe failure.
+
+- **A reach-back hotkey no longer eats a character after a boundary.** Double
+  Shift, toggle-layout, the T9/punctuation hotkeys and accept-suggestion all
+  delete the last flushed word, but used `len(word)` backspaces while the
+  boundary character was still on screen: `manual` mode + `ghbdtn` + Space +
+  double Shift produced `gпривет`. They now delete the word *and* the trailing
+  boundary and retype both, via `_memory_word_span()`.
+
 - **Manual mode no longer corrects without a command.** The reported bug: with
   `mode = manual`, Klyrshift still rewrote words on its own. The layout pass was
   gated on the working mode, but the layout-neutral T9 and punctuation passes

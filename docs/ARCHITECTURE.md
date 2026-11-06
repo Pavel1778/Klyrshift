@@ -87,12 +87,14 @@ lets the compositor apply the deletion before the new text arrives. The
 backspace batch is still flushed with a single `syn`, so a crash before that
 point leaves the text untouched instead of half-deleted.
 
-When the flush is triggered by a word-boundary key (Space/Enter/Tab), the daemon
-waits an additional `trigger_settle_ms` (default 50 ms) *before* the deletion.
-The boundary key that ended the word is still being processed by the compositor
-at that instant; deleting immediately races it and leaves the first character
-behind (`руддщ ` -> `рhello`). The idle fallback and an explicit hotkey skip this
-pause, because no boundary key is in flight.
+When the flush is triggered by a word-boundary key (Space/Enter/Tab/punctuation),
+the daemon waits an additional `trigger_settle_ms` (default 50 ms) *before* the
+deletion. The boundary key that ended the word is still being processed by the
+compositor at that instant; deleting immediately races it and leaves the first
+character behind (`руддщ ` -> `рhello`). The boundary key is then part of the
+deletion and is retyped with the corrected word, so it keeps its place. The idle
+fallback and an explicit hotkey skip this pause, because no boundary key is in
+flight.
 
 A word-boundary trigger is the practical limit of "real time": a word cannot be
 corrected before it is finished, because until then the detector does not know

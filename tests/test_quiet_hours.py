@@ -152,7 +152,7 @@ def test_quiet_hours_also_silence_the_lexical_passes(monkeypatch: pytest.MonkeyP
     assert injector.replacements == []
     # The explicit hotkey still corrects.
     daemon._force_typo_fix()
-    assert injector.replacements == [(8, "language", "us")]
+    assert injector.replacements == [(9, "language ", "us")]
 
 
 def test_invalid_quiet_hours_time_is_rejected() -> None:
