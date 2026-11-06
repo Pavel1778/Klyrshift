@@ -119,7 +119,9 @@ def test_double_shift_after_space_fixes_in_manual_mode() -> None:
     tap(daemon, "KEY_LEFTSHIFT")
     time.sleep(0.02)
     tap(daemon, "KEY_LEFTSHIFT")
-    assert _injector(daemon).replacements == [(6, "привет", "ru")]
+    # The Space that flushed the word is still on screen, so the reach-back fix
+    # deletes it too and retypes it: (7, "привет ", "ru"), not (6, "привет").
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
 
 
 def test_double_shift_after_auto_fix_does_not_revert() -> None:
@@ -169,7 +171,9 @@ def test_toggle_layout_uses_last_flushed_word() -> None:
     press(daemon, "ghbdtn")
     tap(daemon, "KEY_SPACE")  # buffer cleared, memory keeps the word
     daemon._run_hotkey("toggle_layout")
-    assert _injector(daemon).replacements == [(6, "ghbdtn", "us")]
+    # The Space is still on screen after the word, so it is deleted and retyped
+    # too: (7, "ghbdtn ", "us"), not (6, "ghbdtn").
+    assert _injector(daemon).replacements == [(7, "ghbdtn ", "us")]
 
 
 def test_toggle_layout_with_nothing_does_nothing() -> None:

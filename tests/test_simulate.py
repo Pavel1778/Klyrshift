@@ -46,9 +46,35 @@ def test_auto_mode_leaves_a_correct_word() -> None:
 
 
 def test_enter_boundary_keeps_the_newline_after_the_word() -> None:
+    """The Enter that ended the word is consumed and retyped, not eaten.
+
+    The deletion counts characters back from the caret, and the Enter sits
+    between the caret and the word; leaving it out would strand it in front of
+    the correction *and* drop the first character of the word
+    (``ghbdtn`` + Enter -> ``gпривет``).
+    """
     result = run_scenario("type ghbdtn, enter")
     assert result.screen == "привет\n"
-    assert result.replacements == [(6, "привет", "ru")]
+    assert result.replacements == [(7, "привет\n", "ru")]
+
+
+def test_tab_boundary_keeps_the_tab() -> None:
+    result = run_scenario("config on_tab=true, type ghbdtn, tab")
+    assert result.screen == "привет\t"
+    assert result.replacements == [(7, "привет\t", "ru")]
+
+
+def test_punctuation_boundary_keeps_the_punctuation() -> None:
+    result = run_scenario("config on_punctuation=true, type ghbdtn, dot")
+    assert result.screen == "привет."
+    assert result.replacements == [(7, "привет.", "ru")]
+
+
+def test_punctuation_boundary_not_enabled_is_buffered() -> None:
+    result = run_scenario("type ghbdtn, dot, space")
+    # The dot is part of the buffer, so the whole token converts as one word
+    # (``.`` maps to ``ю`` under ``ru``): one fix, not two.
+    assert result.replacements == [(8, "приветю ", "ru")]
 
 
 def test_idle_flush_converts_a_word_without_a_separator() -> None:
@@ -94,6 +120,36 @@ def test_manual_mode_fixes_on_the_explicit_hotkey() -> None:
     result = run_scenario("mode manual, type ghbdtn, dblshift")
     assert result.screen == "привет"
     assert result.replacements == [(6, "привет", "ru")]
+
+
+def test_double_shift_after_space_keeps_the_space() -> None:
+    """A reach-back fix after a boundary must not eat a character.
+
+    The Space that flushed the word is still on screen, so the deletion has to
+    cover it and the replacement retype it -- otherwise the fix deletes one
+    character too many (``gпривет``).
+    """
+    result = run_scenario("mode manual, type ghbdtn, space, dblshift")
+    assert result.screen == "привет "
+    assert result.replacements == [(7, "привет ", "ru")]
+
+
+def test_double_shift_after_enter_keeps_the_newline() -> None:
+    result = run_scenario("mode manual, type ghbdtn, enter, dblshift")
+    assert result.screen == "привет\n"
+
+
+def test_toggle_layout_after_space_keeps_the_space() -> None:
+    result = run_scenario(
+        "config hotkey_toggle_layout_last_word=CTRL+SHIFT+T, type ghbdtn, space, ctrl+shift+t"
+    )
+    assert result.screen == "ghbdtn "
+    assert result.replacements == [(7, "привет ", "ru"), (7, "ghbdtn ", "us")]
+
+
+def test_typo_hotkey_after_space_keeps_the_space() -> None:
+    result = run_scenario("config typo_mode=manual, type langauge, space, ctrl+shift+f")
+    assert result.screen == "language "
 
 
 def test_manual_mode_typo_hotkey_still_works() -> None:

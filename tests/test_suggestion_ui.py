@@ -46,7 +46,8 @@ def test_accepting_the_suggestion_applies_it(monkeypatch: pytest.MonkeyPatch) ->
     tap(daemon, "KEY_SPACE")
 
     assert daemon._accept_suggestion() is True
-    assert _injector(daemon).replacements == [(6, "привет", "ru")]
+    # The Space that flushed the word is consumed and retyped with it.
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
     # The offer is consumed: a second press must not retype the word.
     assert daemon._pending_suggestion is None
     assert daemon._accept_suggestion() is False
@@ -91,7 +92,8 @@ def test_double_shift_applies_the_withheld_offer(monkeypatch: pytest.MonkeyPatch
     assert daemon._pending_suggestion is not None
 
     tap(daemon, "KEY_PAUSE")
-    assert _injector(daemon).replacements == [(6, "привет", "ru")]
+    # The Space that flushed the word is consumed and retyped with it.
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
 
 
 def test_auto_mode_never_offers_a_suggestion(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -127,7 +129,8 @@ def test_dedicated_hotkey_accepts_the_suggestion(monkeypatch: pytest.MonkeyPatch
     tap(daemon, "KEY_SPACE")
 
     tap(daemon, "KEY_PAUSE")
-    assert _injector(daemon).replacements == [(6, "привет", "ru")]
+    # The Space that flushed the word is consumed and retyped with it.
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
 
 
 def test_suggestion_notification_never_carries_the_word(

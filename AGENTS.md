@@ -149,6 +149,17 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   first; otherwise Chromium/Electron coalesce the fast Backspaces and the first
   character survives (`руддщ ` -> `рhello`). Only boundary flushes pass
   `boundary=True`; the idle fallback and hotkey must not pay this pause.
+- **The boundary character is part of the deletion and is retyped.** It sits on
+  screen between the caret and the word, so a flush deletes `buffer +
+  boundary_char` and types `converted + boundary_char`; leaving it out of the
+  count eats the word's last character (`ghbdtn` + Enter -> `gпривет`). Every
+  reach-back path (double Shift, toggle-layout, T9/punctuation hotkeys,
+  accept-suggestion) must do the same: `_memory_word_span()` returns the word,
+  the count *including* the trailing boundary, and the boundary to retype.
+  `injector._BASE_KEYS` maps `\n`/`\t` and `can_type` reports Space/Enter/Tab/
+  punctuation as typable on `uinput`; a backend that cannot type the boundary
+  leaves it in place (safe failure: a stranded character beats a dropped
+  newline). Guarded by `tests/test_simulate.py` and `tests/test_triggers.py`.
 - A single token mixing Latin and Cyrillic (`ghbdtnпривет`) is **never** rewritten
   as a unit: only one half is on the wrong layout, so converting the token
   damages the correct half (`ghйпривет`). `detector._has_mixed_script_word`

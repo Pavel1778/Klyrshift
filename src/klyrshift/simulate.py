@@ -16,15 +16,23 @@ The scenario is a comma-separated list of steps:
 * ``type <text>`` -- press the physical keys that produce ``text`` on a US
   keyboard (``ghbdtn`` -> the six keys ``g h b d t n``); the active layout
   decides the glyphs on screen.
-* ``key <NAME>`` / ``press <NAME>`` -- a single named key (``space``,
-  ``enter``, ``tab``, ``backspace``, ``esc``, ``left``, ``f12`` ...).
+* ``key <NAME>`` / ``press <NAME>`` -- a single named key. Letters/digits by
+  character, punctuation by name (``dot``, ``comma``, ``minus``, ``slash``,
+  ``semicolon``, ``apostrophe``, ``grave``, ``equal``, ``leftbrace``,
+  ``rightbrace``, ``backslash``), and ``space``/``enter``/``tab``/
+  ``backspace``/``esc``/``delete``/arrows/``f1``..``f24``/``digit0``..``digit9``.
+  A printable named key appends its glyph, so the screen stays in step with the
+  buffer (KEY_DOT is ``ю`` under ``ru``, so ``type .`` is not always meant).
 * ``space`` / ``enter`` / ``tab`` / ``backspace`` -- shorthands.
 * ``shift+<key>`` / ``ctrl+<key>`` / ``alt+<key>`` / ``super+<key>`` -- a chord,
   matched against the daemon's hotkey engine.
 * ``dblshift`` / ``dblctrl`` / ``dblalt`` -- a double tap of a modifier.
 * ``layout <name>`` -- make ``name`` the active layout.
 * ``mode <auto|manual|hybrid>`` -- set the working mode before the rest runs.
-* ``config key=value; key=value`` -- override configuration fields.
+* ``app <name>`` / ``focus <name>`` -- pretend ``name`` is the focused
+  application, so the per-app mode/exception rules can be exercised.
+* ``config key=value; key=value`` -- override configuration fields (``true``/
+  ``false``, ints, ``[a, b]`` lists and ``{k: v}`` dicts are parsed).
 * ``wait`` -- force the idle-timeout flush (``type hello, wait``).
 
 The simulator renders the "screen" by applying each injected replacement to the
@@ -53,6 +61,9 @@ for _name, (_plain, _shifted) in _US_KEY_NAMES.items():
     _CHAR_TO_KEY.setdefault(_shifted, (_name, True))
 
 # Named keys a scenario may address directly (lower-case, no ``KEY_`` prefix).
+# Includes punctuation by name (``dot``, ``comma``, ``minus`` ...), because a
+# physical punctuation key can render as a letter in another layout (KEY_DOT is
+# ``ю`` under ``ru``), so ``type .`` is not always what a test means.
 _NAMED_KEYS: Final[frozenset[str]] = frozenset(
     {
         "space",
@@ -80,9 +91,38 @@ _NAMED_KEYS: Final[frozenset[str]] = frozenset(
         "rightshift",
         "leftmeta",
         "rightmeta",
+        "grave",
+        "minus",
+        "equal",
+        "leftbrace",
+        "rightbrace",
+        "backslash",
+        "semicolon",
+        "apostrophe",
+        "comma",
+        "dot",
+        "period",
+        "slash",
+        "pause",
+        "print",
+        "scrolllock",
+        "capslock",
+        "menu",
+        "compose",
     }
     | {f"f{n}" for n in range(1, 25)}
+    | {f"digit{n}" for n in range(10)}
 )
+
+# Aliases a scenario may use for the keys above.
+_KEY_ALIASES: Final[dict[str, str]] = {
+    "period": "dot",
+    "return": "enter",
+    "escape": "esc",
+    "capslock": "capslock",
+    "delete": "delete",
+    "del": "delete",
+}
 
 # Modifier family -> (left key name, right key name).
 _MODIFIER_KEYS: Final[dict[str, tuple[str, str]]] = {
@@ -210,6 +250,11 @@ class _SimInjector:
         self._result.events.append(SimEvent("app-undo", "restored the pre-fix text"))
         return True
 
+    def tap_combo(self, key_names: list[str]) -> bool:
+        """Accept a chord (used by the selection fix); no clipboard in the sim."""
+        self._result.events.append(SimEvent("combo", "+".join(key_names)))
+        return True
+
     def describe(self) -> str:
         return "backend=simulate"
 
@@ -308,12 +353,26 @@ class _Driver:
         rendered = self.daemon._key_to_char(int(code))
         return rendered if rendered is not None else fallback
 
+    def press_named(self, key_name: str, detail: str = "") -> None:
+        """Press a printable named key, appending its glyph to the screen.
+
+        The daemon buffers a punctuation character when ``on_punctuation`` is
+        off, so the simulator's screen must show it too or the two diverge.
+        Non-printable keys (arrows, function keys) append nothing.
+        """
+        rendered = self._render(key_name, "")
+        if len(rendered) == 1:
+            self.screen.append(rendered)
+        self.tap(key_name, "key", detail or key_name)
+
     def boundary(self, key_name: str, char: str, *, consume: bool) -> None:
         """Press a word-boundary key, mirroring how the daemon treats it.
 
-        A Space is consumed and retyped by the replacement, so it is on screen
-        *before* the flush. Enter/Tab are left in place after the corrected word,
-        so they are appended afterwards (the daemon does not delete them).
+        When the trigger is enabled the boundary key is consumed and retyped by
+        the replacement (the daemon deletes ``buffer + boundary_char`` and types
+        ``converted + boundary_char``), so it must be on screen *before* the
+        flush. When the trigger is disabled the buffer is only reset, so the
+        character simply appears after the word.
         """
         if consume:
             self.screen.append(char)
@@ -351,33 +410,56 @@ class _Driver:
                 self.daemon.last_key_time = time.time() - 3600.0
         self.daemon._flush_if_idle()
 
+    def focus(self, app: str) -> None:
+        """Pretend ``app`` is the focused application.
+
+        Pins the daemon's focused-app cache far into the future so
+        ``_focused_app`` returns ``app`` without a D-Bus probe, which is what
+        makes the per-app mode/exception rules testable headlessly.
+        """
+        self.daemon._focused_app_cache = app or None
+        self.daemon._focused_app_at = time.monotonic() + 1e9
+        self.result.events.append(SimEvent("focus", app))
+
 
 def _key_name_for(token: str) -> str:
     """Map a scenario key token to an evdev key name."""
     lowered = token.strip().lower()
+    lowered = _KEY_ALIASES.get(lowered, lowered)
     if lowered in _MODIFIER_KEYS:
         return _MODIFIER_KEYS[lowered][0]
     if lowered.startswith("key_"):
         return lowered.upper()
+    if lowered.startswith("digit") and lowered[5:].isdigit():
+        return f"KEY_{lowered[5:]}"
     if lowered in _NAMED_KEYS:
         return f"KEY_{lowered.upper()}"
-    if len(lowered) == 1 and lowered.isalpha():
+    if len(lowered) == 1 and (lowered.isalpha() or lowered.isdigit()):
         return f"KEY_{lowered.upper()}"
     raise ScenarioError(f"unknown key {token!r}")
 
 
 def _coerce(raw: str) -> Any:
-    """Coerce a scenario value to bool/int/float/list/str.
+    """Coerce a scenario value to bool/int/float/list/dict/str.
 
     ``true``/``false`` are booleans, but a bare ``off``/``on`` is *not* coerced
     to a boolean: those are also valid values for the mode fields
-    (``typo_mode = "off"``), so a string field keeps the word.
+    (``typo_mode = "off"``), so a string field keeps the word. ``{k: v, ...}``
+    builds a dict (``app_modes``, ``app_layouts``); ``[a, b]`` a list.
     """
     if raw.startswith("[") and raw.endswith("]"):
         inner = raw[1:-1].strip()
         if not inner:
             return []
         return [part.strip().strip("'\"") for part in inner.split(",")]
+    if raw.startswith("{") and raw.endswith("}"):
+        inner = raw[1:-1].strip()
+        result: dict[str, str] = {}
+        if inner:
+            for pair in inner.split(","):
+                key, _, value = pair.partition(":")
+                result[key.strip().strip("'\"")] = value.strip().strip("'\"")
+        return result
     lowered = raw.lower()
     if lowered in ("true", "false"):
         return lowered == "true"
@@ -426,8 +508,10 @@ def _run_step(driver: _Driver, step: str) -> None:
         driver.daemon.config.validate()
     elif command in ("wait", "idle"):
         driver.wait()
+    elif command in ("app", "focus"):
+        driver.focus(rest)
     elif command in ("key", "press"):
-        driver.tap(_key_name_for(rest), "key", rest)
+        driver.press_named(_key_name_for(rest), rest)
     elif command == "space":
         driver.boundary("KEY_SPACE", " ", consume=driver.daemon.config.on_space)
     elif command in ("enter", "tab"):
@@ -435,7 +519,10 @@ def _run_step(driver: _Driver, step: str) -> None:
         enabled = (
             driver.daemon.config.on_enter if command == "enter" else driver.daemon.config.on_tab
         )
-        driver.boundary(key, "\n" if command == "enter" else "\t", consume=not enabled)
+        # When the trigger is on, the boundary key is consumed and retyped, so it
+        # is on screen *before* the flush; when off, the buffer is reset and the
+        # character simply appears after the word.
+        driver.boundary(key, "\n" if command == "enter" else "\t", consume=enabled)
     elif command == "backspace":
         driver.backspace()
     elif command in ("esc", "escape"):
@@ -455,7 +542,7 @@ def _run_step(driver: _Driver, step: str) -> None:
                 raise ScenarioError(f"unknown modifier {mod!r} in {step!r}")
         driver.chord(modifiers, key)
     else:
-        driver.tap(_key_name_for(command), "key", command)
+        driver.press_named(_key_name_for(command), command)
 
 
 def run_scenario(

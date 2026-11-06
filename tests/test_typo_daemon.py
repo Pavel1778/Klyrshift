@@ -142,7 +142,7 @@ def test_manual_layout_mode_silences_automatic_typo_correction() -> None:
     assert _injector(daemon).replacements == []
     # The explicit hotkey reaches back to the flushed word and corrects it.
     daemon._force_typo_fix()
-    assert _injector(daemon).replacements == [(8, "language", "us")]
+    assert _injector(daemon).replacements == [(9, "language ", "us")]
 
 
 def test_typo_still_runs_on_explicit_fix_in_manual_mode() -> None:

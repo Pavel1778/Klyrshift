@@ -67,6 +67,12 @@ package as above.
    on_tab = false
    on_punctuation = false
    ```
+   The boundary key is part of the correction: it is deleted and retyped, so it
+   keeps its place. In an application that *acts* on Enter (a chat that sends on
+   Enter), that means the key may be seen twice -- once by the application and
+   once by the correction. Turn `on_enter = false` in such an application (or
+   list it in `exceptions_apps`) and let Space or the idle timeout flush the
+   word instead.
    If you type a word without ever pressing a boundary, the idle fallback
    `analysis_timeout` (default `0.8` s) flushes it. With
    `analysis_timeout_adaptive = true` (the default) that timeout follows your
@@ -358,10 +364,14 @@ Klyrshift avoids this in three ways, all on by default:
 
 - The daemon counts *physical keys*, not characters, so the number of
   Backspaces always equals the number of keys pressed.
-- When the trigger is a Space, the Space is already on screen: the daemon
-  deletes it too and retypes it after the corrected word, so it is never
-  stranded in front of the text. (Enter and Tab keep their place after the
-  corrected word instead, so a newline or tab is never dropped.)
+- When the trigger is a word-boundary key (Space, Enter, Tab or punctuation),
+  that key is already on screen after the word: the daemon deletes it too and
+  retypes it after the corrected word, so it is never stranded in front of the
+  text. (The deletion counts characters back from the caret, so a boundary that
+  was left out of the count would eat the word's last character:
+  `ghbdtn` + Enter -> `gпривет`. The `uinput` backend can type Space, Enter,
+  Tab and punctuation back; a backend that cannot type the boundary leaves it
+  in place, which is the safe failure.)
 - The `uinput` backend flushes the backspaces, waits `backspace_settle_ms`, then
   types the replacement. Keys you press during that pause are queued and
   replayed afterwards, so nothing is lost.

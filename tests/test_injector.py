@@ -139,6 +139,26 @@ def test_char_to_key_unknown_char() -> None:
     assert injector._char_to_key("\u2603", "us") is None
 
 
+def test_char_to_key_boundaries_are_typable() -> None:
+    """Enter, Tab, Space and punctuation must be retypable at a boundary.
+
+    A word-boundary fix deletes ``buffer + boundary_char`` and retypes the
+    correction plus that character; without a key for Enter/Tab the deletion
+    would eat the newline and the word's first character (``ghbdtn`` + Enter ->
+    ``gпривет``).
+    """
+    injector = TextInjector(converter=LayoutConverter(), backend="auto")
+    assert injector._char_to_key("\n", "us") == ("KEY_ENTER", False)
+    assert injector._char_to_key("\t", "us") == ("KEY_TAB", False)
+    # Punctuation is layout-aware: '.' is KEY_DOT on us, KEY_SLASH on ru.
+    assert injector._char_to_key(".", "us") == ("KEY_DOT", False)
+    assert injector._char_to_key(".", "ru") == ("KEY_SLASH", False)
+    # The uinput backend reports them as typable, so they are consumed+retyped.
+    injector._backend = "uinput"
+    for char in ("\n", "\t", " ", ".", ",", "!", "?"):
+        assert injector.can_type(char, "ru") is True, char
+
+
 def test_describe() -> None:
     injector = TextInjector(backend="auto")
     assert "backend=" in injector.describe()
