@@ -524,10 +524,49 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 ## Known limitation
 
 The daemon works on a real GNOME desktop only; the CI and smoke tests do not
-exercise the evdev → uinput correction path end to end. See `docs/TESTING.md`.
+exercise the evdev → uinput correction path end to end. `klyrshift simulate`
+(`src/klyrshift/simulate.py`) covers the *logic* end to end without a keyboard by
+faking the keyboard, the switcher and the injector and driving the real daemon;
+what it still cannot prove is the real device stack (evdev → uinput) and how a
+live compositor reacts to synthetic input. See `docs/TESTING.md`.
 
 ## Lessons that must not be re-learned
 
+- **`manual` is the master gate; the per-feature modes only select a pass.**
+  The user reported "manual mode corrects me without my command". The layout
+  pass was gated on the working mode but the layout-neutral T9 and punctuation
+  passes were not, so `mode = manual` with `typo_mode = "auto"` still rewrote
+  every word boundary. `_process_buffer_inner` now checks
+  `_lexical_pass_allowed(force=...)` before the typo/punctuation fallback, so
+  nothing runs automatically in `manual` (an explicit hotkey, `force=True`, and
+  a per-app override naming a correcting mode both still work).
+  `tests/test_typo_modes.py` and `tests/test_simulate.py` pin it.
+- **The undo word must be cleared by every new fix, not only set once.**
+  `_maybe_handle_undo_chord` reads `_last_undone_word or _last_fixed_from`. The
+  undone word used to be sticky, so after the first Ctrl+Z every later chord
+  suppressed that *first* word and the newest fix kept coming back -- the "it
+  keeps pushing its fix back at me" report. Every fix now goes through
+  `_remember_fix_source`, which sets `_last_fixed_from` and clears
+  `_last_undone_word`. Guarded by `tests/test_undo_suppression.py`.
+- **A Ctrl-based hotkey must restore the word its modifier suspended.** Pressing
+  Ctrl/Alt suspends the buffer (`_handle_chord_modifier`) so `Ctrl+C` cannot
+  leave a stale fragment. The `fix` hotkey restored it, but the lexical hotkeys
+  (`CTRL+SHIFT+F`/`P`) did not, so they acted on an empty buffer and silently
+  did nothing on a live word. `_run_hotkey` now calls
+  `_restore_suspended_buffer()` before `_force_typo_fix`/`_force_punctuation_fix`.
+- **The GUI CI job must not run on `ubuntu-latest`.** The GUI tests import the
+  *distribution* PyGObject (`python3-gi`), a compiled extension built for the
+  distro interpreter's ABI. When `ubuntu-latest` moved to 26.04 (Python 3.14)
+  while `setup-python` still installed 3.12, `import gi` failed, every GTK test
+  skipped, the GUI modules dropped to 0% coverage and the job failed on
+  `--cov-fail-under=85` (63% measured). The job pins `ubuntu-24.04`; bump it
+  together with its `python-version`.
+- **The headless simulator is the agent's keyboard.** `klyrshift simulate`
+  (`src/klyrshift/simulate.py`) drives the real daemon with faked keyboard,
+  switcher and injector, and renders the *screen* by applying each replacement,
+  so a test can assert what the user would see. It models the application's own
+  Ctrl+Z undo (the daemon only observes that chord). Keep it in step with the
+  daemon: a new key class or hotkey path needs a scenario step and a test.
 - **The undo history must be dropped when the caret moves.** A recorded fix can
   only be restored while its corrected word is still under the caret: undo
   deletes a fixed character count and retypes the original. The time window and

@@ -506,3 +506,21 @@ def test_double_shift_fixes_taught_single_char() -> None:
     tap(daemon, "KEY_LEFTSHIFT")
     tap(daemon, "KEY_LEFTSHIFT")
     assert _injector(daemon).replacements == [(1, "f", "us")]
+
+
+def test_toggle_layout_hotkey_reaches_a_word_suspended_by_ctrl() -> None:
+    """Ctrl+Shift+T must convert the live word, not an empty buffer.
+
+    Ctrl suspends the word being typed (it begins a chord); the manual reverse
+    conversion used to run without restoring it, so the hotkey silently did
+    nothing on a live word.
+    """
+    daemon = make_daemon(hotkey_toggle_layout_last_word="CTRL+SHIFT+T")
+    daemon.switcher.current = "ru"
+    press(daemon, "ghbdtn")  # renders "привет" in the active ru layout
+    assert daemon.buffer == "привет"
+    daemon._handle_event(make_event("KEY_LEFTCTRL", 1))
+    assert daemon.buffer == ""  # suspended by the Ctrl press
+    daemon._handle_event(make_event("KEY_LEFTSHIFT", 1))
+    tap(daemon, "KEY_T")
+    assert _injector(daemon).replacements == [(6, "ghbdtn", "us")]

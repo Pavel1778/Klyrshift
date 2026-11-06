@@ -1000,6 +1000,24 @@ class KlyrshiftDaemon:
             return app.lower() in {name.lower() for name in self.config.exceptions_force_in_manual}
         return True
 
+    def _lexical_pass_allowed(self, *, force: bool) -> bool:
+        """Return whether the automatic T9 / punctuation pass may run now.
+
+        ``manual`` means "only when I ask": the user chose a mode in which
+        Klyrshift touches nothing until an explicit hotkey, so the layout-neutral
+        passes are silenced too. A per-application override that names a
+        correcting mode (``{"code": "auto"}``) re-enables them for that app, and
+        an explicit hotkey (``force``) always wins. The per-feature mode still
+        gates whether the pass runs at all; this only adds the working-mode gate.
+
+        Without it a ``manual`` user who had enabled T9 or punctuation was
+        corrected automatically on every word boundary, which is exactly the
+        "the app fixes me without my command" report.
+        """
+        if force:
+            return True
+        return self._should_fix_buffer()
+
     def _layout_target(
         self, buffer: str, current: str, neighbor: str | None, *, force: bool
     ) -> str | None:
@@ -1110,10 +1128,18 @@ class KlyrshiftDaemon:
         elif action == "selection_fix" and self.config.selection_fix_enabled:
             self.selection_fix.convert_selection()
         elif action == "toggle_layout":
+            # Same reason as the lexical hotkeys: Ctrl suspends the live word,
+            # so it must be put back before a Ctrl-based hotkey can act on it.
+            self._restore_suspended_buffer()
             self._toggle_last_word_layout()
         elif action == "typo_fix":
+            # Ctrl/Alt suspend the word being typed (they begin a chord), so the
+            # word must be put back before the lexical pass runs; otherwise a
+            # Ctrl-based hotkey acts on an empty buffer and does nothing.
+            self._restore_suspended_buffer()
             self._force_typo_fix()
         elif action == "punctuation_fix":
+            self._restore_suspended_buffer()
             self._force_punctuation_fix()
         elif action == "accept_suggestion":
             self._accept_suggestion()
@@ -1161,7 +1187,7 @@ class KlyrshiftDaemon:
         if not self.injector.replace_text(backspace_count, converted, target):
             logger.warning("Applying the withheld suggestion failed to replace text")
             return False
-        self._last_fixed_from = word
+        self._remember_fix_source(word)
         self._record_undo(word, current, backspace_count, source=current, target=target)
         with self._lock:
             self._last_flushed_word = converted
@@ -1386,6 +1412,17 @@ class KlyrshiftDaemon:
             return None
         return corrected
 
+    def _remember_fix_source(self, word: str) -> None:
+        """Record the pre-fix text of a fresh correction, for a later Ctrl+Z.
+
+        Also clears the previously-undone word. Without that, ``Ctrl+Z`` falls
+        back to the *first* word the user ever undid and suppresses the wrong
+        entry, so a later correction keeps coming back no matter how often it is
+        rejected -- the "it keeps pushing its fix back at me" report.
+        """
+        self._last_fixed_from = word
+        self._last_undone_word = ""
+
     def _record_undo(
         self,
         original: str,
@@ -1559,7 +1596,7 @@ class KlyrshiftDaemon:
         if not self.injector.replace_text(backspace_count, converted, target):
             logger.warning("Manual layout toggle failed to replace text")
             return False
-        self._last_fixed_from = word
+        self._remember_fix_source(word)
         self._record_undo(word, current, backspace_count, source=current, target=target)
         # The on-screen word is now the converted one; keep the memory in step
         # so pressing the hotkey again flips it back.
@@ -1623,7 +1660,7 @@ class KlyrshiftDaemon:
         if not self.injector.replace_text(backspace_count, fixed, current):
             logger.warning("Manual %s fix failed to replace text", label)
             return False
-        self._last_fixed_from = word
+        self._remember_fix_source(word)
         self._record_undo(word, current, backspace_count, source=current, target=current)
         with self._lock:
             if from_buffer:
@@ -1725,6 +1762,10 @@ class KlyrshiftDaemon:
         command = request.get("cmd")
         if command == "learn.list":
             return {"words": self.learning.learned_words()}
+        if command == "learn.rejected":
+            # The words the user undid (Ctrl+Z): the daemon never corrects them
+            # again this session. In memory only, like the learned vocabulary.
+            return {"words": self.learning.suppressed_words()}
         word = request.get("word")
         if not isinstance(word, str) or not word:
             return {"error": "missing word"}
@@ -1975,9 +2016,17 @@ class KlyrshiftDaemon:
             if target == current:
                 target = None
         if target is None:
-            # Layout detection found nothing. A separate, opt-in step then looks
-            # for a single-character typo in the language the user is typing;
-            # that fix stays in the current layout.
+            # Layout detection found nothing. Before the layout-neutral passes
+            # run, honour the working mode: ``manual`` silences them too, so a
+            # user who chose "only when I ask" is never corrected without a
+            # command. An explicit hotkey (``force``) bypasses this.
+            if not self._lexical_pass_allowed(force=force):
+                logger.debug("Lexical passes silenced by the working mode")
+                self._note_kept(buffer)
+                return
+            # A separate, opt-in step then looks for a single-character typo in
+            # the language the user is typing; that fix stays in the current
+            # layout.
             corrected = self._typo_correction(buffer, current, force=force)
             if corrected is not None:
                 converted = corrected
@@ -2076,8 +2125,11 @@ class KlyrshiftDaemon:
             self.learning.observe_corrected(buffer)
             # Remember the pre-fix text so a bare Ctrl+Z can suppress exactly the
             # word the user restored (only set on a real fix, so an unrelated
-            # Ctrl+Z does not suppress a word the daemon never touched).
-            self._last_fixed_from = buffer
+            # Ctrl+Z does not suppress a word the daemon never touched). This
+            # also clears the previously-undone word, so Ctrl+Z after a *later*
+            # fix suppresses the word actually under the caret, not the first
+            # word the user ever rejected.
+            self._remember_fix_source(buffer)
             # Record the *pre-fix* on-screen text so a later undo restores it
             # exactly, including the boundary that was consumed and retyped.
             self._record_undo(

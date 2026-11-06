@@ -45,12 +45,13 @@ from the dictionary language and from the interface language of the GUI; see
 | `hotkeys` | Print the configured hotkeys. |
 | `fix [--text TEXT] [--apply] [--dry-run]` | Correct a string. With no `--text` it reads from standard input; with `--apply` it also rewrites the text on screen. |
 | `explain [--text TEXT] [--layout LAYOUT]` | Explain what would be decided for a string and why, without changing anything. `--layout` states the current layout instead of detecting it. |
+| `simulate SCENARIO [--json] [--layout LAYOUT]` | Replay a keystroke scenario through the real daemon with the keyboard and injector faked, and print what the user would see. The scenario is a comma-separated list: `type ghbdtn`, `space`, `enter`, `ctrl z`, `dblshift`, `layout ru`, `mode manual`, `config key=value`, `wait`. See [Testing](TESTING.md). |
 
 ## Learning
 
 | Command | What it does |
 | --- | --- |
-| `learn [list\|promote\|forget] [WORD]` | Inspect and adjust learned words. `list` shows them; `promote` pins a word so it is never rewritten; `forget` removes it. |
+| `learn [list\|list-rejected\|promote\|forget] [WORD]` | Inspect and adjust learned words. `list` shows them; `list-rejected` shows the words the user rejected with `Ctrl+Z` (never corrected again this session); `promote` pins a word so it is never rewritten; `forget` removes it (and clears a rejection). |
 | `learn --on` / `--off` | Enable or disable learning. |
 | `learn --reset` | Reset the learning counters. |
 

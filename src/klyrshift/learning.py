@@ -216,11 +216,15 @@ class LearningEngine:
         """Record that the user rejected a correction for ``word``.
 
         The word is suppressed for the rest of the session, so the daemon stops
-        offering the correction the user just undid.
+        offering the correction the user just undid. A plain word is stored
+        lower-cased; a token that is not a plain word (``текст--``, the input to
+        the punctuation pass) is stored verbatim so the same on-screen text is
+        recognised when it is typed again. A token that is neither (empty, or
+        absurdly long) is ignored.
         """
         if not self.enabled:
             return
-        normalised = self._normalise(word)
+        normalised = self._normalise(word) or self._normalise_token(word)
         if normalised is None:
             return
         with self._lock:
@@ -238,19 +242,32 @@ class LearningEngine:
 
     # --- queries ----------------------------------------------------------
     def is_suppressed(self, word: str) -> bool:
-        """Return ``True`` when the user rejected a fix for ``word``."""
+        """Return ``True`` when the user rejected a fix for ``word``.
+
+        Checks the exact token first (so ``текст--`` matches the punctuation
+        rejection) and then the plain-word form, so ``GHBDTN`` still matches a
+        rejected ``ghbdtn``.
+        """
         if not self.enabled:
             return False
-        normalised = self._normalise(word)
-        if normalised is None:
-            return False
+        candidates = {word.strip(), self._normalise(word), self._normalise_token(word)}
         with self._lock:
-            return normalised in self._suppressed
+            return any(candidate in self._suppressed for candidate in candidates if candidate)
 
     def suppressed_count(self) -> int:
         """Return how many words the user rejected this session."""
         with self._lock:
             return len(self._suppressed)
+
+    def suppressed_words(self) -> list[str]:
+        """Return the words the user rejected this session (sorted).
+
+        Exposed for the simulator and the GUI: a rejected word is one the user
+        undid, and it is never corrected again this session. Like the learned
+        vocabulary it lives in memory only and is never written to disk.
+        """
+        with self._lock:
+            return sorted(self._suppressed)
 
     def learned_words(self) -> list[str]:
         """Return the promoted words (in promotion order)."""
@@ -302,7 +319,7 @@ class LearningEngine:
         Returns:
             ``True`` when the word was present and has been removed.
         """
-        normalised = self._normalise(word)
+        normalised = self._normalise(word) or self._normalise_token(word)
         if normalised is None:
             return False
         with self._lock:
@@ -354,3 +371,17 @@ class LearningEngine:
         if not stripped or len(stripped) > _MAX_WORD_LENGTH or not stripped.isalpha():
             return None
         return stripped.lower()
+
+    @staticmethod
+    def _normalise_token(word: str) -> str | None:
+        """Return the stripped token for a *rejection*, or ``None``.
+
+        Unlike :meth:`_normalise` this keeps punctuation, so the input to the
+        punctuation pass (``текст--``) can be suppressed when the user undoes
+        that fix. It is used only for the rejection set, never for the learned
+        vocabulary, so it cannot pollute what the detector treats as known.
+        """
+        stripped = word.strip()
+        if not stripped or len(stripped) > _MAX_WORD_LENGTH:
+            return None
+        return stripped

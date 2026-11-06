@@ -139,9 +139,9 @@ force\-kill a hung daemon (SIGKILL)
 .SS learn
 learning: statistics, word list, on/off
 .PP
-.B learn_action {list, promote, forget}
+.B learn_action {list, list\-rejected, promote, forget}
 .br
-list — show learned words; promote/forget — pin/unpin a word
+list — learned words; list\-rejected — rejected (Ctrl+Z); promote/forget — pin/forget a word
 .PP
 .B word
 .br
@@ -178,6 +178,21 @@ show or change the mode (auto/manual/hybrid)
 .B mode {auto, manual, hybrid}
 .SS restart
 restart the daemon
+.SS simulate
+replay a keystroke scenario without a keyboard (testing)
+.PP
+.B scenario
+.br
+comma\-separated steps, e.g. 'type ghbdtn, space'
+.PP
+.RS
+.TP
+.B \-\-json
+print the result as JSON
+.TP
+.B \-\-layout
+the layout active at the start of the scenario
+.RE
 .SS start
 start the daemon
 .PP

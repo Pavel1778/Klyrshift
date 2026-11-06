@@ -135,6 +135,26 @@ def test_quiet_hours_disabled_fixes_normally() -> None:
     assert injector.replacements == [(7, "привет ", "ru")]
 
 
+def test_quiet_hours_also_silence_the_lexical_passes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Quiet hours are "do not touch automatically" for *every* pass.
+
+    T9 and punctuation are layout-neutral but still automatic, so quiet hours
+    must silence them too -- otherwise "quiet" still rewrote words.
+    """
+    daemon = make_daemon(quiet_hours_enabled=True, typo_mode="auto", punctuation_mode="auto")
+    monkeypatch.setattr(daemon, "_is_quiet_now", lambda: True)
+    daemon.switcher.current = "us"
+    daemon.buffer = "langauge"
+    daemon._scancodes = [0] * len("langauge")
+    daemon._process_buffer(boundary=True, boundary_char=" ")
+    injector = daemon.injector
+    assert isinstance(injector, FakeInjector)
+    assert injector.replacements == []
+    # The explicit hotkey still corrects.
+    daemon._force_typo_fix()
+    assert injector.replacements == [(8, "language", "us")]
+
+
 def test_invalid_quiet_hours_time_is_rejected() -> None:
     with pytest.raises(ValueError):
         Config(quiet_hours_start="25:00").validate()

@@ -282,3 +282,48 @@ def test_undo_history_is_dropped_by_a_command_chord() -> None:
 
     assert daemon._undo_history == []
     assert daemon._undo_last_fix() is False
+
+
+def test_ctrl_z_after_a_later_fix_suppresses_that_later_word() -> None:
+    """The second Ctrl+Z must reject the *newest* fix, not the first one.
+
+    ``_last_undone_word`` used to be sticky: once set it shadowed
+    ``_last_fixed_from``, so a later correction was never suppressed and kept
+    coming back however often the user undid it.
+    """
+    daemon = make_daemon()
+    # First fix, rejected.
+    type_word(daemon, "ghbdtn")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    assert _injector(daemon).replacements == [(7, "привет ", "ru")]
+    press_ctrl_z(daemon)
+    assert daemon.learning.is_suppressed("ghbdtn") is True
+
+    # A second, different word is corrected and rejected too. ``руддщ`` is the
+    # ru-layout rendering of the physical keys ``hello``, so type those.
+    set_layout(daemon, "ru")
+    type_word(daemon, "hello")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    assert _injector(daemon).replacements[-1] == (6, "hello ", "us")
+    press_ctrl_z(daemon)
+    assert daemon.learning.is_suppressed("руддщ") is True
+
+
+def test_rejected_word_is_not_converted_as_a_whole_either() -> None:
+    """A rejected word is left alone in *every* layout, not just the typed one.
+
+    The learning guard is checked before the layout decision, so re-typing the
+    same physical keys after Ctrl+Z cannot be converted in either direction.
+    """
+    daemon = make_daemon()
+    type_word(daemon, "ghbdtn")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    press_ctrl_z(daemon)
+
+    before = len(_injector(daemon).replacements)
+    # Same physical keys, active layout is now Russian: the Cyrillic rendering
+    # is what would be "converted back" to Latin without the guard.
+    set_layout(daemon, "ru")
+    type_word(daemon, "ghbdtn")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    assert len(_injector(daemon).replacements) == before
