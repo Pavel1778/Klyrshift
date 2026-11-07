@@ -259,7 +259,7 @@ stop_words = [
 
 # T9: исправление опечаток внутри слова (выключено по умолчанию).
 typo_correction = false    # true — включить
-typo_mode = "off"          # off | manual | auto | hybrid (независимо от mode)
+typo_mode = "off"          # off | manual | auto | hybrid (что может работать; авто — только в mode=auto/hybrid)
 typo_hotkey = "CTRL+SHIFT+F"  # ручной триггер T9 в режимах manual/hybrid
 typo_max_distance = 1      # 1 или 2 опечатки в коротком слове
 typo_max_distance_long = 2 # 1 или 2 опечатки в слове длиной от 6 символов
