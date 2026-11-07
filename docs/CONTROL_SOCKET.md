@@ -42,6 +42,7 @@ Unix-сокет `SOCKET_STREAM`, который демон создаёт при
 
 ```bash
 klyrshift learn list              # что демон выучил за сессию
+klyrshift learn list-rejected     # слова, отклонённые Ctrl+Z
 klyrshift learn promote vercel    # закрепить слово вручную
 klyrshift learn forget vercel     # снова разрешить исправлять
 ```

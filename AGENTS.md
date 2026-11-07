@@ -160,6 +160,16 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   punctuation as typable on `uinput`; a backend that cannot type the boundary
   leaves it in place (safe failure: a stranded character beats a dropped
   newline). Guarded by `tests/test_simulate.py` and `tests/test_triggers.py`.
+  **`_last_flushed_boundary` must be updated by every fix, not only by a flush.**
+  A live-buffer hotkey fix (toggle-layout / T9 / punctuation with a non-empty
+  buffer) retypes no boundary, so it must clear the remembered one; leaving the
+  old value makes the *next* reach-back fix delete one character too many and
+  eat the separator before the word (`abc привет` -> `abcghbdtn `). Both
+  `_toggle_last_word_layout` and `_force_lexical_fix` set
+  `_last_flushed_boundary = boundary` (empty for a live fix) alongside
+  `_last_flushed_word`. Guarded by
+  `tests/test_simulate.py::test_live_fix_does_not_leave_a_stale_boundary` and
+  `::test_boundary_separators_are_never_lost`.
 - A single token mixing Latin and Cyrillic (`ghbdtnпривет`) is **never** rewritten
   as a unit: only one half is on the wrong layout, so converting the token
   damages the correct half (`ghйпривет`). `detector._has_mixed_script_word`
@@ -194,7 +204,7 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   explicitly (`klyrshift dict add/remove`, the GUI Dictionary tab, or by hand);
   the daemon never writes typed text to it. A config reload always re-reads it.
 - The default fix hotkey is **`SHIFT+SHIFT`** (double tap of a modifier within
-  `hotkey_double_tap_ms`, default 300 ms), not `PAUSE`. `daemon._parse_hotkey`
+  `hotkey_double_tap_ms`, default 2000 ms), not `PAUSE`. `daemon._parse_hotkey`
   handles chords; `_build_double_tap_hotkeys`/`_handle_modifier` handle double
   taps. A single modifier tap never fixes, and any other key cancels an armed
   tap, so capitalisation is unaffected. `DEFAULT_FIX_HOTKEY` in `config.py` is

@@ -77,13 +77,13 @@ class SettingsPage(BoundPreferencesPage):
             [MODE_LABELS[m] for m in MODE_ORDER],
             self._config.mode,
             self._on_mode_selected,
-            # The layout switch is what ``manual`` gates. The opt-in passes
-            # (T9, punctuation) are layout-neutral and still run unless their
-            # own switches are off, so a "fully quiet" manual needs those off.
+            # ``manual`` is the master gate: it silences every automatic pass,
+            # layout and the layout-neutral T9/punctuation alike. An explicit
+            # hotkey still works.
             subtitle=(
                 _(
                     "Авто исправляет сразу, ручной — только по хоткею "
-                    "(опечатки и пунктуация — по своим переключателям)"
+                    "(ничего автоматически, включая опечатки и пунктуацию)"
                 )
             ),
         )

@@ -348,11 +348,12 @@ word is scored against the corpora whose *layout could have produced it*.
   `lingvix-dict-<slug>.tar.gz` and `linguafix-dict-<slug>.tar.gz` that the live
   release ships) or the offline repository copy.
 - **Typo correction (T9)** (`typo_mode`, `typo_max_distance`,
-  `typo_max_distance_long`, `typo_min_word_length`). A second, independent
+  `typo_max_distance_long`, `typo_min_word_length`). A second, layout-neutral
   correction path, off by default. Its own `typo_mode` (`off` / `manual` /
-  `auto` / `hybrid`) decides when it runs, *independently* of the global layout
-  `mode`: `manual` fires only on `CTRL+SHIFT+F`, `auto`/`hybrid` on a word
-  boundary, `off` never. The legacy boolean `typo_correction` is kept mirrored to
+  `auto` / `hybrid`) selects *which* T9 pass may run, but the working `mode` is
+  the master gate: `manual` silences the layout-neutral passes too, so nothing
+  is rewritten without an explicit hotkey. Within that, `manual` fires only on
+  `CTRL+SHIFT+F`, `auto`/`hybrid` on a word boundary, `off` never. The legacy boolean `typo_correction` is kept mirrored to
   `typo_mode != "off"` for compatibility (and for the GUI switch). A legacy file
   is migrated on load: `typo_correction = true` with `mode = "manual"` becomes
   `typo_mode = "manual"`, otherwise the global mode is used. It runs only when
@@ -373,15 +374,19 @@ word is scored against the corpora whose *layout could have produced it*.
 
 ## Modes and hotkeys
 
-`mode` selects how much the daemon acts on its own for the *layout* pass:
-`auto` corrects every word, `manual` only on the fix hotkey, and `hybrid`
-corrects automatically but keeps a short undo history.
+`mode` is the master gate: `auto` acts on every word, `manual` acts only on an
+explicit hotkey, and `hybrid` acts automatically but withholds an uncertain
+layout fix for the manual hotkey. `manual` silences *every* automatic pass —
+layout, T9 and punctuation — so a user who chose "only when I ask" is never
+rewritten without a command (the reported "the app fixes me without my command"
+bug).
 
-Each optional feature has its own mode on top of that (`typo_mode`,
+Each optional feature then has its own mode on top of that (`typo_mode`,
 `punctuation_mode`): `off`, `manual` (explicit hotkey only), `auto` (on a word
-boundary) or `hybrid`. This lets a user keep automatic layout switching while
-making T9 hotkey-only — the combination behind the "T9-спам" report, where a
-correct word was auto-rewritten because the typo pass inherited the global mode.
+boundary) or `hybrid`. It selects *which* pass may run; the working `mode` still
+decides *whether* it runs automatically. This lets a user keep automatic layout
+switching while making T9 hotkey-only (`typo_mode = "manual"`, `mode = "auto"`),
+while a fully quiet app is `mode = "manual"`.
 
 Hotkeys are matched in `daemon._parse_hotkey`. A chord such as `CTRL+F12` requires
 the modifier to be held; a **double tap** such as `SHIFT+SHIFT`, `CTRL+CTRL` or
