@@ -45,3 +45,6 @@ debian/
 
 # Local state
 *.log
+
+# QA engine output
+qa-out/

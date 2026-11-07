@@ -646,6 +646,7 @@ make build-deb                # собрать .deb в dist/
 Языки интерфейса (каталоги, fallback, плюрали, как добавить язык): [docs/INTERFACE_LANGUAGES.md](docs/INTERFACE_LANGUAGES.md).
 План развития: [docs/ROADMAP.md](docs/ROADMAP.md).
 Ручной план тестирования на реальной системе: [docs/TESTING.md](docs/TESTING.md).
+Автономный QA-движок (сценарии, инварианты, отчёт, регрессии): [docs/QA_ENGINE.md](docs/QA_ENGINE.md).
 Чек-лист выпуска (проверки пакета, словарей и живой клавиатуры): [docs/RELEASING.md](docs/RELEASING.md).
 Вся документация одним файлом: [docs/klyrshift-handbook.pdf](docs/klyrshift-handbook.pdf)
 (PDF) или [docs/klyrshift-handbook.md](docs/klyrshift-handbook.md) (Markdown);

@@ -21,6 +21,7 @@ _klyrshift() {
         'learn:learning: statistics, word list, on/off'
         'logs:show the daemon log'
         'mode:show or change the mode (auto/manual/hybrid)'
+        'qa:autonomous QA: scenarios, invariants, report, regressions'
         'restart:restart the daemon'
         'simulate:replay a keystroke scenario without a keyboard (testing)'
         'start:start the daemon'
@@ -122,6 +123,20 @@ _klyrshift() {
             mode)
                 _arguments \
                 '1: :(auto manual hybrid)'
+                ;;
+            qa)
+                _arguments \
+                '--seed[seed for scenario generation]' \
+                '--generate[generate N scenarios]' \
+                '--focus[restrict generation to a category (repeatable)]' \
+                '--changed[changed file: focus generation on the areas it affects]' \
+                '--scenarios[scenario file or directory (JSON)]' \
+                '--report[write the report to a directory (JSON + Markdown)]' \
+                '--store[path to the regression file]' \
+                '--json[print the report as JSON]' \
+                '--no-minimise[do not minimise failures]' \
+                '--no-record[do not record regressions]' \
+                '1: :(run regress list)'
                 ;;
             restart)
                 _arguments \

@@ -269,6 +269,40 @@ jobs:
           python scripts/measure_latency.py \
             --limit 3000 --repeats 3 --budget-ms 0.5 --budget-mib 64
 
+  qa:
+    name: Autonomous QA (deterministic, offline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install evdev
+
+      # The deterministic QA engine: the curated corpus plus a fixed batch of
+      # generated scenarios, run through the real daemon with the simulator. It
+      # needs no API key and no network, so it runs on every push and PR. The
+      # exit code is non-zero only on a real failure or a broken scenario.
+      - name: Run the QA engine
+        run: |
+          klyrshift qa run --generate 60 --seed 12345 --no-record --report qa-out
+
+      - name: Upload the QA report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: klyrshift-qa-report
+          path: qa-out/
+          if-no-files-found: warn
+
   site:
     name: Landing page build
     runs-on: ubuntu-latest

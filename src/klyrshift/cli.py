@@ -1122,6 +1122,89 @@ def cmd_simulate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_qa(args: argparse.Namespace) -> int:
+    """Run the autonomous QA engine: corpus, generation, invariants, report.
+
+    Deterministic and offline by default: the same seed and corpus produce the
+    same report with no network and no API key. The engine drives the real
+    daemon through ``klyrshift.simulate``, checks independent invariants and
+    records confirmed bugs in a regression store -- see ``klyrshift.qa``.
+    """
+    from pathlib import Path
+
+    from .qa.curated import CURATED
+    from .qa.report import to_json, write_reports
+    from .qa.runner import RunConfig, build_corpus, rerun_regressions, run
+    from .qa.scenario import ScenarioFormatError, load_scenarios
+    from .qa.store import RegressionStore
+
+    action = getattr(args, "qa_action", "run")
+    store = RegressionStore(Path(args.store) if args.store else None)
+
+    if action == "list":
+        entries = store.sorted()
+        if not entries:
+            print(_("Регрессий не найдено."))
+            return 0
+        print(_("Регрессии ({0}):").format(len(entries)))
+        for entry in entries:
+            print(f"  [{entry.status}] {entry.scenario.id} — {', '.join(entry.invariants)}")
+        return 0
+
+    if action == "regress":
+        summary = rerun_regressions(store)
+        _print_qa_summary(summary)
+        return 0 if summary.failed == 0 else 1
+
+    # action == "run"
+    config = RunConfig(
+        seed=args.seed,
+        generated=args.generate,
+        focus=list(args.focus or []),
+        changed_files=list(args.changed or []),
+        minimise=not args.no_minimise,
+        record=not args.no_record,
+        store_path=Path(args.store) if args.store else None,
+    )
+    corpus = list(CURATED)
+    if args.scenarios:
+        for path in args.scenarios:
+            try:
+                corpus.extend(load_scenarios(Path(path)))
+            except ScenarioFormatError as exc:
+                print(_("Ошибка сценария: {0}").format(exc))
+                return 2
+    corpus = build_corpus(corpus, config)
+    summary = run(corpus, config, store=store)
+
+    if args.report:
+        json_path, md_path = write_reports(summary, Path(args.report))
+        print(_("Отчёт: {0} и {1}").format(json_path, md_path))
+    if args.json:
+        print(to_json(summary))
+    else:
+        _print_qa_summary(summary)
+    return 0 if summary.failed == 0 and summary.harness_errors == 0 else 1
+
+
+def _print_qa_summary(summary: object) -> None:
+    """Print a one-screen QA summary (measured numbers only)."""
+    total = getattr(summary, "total", 0)
+    passed = getattr(summary, "passed", 0)
+    failed = getattr(summary, "failed", 0)
+    harness = getattr(summary, "harness_errors", 0)
+    new_bugs = getattr(summary, "new_bugs", [])
+    repeat = getattr(summary, "repeat_bugs", [])
+    print(
+        _("QA: проверено {0}, успешно {1}, провалов {2}, ошибок стенда {3}").format(
+            total, passed, failed, harness
+        )
+    )
+    print(_("Новых багов: {0}; повторных: {1}").format(len(new_bugs), len(repeat)))
+    for bug_id in new_bugs:
+        print(f"  {bug_id}")
+
+
 def cmd_doctor(_args: argparse.Namespace) -> int:
     """Run environment self-diagnosis and print a status table."""
     return run_doctor()
@@ -1324,6 +1407,38 @@ def build_parser() -> argparse.ArgumentParser:
     simulate.add_argument("--json", action="store_true", help=_("вывести результат в JSON"))
     simulate.add_argument("--layout", default="us", help=_("раскладка в начале сценария"))
     simulate.set_defaults(func=cmd_simulate)
+
+    qa = subparsers.add_parser(
+        "qa", help=_("автономное QA: сценарии, инварианты, отчёт, регрессии")
+    )
+    qa.add_argument(
+        "qa_action",
+        nargs="?",
+        choices=["run", "regress", "list"],
+        default="run",
+        help=_("run — прогон корпуса; regress — перепроверить регрессии; list — список регрессий"),
+    )
+    qa.add_argument("--seed", type=int, default=0, help=_("seed для генерации сценариев"))
+    qa.add_argument("--generate", type=int, default=0, help=_("сгенерировать N сценариев"))
+    qa.add_argument(
+        "--focus",
+        action="append",
+        default=[],
+        help=_("ограничить генерацию категорией (можно повторять)"),
+    )
+    qa.add_argument(
+        "--changed",
+        action="append",
+        default=[],
+        help=_("изменённый файл: сфокусировать генерацию на затронутых областях"),
+    )
+    qa.add_argument("--scenarios", action="append", help=_("файл или каталог сценариев (JSON)"))
+    qa.add_argument("--report", help=_("записать отчёт в каталог (JSON + Markdown)"))
+    qa.add_argument("--store", help=_("путь к файлу регрессий"))
+    qa.add_argument("--json", action="store_true", help=_("вывести отчёт в JSON"))
+    qa.add_argument("--no-minimise", action="store_true", help=_("не минимизировать падения"))
+    qa.add_argument("--no-record", action="store_true", help=_("не записывать регрессии"))
+    qa.set_defaults(func=cmd_qa)
 
     doctor = subparsers.add_parser("doctor", help=_("самодиагностика окружения"))
     doctor.set_defaults(func=cmd_doctor)

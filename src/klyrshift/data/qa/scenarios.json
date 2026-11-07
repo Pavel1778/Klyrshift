@@ -1,0 +1,848 @@
+[
+  {
+    "category": "layout",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет "
+    },
+    "id": "layout/wrong-layout-space",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known",
+      "layout-switched"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "boundary",
+      "layout"
+    ],
+    "title": "A wrong-layout word is fixed on Space"
+  },
+  {
+    "category": "layout",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "hello "
+    },
+    "id": "layout/correct-word-kept",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type hello",
+      "space"
+    ],
+    "tags": [],
+    "title": "A correct word is left alone"
+  },
+  {
+    "category": "boundary",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет\n"
+    },
+    "id": "layout/enter-boundary",
+    "invariants": [
+      "no-lost-characters",
+      "space-preserved",
+      "enter-preserved",
+      "tab-preserved",
+      "punctuation-preserved",
+      "no-mixed-script-replacement"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type ghbdtn",
+      "enter"
+    ],
+    "tags": [
+      "enter"
+    ],
+    "title": "A wrong-layout word is fixed on Enter and the newline survives"
+  },
+  {
+    "category": "boundary",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет\t"
+    },
+    "id": "layout/tab-boundary",
+    "invariants": [
+      "no-lost-characters",
+      "space-preserved",
+      "enter-preserved",
+      "tab-preserved",
+      "punctuation-preserved",
+      "no-mixed-script-replacement"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config on_tab=true",
+      "type ghbdtn",
+      "tab"
+    ],
+    "tags": [
+      "tab"
+    ],
+    "title": "A wrong-layout word is fixed on Tab and the tab survives"
+  },
+  {
+    "category": "boundary",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет."
+    },
+    "id": "layout/punctuation-boundary",
+    "invariants": [
+      "no-lost-characters",
+      "space-preserved",
+      "enter-preserved",
+      "tab-preserved",
+      "punctuation-preserved",
+      "no-mixed-script-replacement"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config on_punctuation=true",
+      "type ghbdtn",
+      "dot"
+    ],
+    "tags": [
+      "punctuation"
+    ],
+    "title": "A wrong-layout word is fixed on a punctuation boundary"
+  },
+  {
+    "category": "layout",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет"
+    },
+    "id": "layout/idle-flush",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known",
+      "layout-switched"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type ghbdtn",
+      "wait"
+    ],
+    "tags": [],
+    "title": "The idle fallback flushes a word with no separator"
+  },
+  {
+    "category": "layout",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет "
+    },
+    "id": "layout/backspace-then-space",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known",
+      "layout-switched"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type ghbdtnx",
+      "backspace",
+      "space"
+    ],
+    "tags": [],
+    "title": "A backspace edits the buffer before the fix"
+  },
+  {
+    "category": "layout",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет hello "
+    },
+    "id": "layout/two-words",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known",
+      "layout-switched"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type ghbdtn",
+      "space",
+      "type hello",
+      "space"
+    ],
+    "tags": [],
+    "title": "Two words are fixed independently"
+  },
+  {
+    "category": "layout",
+    "config": {},
+    "difficulty": "intermediate",
+    "expect": {
+      "screen": "Привет "
+    },
+    "id": "layout/capitalised",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known",
+      "layout-switched"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type Ghbdtn",
+      "space"
+    ],
+    "tags": [],
+    "title": "Capitalisation is preserved"
+  },
+  {
+    "category": "modes",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "ghbdtn "
+    },
+    "id": "modes/manual-silent",
+    "invariants": [
+      "manual-mode-silent",
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "mode manual",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "manual"
+    ],
+    "title": "Manual mode corrects nothing without a hotkey"
+  },
+  {
+    "category": "modes",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет"
+    },
+    "id": "modes/manual-double-shift",
+    "invariants": [
+      "manual-mode-silent",
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "mode manual",
+      "type ghbdtn",
+      "dblshift"
+    ],
+    "tags": [
+      "hotkey",
+      "manual"
+    ],
+    "title": "Double Shift fixes the live word in manual mode"
+  },
+  {
+    "category": "modes",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет "
+    },
+    "id": "modes/manual-double-shift-after-space",
+    "invariants": [
+      "manual-mode-silent",
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known",
+      "space-preserved"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "mode manual",
+      "type ghbdtn",
+      "space",
+      "dblshift"
+    ],
+    "tags": [
+      "hotkey",
+      "manual",
+      "reach-back"
+    ],
+    "title": "Double Shift reaches back to the flushed word and keeps the space"
+  },
+  {
+    "category": "typo",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "language"
+    },
+    "id": "modes/manual-t9-hotkey",
+    "invariants": [
+      "manual-mode-silent",
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "mode manual",
+      "config typo_mode=auto",
+      "type langauge",
+      "ctrl+shift+f"
+    ],
+    "tags": [
+      "manual",
+      "t9"
+    ],
+    "title": "The T9 hotkey still works in manual mode"
+  },
+  {
+    "category": "modes",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет "
+    },
+    "id": "modes/hybrid-fixes-confident",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known",
+      "layout-switched"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "mode hybrid",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "hybrid"
+    ],
+    "title": "Hybrid fixes a confident conversion"
+  },
+  {
+    "category": "typo",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "language "
+    },
+    "id": "typo/auto-on-boundary",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config typo_mode=auto",
+      "type langauge",
+      "space"
+    ],
+    "tags": [
+      "t9"
+    ],
+    "title": "T9 fixes a typo on a word boundary"
+  },
+  {
+    "category": "typo",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "language "
+    },
+    "id": "typo/keeps-correct-word",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config typo_mode=auto",
+      "type language",
+      "space"
+    ],
+    "tags": [
+      "t9"
+    ],
+    "title": "T9 never rewrites a correct word"
+  },
+  {
+    "category": "punctuation",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "hello— "
+    },
+    "id": "punctuation/dashes",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config punctuation_mode=auto",
+      "type hello",
+      "minus",
+      "minus",
+      "space"
+    ],
+    "tags": [],
+    "title": "Two hyphens become an em dash"
+  },
+  {
+    "category": "punctuation",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "hello… "
+    },
+    "id": "punctuation/ellipsis",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config punctuation_mode=auto",
+      "type hello",
+      "dot",
+      "dot",
+      "dot",
+      "space"
+    ],
+    "tags": [],
+    "title": "Three dots become an ellipsis"
+  },
+  {
+    "category": "undo",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "ghbdtn "
+    },
+    "id": "undo/hotkey-restores",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type ghbdtn",
+      "space",
+      "shift+backspace"
+    ],
+    "tags": [],
+    "title": "The undo hotkey restores the last fix"
+  },
+  {
+    "category": "learning",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "ghbdtn ghbdtn "
+    },
+    "id": "learning/ctrl-z-suppresses",
+    "invariants": [
+      "ctrl-z-suppressed",
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type ghbdtn",
+      "space",
+      "ctrl z",
+      "layout us",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "ctrl-z"
+    ],
+    "title": "A word rejected with Ctrl+Z is not corrected again"
+  },
+  {
+    "category": "learning",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {},
+    "id": "learning/ctrl-z-then-hotkey-wins",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type ghbdtn",
+      "space",
+      "ctrl z",
+      "layout us",
+      "type ghbdtn",
+      "dblshift"
+    ],
+    "tags": [
+      "ctrl-z",
+      "hotkey"
+    ],
+    "title": "An explicit hotkey still fixes a rejected word"
+  },
+  {
+    "category": "guards",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "github.com "
+    },
+    "id": "guards/url-untouched",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type github.com",
+      "space"
+    ],
+    "tags": [],
+    "title": "A URL is never rewritten"
+  },
+  {
+    "category": "guards",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "a@b.co "
+    },
+    "id": "guards/email-untouched",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type a@b.co",
+      "space"
+    ],
+    "tags": [],
+    "title": "An e-mail is never rewritten"
+  },
+  {
+    "category": "guards",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "secret "
+    },
+    "id": "guards/stop-word-untouched",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config stop_words=[secret]",
+      "type secret",
+      "space"
+    ],
+    "tags": [],
+    "title": "A stop word is never rewritten"
+  },
+  {
+    "category": "guards",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "ab "
+    },
+    "id": "guards/short-word-untouched",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type ab",
+      "space"
+    ],
+    "tags": [],
+    "title": "A word below min_word_length is not corrected"
+  },
+  {
+    "category": "per-app",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "ghbdtn "
+    },
+    "id": "per-app/exception-skips",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config exceptions_apps=[kitty]",
+      "mode auto",
+      "app kitty",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "exceptions"
+    ],
+    "title": "An excepted application is not corrected"
+  },
+  {
+    "category": "per-app",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "ghbdtn "
+    },
+    "id": "per-app/mode-override-manual",
+    "invariants": [
+      "manual-mode-silent",
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config app_modes={code: manual}",
+      "mode auto",
+      "app code",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "app-modes"
+    ],
+    "title": "A per-app manual override silences an auto mode"
+  },
+  {
+    "category": "per-app",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "привет "
+    },
+    "id": "per-app/mode-override-auto",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known",
+      "layout-switched"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config app_modes={telegram: auto}",
+      "mode manual",
+      "app telegram",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "app-modes"
+    ],
+    "title": "A per-app auto override re-enables correction in manual mode"
+  },
+  {
+    "category": "snippets",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "brb "
+    },
+    "id": "snippets/expansion",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config text_expander_enabled=true",
+      "type brb",
+      "space"
+    ],
+    "tags": [],
+    "title": "A snippet trigger is expanded verbatim"
+  },
+  {
+    "category": "robustness",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": " "
+    },
+    "id": "robustness/empty-space",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "space"
+    ],
+    "tags": [],
+    "title": "A Space on an empty buffer is a no-op"
+  },
+  {
+    "category": "robustness",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": " "
+    },
+    "id": "robustness/over-backspace",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type gh",
+      "backspace",
+      "backspace",
+      "backspace",
+      "space"
+    ],
+    "tags": [],
+    "title": "Backspacing past the start is safe"
+  }
+]

@@ -1,4 +1,4 @@
-.PHONY: help install uninstall test lint format typecheck check build-deb smoke-test zero-config upgrade-test clean dev docs-pdf cli-docs
+.PHONY: help install uninstall test lint format typecheck check qa build-deb smoke-test zero-config upgrade-test clean dev docs-pdf cli-docs
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -37,6 +37,9 @@ format: ## Auto-format the code with ruff, isort and black
 
 typecheck: ## Run mypy in strict mode
 	$(VENV)/bin/mypy --strict .
+
+qa: ## Run the deterministic autonomous QA engine (offline, no API key)
+	$(VENV_PY) -m klyrshift qa run --generate 60 --seed 12345 --no-record --report qa-out
 
 check: lint typecheck test ## Run lint, typecheck and tests
 
