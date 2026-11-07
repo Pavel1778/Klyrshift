@@ -152,6 +152,51 @@ def test_typo_hotkey_after_space_keeps_the_space() -> None:
     assert result.screen == "language "
 
 
+def test_live_fix_does_not_leave_a_stale_boundary() -> None:
+    """A live-buffer hotkey fix must clear the remembered boundary.
+
+    The toggle/T9/punctuation hotkeys act on the word in the live buffer when
+    one exists; that fix retypes no boundary, so the remembered boundary must
+    become empty. Otherwise the *next* reach-back fix deletes one character too
+    many and eats the separator before the word (``abc привет`` -> ``abcghbdtn ``).
+    """
+    result = run_scenario(
+        "mode manual, config hotkey_toggle_layout_last_word=CTRL+SHIFT+T, "
+        "type abc, space, type ghbdtn, ctrl+shift+t, ctrl+shift+t"
+    )
+    # Step 2 converts the live word in place (no boundary); step 3 flips it back.
+    # The space after ``abc`` must survive both.
+    assert result.screen == "abc ghbdtn"
+
+
+def test_boundary_separators_are_never_lost() -> None:
+    """A fix consumes and retypes its boundary, so separators are invariant.
+
+    This sweeps a batch of scripted sequences (auto/manual/hybrid, with
+    reach-back hotkeys and idle flushes between words) and asserts the final
+    screen keeps every Space/Enter that was typed. It is the broad guard for the
+    whole reach-back family: a stale or mis-counted boundary shows up as a
+    missing separator.
+    """
+    scenarios = [
+        "type abc, space, type ghbdtn, space",
+        "mode manual, type abc, space, type ghbdtn, space, dblshift",
+        "config hotkey_toggle_layout_last_word=CTRL+SHIFT+T, "
+        "type abc, space, type ghbdtn, space, ctrl+shift+t",
+        "mode manual, config hotkey_toggle_layout_last_word=CTRL+SHIFT+T, "
+        "type abc, space, type ghbdtn, ctrl+shift+t, ctrl+shift+t",
+        "type abc, enter, type ghbdtn, enter",
+        "mode manual, type abc, enter, type ghbdtn, enter, dblshift",
+        "config typo_mode=manual, type langauge, space, ctrl+shift+f",
+        "mode manual, type abc, space, type abc, space, type abc, space",
+    ]
+    for scenario in scenarios:
+        result = run_scenario(scenario)
+        expected_separators = scenario.count(", space") + scenario.count(", enter")
+        got = result.screen.count(" ") + result.screen.count("\n")
+        assert got >= expected_separators, (scenario, result.screen)
+
+
 def test_manual_mode_typo_hotkey_still_works() -> None:
     result = run_scenario("mode manual, config typo_mode=auto, type langauge, ctrl+shift+f")
     assert result.screen == "language"

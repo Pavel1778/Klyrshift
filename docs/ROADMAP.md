@@ -12,9 +12,10 @@ outside the codebase).
 
 Klyrshift is a working Debian/GNOME layout switcher: it detects wrong-layout
 words, rewrites them, switches the layout, and can undo the change. The core is
-strong (1100+ tests, 87 % coverage, 0 false positives and 0 corruption on the
-detector benchmark). The gaps are system integration on real hardware, the
-first-run experience, and packaging beyond a manual `.deb`.
+strong (1300+ tests, ~86 % coverage, 0 false positives and 0 corruption on the
+detector benchmark). The gaps are system integration on real hardware and
+packaging beyond a manual `.deb`; the first-run wizard and tour ship, but are
+only exercised by hand on a real desktop.
 
 ## Stage 0 — Audit and foundations — **done**
 

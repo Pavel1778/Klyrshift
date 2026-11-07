@@ -489,8 +489,13 @@ of a wrong correction, so prefer the dictionary when you can.
 ## Correct words keep getting rewritten ("T9-спам")
 
 If T9 rewrites words that are already correct — and it repeats every few seconds
-— the automatic pass is running when you do not want it to. Since v0.2.8.2 the
-typo pass has its **own** mode, independent of the global layout `mode`:
+— the automatic pass is running when you do not want it to. Two settings are
+involved:
+
+* the working `mode` (`auto`/`manual`/`hybrid`) decides **whether** anything runs
+  automatically. `manual` means "only when I ask": it silences the layout pass
+  *and* the T9/punctuation passes;
+* `typo_mode` (`off`/`manual`/`auto`/`hybrid`) decides **which** T9 pass may run:
 
 ```toml
 typo_mode = "manual"   # off | manual | auto | hybrid
@@ -498,12 +503,14 @@ typo_mode = "manual"   # off | manual | auto | hybrid
 
 - `off` — T9 never runs;
 - `manual` — T9 runs only on the explicit hotkey (default `CTRL+SHIFT+F`);
-- `auto` / `hybrid` — T9 runs on a word boundary (Space / Enter).
+- `auto` / `hybrid` — T9 runs on a word boundary (Space / Enter), but only when
+  the working `mode` is also `auto` or `hybrid`.
 
-A user who wants automatic *layout* switching but hotkey-only *typo* fixing sets
-`typo_mode = "manual"` and leaves `mode = "auto"`. The two modes no longer
-interfere. On the **Т9** tab of `klyrshift gui` each feature has its own mode
-combo.
+So a user who wants automatic *layout* switching but hotkey-only *typo* fixing
+sets `typo_mode = "manual"` and leaves `mode = "auto"`. A user who wants a fully
+quiet app sets `mode = "manual"`: nothing is rewritten until an explicit hotkey,
+whatever `typo_mode` says. On the **Т9** tab of `klyrshift gui` each feature has
+its own mode combo.
 
 If T9 still rewrites a specific correct word, add it to the dictionary
 (`klyrshift dict add загадка`) — a word known in any loaded language is never

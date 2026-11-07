@@ -1624,8 +1624,13 @@ of a wrong correction, so prefer the dictionary when you can.
 ### Correct words keep getting rewritten ("T9-спам")
 
 If T9 rewrites words that are already correct — and it repeats every few seconds
-— the automatic pass is running when you do not want it to. Since v0.2.8.2 the
-typo pass has its **own** mode, independent of the global layout `mode`:
+— the automatic pass is running when you do not want it to. Two settings are
+involved:
+
+* the working `mode` (`auto`/`manual`/`hybrid`) decides **whether** anything runs
+  automatically. `manual` means "only when I ask": it silences the layout pass
+  *and* the T9/punctuation passes;
+* `typo_mode` (`off`/`manual`/`auto`/`hybrid`) decides **which** T9 pass may run:
 
 ```toml
 typo_mode = "manual"   # off | manual | auto | hybrid
@@ -1633,12 +1638,14 @@ typo_mode = "manual"   # off | manual | auto | hybrid
 
 - `off` — T9 never runs;
 - `manual` — T9 runs only on the explicit hotkey (default `CTRL+SHIFT+F`);
-- `auto` / `hybrid` — T9 runs on a word boundary (Space / Enter).
+- `auto` / `hybrid` — T9 runs on a word boundary (Space / Enter), but only when
+  the working `mode` is also `auto` or `hybrid`.
 
-A user who wants automatic *layout* switching but hotkey-only *typo* fixing sets
-`typo_mode = "manual"` and leaves `mode = "auto"`. The two modes no longer
-interfere. On the **Т9** tab of `klyrshift gui` each feature has its own mode
-combo.
+So a user who wants automatic *layout* switching but hotkey-only *typo* fixing
+sets `typo_mode = "manual"` and leaves `mode = "auto"`. A user who wants a fully
+quiet app sets `mode = "manual"`: nothing is rewritten until an explicit hotkey,
+whatever `typo_mode` says. On the **Т9** tab of `klyrshift gui` each feature has
+its own mode combo.
 
 If T9 still rewrites a specific correct word, add it to the dictionary
 (`klyrshift dict add загадка`) — a word known in any loaded language is never
@@ -2622,11 +2629,12 @@ word is scored against the corpora whose *layout could have produced it*.
   `lingvix-dict-<slug>.tar.gz` and `linguafix-dict-<slug>.tar.gz` that the live
   release ships) or the offline repository copy.
 - **Typo correction (T9)** (`typo_mode`, `typo_max_distance`,
-  `typo_max_distance_long`, `typo_min_word_length`). A second, independent
+  `typo_max_distance_long`, `typo_min_word_length`). A second, layout-neutral
   correction path, off by default. Its own `typo_mode` (`off` / `manual` /
-  `auto` / `hybrid`) decides when it runs, *independently* of the global layout
-  `mode`: `manual` fires only on `CTRL+SHIFT+F`, `auto`/`hybrid` on a word
-  boundary, `off` never. The legacy boolean `typo_correction` is kept mirrored to
+  `auto` / `hybrid`) selects *which* T9 pass may run, but the working `mode` is
+  the master gate: `manual` silences the layout-neutral passes too, so nothing
+  is rewritten without an explicit hotkey. Within that, `manual` fires only on
+  `CTRL+SHIFT+F`, `auto`/`hybrid` on a word boundary, `off` never. The legacy boolean `typo_correction` is kept mirrored to
   `typo_mode != "off"` for compatibility (and for the GUI switch). A legacy file
   is migrated on load: `typo_correction = true` with `mode = "manual"` becomes
   `typo_mode = "manual"`, otherwise the global mode is used. It runs only when
@@ -2647,15 +2655,19 @@ word is scored against the corpora whose *layout could have produced it*.
 
 ### Modes and hotkeys
 
-`mode` selects how much the daemon acts on its own for the *layout* pass:
-`auto` corrects every word, `manual` only on the fix hotkey, and `hybrid`
-corrects automatically but keeps a short undo history.
+`mode` is the master gate: `auto` acts on every word, `manual` acts only on an
+explicit hotkey, and `hybrid` acts automatically but withholds an uncertain
+layout fix for the manual hotkey. `manual` silences *every* automatic pass —
+layout, T9 and punctuation — so a user who chose "only when I ask" is never
+rewritten without a command (the reported "the app fixes me without my command"
+bug).
 
-Each optional feature has its own mode on top of that (`typo_mode`,
+Each optional feature then has its own mode on top of that (`typo_mode`,
 `punctuation_mode`): `off`, `manual` (explicit hotkey only), `auto` (on a word
-boundary) or `hybrid`. This lets a user keep automatic layout switching while
-making T9 hotkey-only — the combination behind the "T9-спам" report, where a
-correct word was auto-rewritten because the typo pass inherited the global mode.
+boundary) or `hybrid`. It selects *which* pass may run; the working `mode` still
+decides *whether* it runs automatically. This lets a user keep automatic layout
+switching while making T9 hotkey-only (`typo_mode = "manual"`, `mode = "auto"`),
+while a fully quiet app is `mode = "manual"`.
 
 Hotkeys are matched in `daemon._parse_hotkey`. A chord such as `CTRL+F12` requires
 the modifier to be held; a **double tap** such as `SHIFT+SHIFT`, `CTRL+CTRL` or
@@ -2825,6 +2837,7 @@ Unix-сокет `SOCKET_STREAM`, который демон создаёт при
 
 ```bash
 klyrshift learn list              # что демон выучил за сессию
+klyrshift learn list-rejected     # слова, отклонённые Ctrl+Z
 klyrshift learn promote vercel    # закрепить слово вручную
 klyrshift learn forget vercel     # снова разрешить исправлять
 ```
@@ -3703,9 +3716,10 @@ outside the codebase).
 
 Klyrshift is a working Debian/GNOME layout switcher: it detects wrong-layout
 words, rewrites them, switches the layout, and can undo the change. The core is
-strong (1100+ tests, 87 % coverage, 0 false positives and 0 corruption on the
-detector benchmark). The gaps are system integration on real hardware, the
-first-run experience, and packaging beyond a manual `.deb`.
+strong (1300+ tests, ~86 % coverage, 0 false positives and 0 corruption on the
+detector benchmark). The gaps are system integration on real hardware and
+packaging beyond a manual `.deb`; the first-run wizard and tour ship, but are
+only exercised by hand on a real desktop.
 
 ### Stage 0 — Audit and foundations — **done**
 
@@ -4008,6 +4022,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   boundary character was still on screen: `manual` mode + `ghbdtn` + Space +
   double Shift produced `gпривет`. They now delete the word *and* the trailing
   boundary and retype both, via `_memory_word_span()`.
+
+- **A live-buffer hotkey fix no longer leaves a stale boundary.** Toggle-layout,
+  the T9/punctuation hotkeys act on the live buffer when one exists; that fix
+  retypes no boundary, but it left the remembered boundary from an earlier
+  flush, so the *next* reach-back fix deleted one character too many and ate the
+  separator before the word (`abc привет` -> `abcghbdtn `). The remembered
+  boundary is now updated by every fix, matching what it actually retyped.
 
 - **Manual mode no longer corrects without a command.** The reported bug: with
   `mode = manual`, Klyrshift still rewrote words on its own. The layout pass was

@@ -192,6 +192,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   double Shift produced `gпривет`. They now delete the word *and* the trailing
   boundary and retype both, via `_memory_word_span()`.
 
+- **A live-buffer hotkey fix no longer leaves a stale boundary.** Toggle-layout,
+  the T9/punctuation hotkeys act on the live buffer when one exists; that fix
+  retypes no boundary, but it left the remembered boundary from an earlier
+  flush, so the *next* reach-back fix deleted one character too many and ate the
+  separator before the word (`abc привет` -> `abcghbdtn `). The remembered
+  boundary is now updated by every fix, matching what it actually retyped.
+
 - **Manual mode no longer corrects without a command.** The reported bug: with
   `mode = manual`, Klyrshift still rewrote words on its own. The layout pass was
   gated on the working mode, but the layout-neutral T9 and punctuation passes

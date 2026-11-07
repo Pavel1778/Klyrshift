@@ -1641,13 +1641,17 @@ class KlyrshiftDaemon:
         self._remember_fix_source(word)
         self._record_undo(word + boundary, current, backspace_count, source=current, target=target)
         # The on-screen word is now the converted one; keep the memory in step
-        # so pressing the hotkey again flips it back.
+        # so pressing the hotkey again flips it back. The boundary is updated
+        # too: a live-buffer fix leaves none (``boundary`` is ``""``), while a
+        # reach-back fix retypes it -- a stale boundary from an earlier flush
+        # would make the next reach-back delete one character too many.
         with self._lock:
             if from_buffer:
                 self.buffer = ""
                 self._scancodes = []
             self._last_flushed_word = converted
             self._last_flushed_corrected = False
+            self._last_flushed_boundary = boundary
         return True
 
     def _force_typo_fix(self) -> bool:
@@ -1714,9 +1718,12 @@ class KlyrshiftDaemon:
                 self.buffer = ""
                 self._scancodes = []
             # The on-screen word is now the corrected form; keep the memory in
-            # step so a repeat hotkey does not re-fix already-correct text.
+            # step so a repeat hotkey does not re-fix already-correct text. The
+            # boundary follows the same rule as the toggle: empty after a
+            # live-buffer fix, the retyped character after a reach-back one.
             self._last_flushed_word = fixed
             self._last_flushed_corrected = True
+            self._last_flushed_boundary = boundary
         return True
 
     def _maybe_handle_undo_chord(self, name: str) -> bool:
