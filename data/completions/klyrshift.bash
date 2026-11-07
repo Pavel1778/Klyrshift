@@ -31,7 +31,7 @@ _klyrshift() {
     done
 
     if [[ -z "$cmd" ]]; then
-        COMPREPLY=( $(compgen -W "app-mode collect-logs config dict doctor explain export fix gui hotkeys import install-autostart kill learn logs mode restart simulate start status stop undo uninstall-autostart verify version -h --help --version --lang" -- "$cur") )
+        COMPREPLY=( $(compgen -W "app-mode collect-logs config dict doctor explain export fix gui hotkeys import install-autostart kill learn logs mode qa restart simulate start status stop undo uninstall-autostart verify version -h --help --version --lang" -- "$cur") )
         return 0
     fi
 
@@ -102,6 +102,13 @@ _klyrshift() {
                 COMPREPLY=( $(compgen -W "auto manual hybrid" -- "$cur") )
             else
                 COMPREPLY=( $(compgen -W "-h --help" -- "$cur") )
+            fi
+            ;;
+        qa)
+            if [[ "$cur" != -* ]] && (( COMP_CWORD == i + 1 )); then
+                COMPREPLY=( $(compgen -W "run regress list" -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -W "--seed --generate --focus --changed --scenarios --report --store --json --no-minimise --no-record -h --help" -- "$cur") )
             fi
             ;;
         restart)

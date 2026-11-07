@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **An autonomous QA engine (`klyrshift qa`).** A testing layer on top of the
+  pytest suite: it drives the real daemon through `klyrshift.simulate`, checks
+  independent invariants and records confirmed bugs in a regression store. A
+  scenario is JSON data (a bundled corpus plus a seeded deterministic
+  generator), never code — only the simulator's fixed step DSL is ever run, so
+  no step an LLM proposes can execute. `klyrshift qa run` is offline and
+  deterministic (no API key), and a new CI job runs it on every push;
+  `--report` writes a JSON and a Markdown report that show measured numbers
+  only. See [docs/QA_ENGINE.md](docs/QA_ENGINE.md).
+
 - **A comparison section on the landing page.** The README carried a feature
   matrix against the other Linux layout switchers, but the page a visitor lands
   on did not. `Comparison.astro` renders the same matrix (automatic correction,

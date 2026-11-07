@@ -542,6 +542,40 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   CC-BY-SA requires attribution, and `Gtk.License.MIT_X11` only describes the
   code.
 
+## Autonomous QA engine (`klyrshift.qa`)
+
+`klyrshift qa run` is a testing layer *on top of* the pytest suite, never a
+replacement. It drives the real daemon through `klyrshift.simulate`, checks
+independent invariants and records confirmed bugs. Pieces, each testable alone:
+
+- `qa/scenario.py` -- the scenario model; the corpus is JSON data
+  (`src/klyrshift/data/qa/scenarios.json`), loaded by `qa/curated.py`. Scenarios
+  live in data, not Python literals, so the i18n guard (which flags every
+  Cyrillic literal in a `.py` file) is not tripped by expected screens.
+- `qa/invariants.py` -- pure checkers over a result. The typed counts
+  (`typed_separators`/`typed_punctuation`/`typed_chars`) are an **independent
+  oracle** computed from the steps, not from the simulator. A structural
+  invariant (a lost character, a manual-mode fix with no hotkey, a
+  mixed-script replacement) is a confirmed bug; a hand-written `expect`
+  mismatch is only a *suspicion*.
+- `qa/executor.py` -- feeds a scenario to the simulator's own step parser.
+  **Never execute a step as code**: a scenario is data, and only the fixed DSL
+  runs. A rejected step or a daemon exception is a `harness-error`, not a bug.
+- `qa/generator.py` -- deterministic (seeded) generation, plus an optional
+  `LLMProvider` whose proposals are validated as data and dropped when
+  malformed. The deterministic run never depends on a provider.
+- `qa/analyzer.py` -- classifies a failure and minimises it by delta-debugging
+  (a candidate is kept only if the failure signature is identical).
+- `qa/store.py` -- the regression store; it only appends, a fixed entry is
+  marked `fixed`, never deleted.
+- `qa/runner.py`, `qa/report.py` -- orchestration and measured-only reports (no
+  invented coverage percentage).
+
+CI runs `klyrshift qa run --generate 60 --seed 12345` in the `qa` job: offline,
+no API key, deterministic. Keep it that way -- an LLM call in the default path
+would make CI depend on the network. The engine tests the same surface the
+simulator does; it does **not** prove the real `evdev`/`uinput` path.
+
 ## Known limitation
 
 The daemon works on a real GNOME desktop only; the CI and smoke tests do not

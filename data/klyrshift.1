@@ -176,6 +176,45 @@ show only lines of this level (DEBUG/INFO/WARNING/ERROR)
 show or change the mode (auto/manual/hybrid)
 .PP
 .B mode {auto, manual, hybrid}
+.SS qa
+autonomous QA: scenarios, invariants, report, regressions
+.PP
+.B qa_action {run, regress, list}
+.br
+run — run the corpus; regress — re\-check regressions; list — list regressions
+.PP
+.RS
+.TP
+.B \-\-seed
+seed for scenario generation
+.TP
+.B \-\-generate
+generate N scenarios
+.TP
+.B \-\-focus
+restrict generation to a category (repeatable)
+.TP
+.B \-\-changed
+changed file: focus generation on the areas it affects
+.TP
+.B \-\-scenarios
+scenario file or directory (JSON)
+.TP
+.B \-\-report
+write the report to a directory (JSON + Markdown)
+.TP
+.B \-\-store
+path to the regression file
+.TP
+.B \-\-json
+print the report as JSON
+.TP
+.B \-\-no\-minimise
+do not minimise failures
+.TP
+.B \-\-no\-record
+do not record regressions
+.RE
 .SS restart
 restart the daemon
 .SS simulate
