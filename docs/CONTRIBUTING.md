@@ -37,6 +37,12 @@ The test suite must stay above **80 %** coverage. The operating-system boundary
 (`evdev` devices, `uinput`, `g3kb-switch`, `setxkbmap`, `wtype`, `xdotool`) is
 replaced with lightweight fakes; the tests exercise the real daemon logic.
 
+The headless simulator (`klyrshift simulate`) and the autonomous QA engine
+(`klyrshift qa`) verify the same logic end to end without a keyboard; see
+[SELF_VERIFICATION.md](SELF_VERIFICATION.md). If you work in an automated
+session, the lifecycle and restart procedure is in
+[AGENT_SESSIONS.md](AGENT_SESSIONS.md).
+
 ## Code standards
 
 - Python 3.10+, fully typed. `mypy --strict` must pass.

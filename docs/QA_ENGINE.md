@@ -5,9 +5,11 @@ daemon through the headless simulator (`klyrshift simulate`), checks independent
 invariants, classifies failures, minimises them and keeps a regression store.
 
 It is **not** a replacement for the pytest suite and it does **not** talk to
-`evdev`/`uinput` or a compositor. It tests the *logic and observable behaviour*
-of the daemon, exactly like the simulator does; the real device stack still
-needs a desktop (see [TESTING.md](TESTING.md)).
+`evdev`/`uinput` or a compositor. It tests the *logic and observable
+behaviour* of the daemon, exactly like the simulator does; the real device
+stack still needs a desktop (see [TESTING.md](TESTING.md)). For how the
+simulator and this engine fit together as the project's self-verification
+story, see [SELF_VERIFICATION.md](SELF_VERIFICATION.md).
 
 ## Run it
 
