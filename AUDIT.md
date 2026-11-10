@@ -153,7 +153,7 @@ polish items plus two confirmations; all are done.
 | 2 — are `etx` and `csh` intentional? | Yes. Both are real entries of the stdlib `mimetypes` table (verified: `etx in mimetypes.types_map` is `True`, likewise `csh`), so they come from the generated corpus, not a manual addition. Neither is a word of en/ru. They are borderline (a control byte and a shell name) and are now marked as such in `stop_words.txt`. |
 | 3 — document "screen and learning are independent", and test the adjacent scenario | The invariant is documented in `AGENTS.md` and `docs/UNDO_CONTRACT.md` (undo restores the *screen*; rejection is a separate signal). The adjacent scenario is pinned: a word rejected three times with `Ctrl+Z` **does not** accumulate keeps (`kept == 0`), the same principle as the manual-mode fix. New test: `tests/test_simulate.py::test_a_rejected_word_never_accumulates_keeps`. |
 | patch upgrade on Debian 12 | Run: `UPGRADE_IMAGE=debian:12 bash scripts/patch_upgrade_test.sh` passes (the clean install was already covered on 12 and 13). |
-| reproducibility: does the script set `SOURCE_DATE_EPOCH` itself? | Yes. When the variable is unset, `build_deb.sh` derives it from the newest commit (`git log -1 --format=%ct`), so a **local** build with no CI variable is reproducible too; an explicit `SOURCE_DATE_EPOCH` overrides it. Confirmed by two consecutive builds producing the identical hash. |
+| reproducibility: does the script set `SOURCE_DATE_EPOCH` itself? | Yes, and it is now **cross-environment**. Comparing the CI artifact with a local build exposed two host-dependent differences: the date came from the newest commit (a PR's synthetic merge commit differs from the merge), and dpkg's default compressor changed from xz to zstd in 1.22.x (CI produced `.tar.zst`, a local 1.22.22 `.tar.xz`). `build_deb.sh` now pins `-Zxz` and derives the date from the **release date in `CHANGELOG.md`**, so the same commit builds the identical artifact locally and in CI. `SOURCE_DATE_EPOCH` still overrides. Verified: two consecutive local builds match, and the mechanism no longer depends on the host's dpkg version. |
 
 ## Phase 3 — numbers after the change
 
@@ -193,13 +193,12 @@ polish items plus two confirmations; all are done.
   regenerated (`scripts/build_cli_docs.py`) and the handbook rebuilt.
 
 - **Artifact.** `dist/klyrshift_0.2.10_all.deb`
-  - `sha256: 1b945dc1cfbfd78c9833db491fac70f61c0a3128409d2de08cf3dab1b4e8f5bb`
-    (the build is byte-reproducible: `build_deb.sh` sets `SOURCE_DATE_EPOCH`
-    itself from the newest commit when the variable is unset, so a local
-    build with no CI variable reproduces the same hash. Two consecutive
-    builds were verified identical. Earlier hashes in this PR changed as the
-    tree changed -- that is expected; only this one matches the shipped
-    artifact.)
+  - `sha256: 6c0a55eac54a825a344a2a529a61cafb6928baaeab84cbd55cb0b10d8a82b58a`
+    (byte-reproducible across environments: the compressor is pinned to xz and
+    the date comes from the CHANGELOG release date, so this tree builds the
+    same artifact locally and in CI. Supersedes the earlier hashes, which
+    changed both as the tree changed and because a newer dpkg defaulted to
+    zstd.)
   - Built with `scripts/build_deb.sh` (dpkg-deb, `--root-owner-group`).
   - `Depends:` unchanged and minimal: `python3 (>= 3.10)`,
     `python3-tomli | python3 (>= 3.11)`, `python3-tomli-w`, `python3-evdev`,

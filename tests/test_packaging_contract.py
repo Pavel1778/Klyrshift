@@ -324,6 +324,15 @@ def test_build_script_supports_reproducible_builds() -> None:
     assert "BUILD_DATE" in script
     # The tree's mtimes must be clamped before the archive is built.
     assert "touch -h -d" in script
+    # The epoch must come from the tree (the CHANGELOG release date), not the
+    # commit timestamp: a PR's synthetic merge commit has a different time than
+    # the merge, so a commit-derived date would make CI and a local build
+    # disagree. It falls back to the commit only for an undated version.
+    assert "CHANGELOG.md" in script
+    assert "release_date" in script
+    # The compressor must be pinned: dpkg's default changed from xz to zstd in
+    # 1.22.x, so a newer host (CI) and an older one produced different bytes.
+    assert "-Zxz" in script
 
 
 def test_release_workflow_only_fires_on_release_tags() -> None:

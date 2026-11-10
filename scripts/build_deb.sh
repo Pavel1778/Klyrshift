@@ -23,16 +23,30 @@ ARCH="all"
 BUILD_DIR="${REPO_DIR}/build/${PKG}_${VERSION}_${ARCH}"
 DIST_DIR="${REPO_DIR}/dist"
 
-# Reproducible builds: honour SOURCE_DATE_EPOCH (https://reproducible-builds.org/)
-# so the same tree yields the same .deb and a published checksum never goes
-# stale. Without it, ``date -R`` in the generated changelog and the tar member
-# mtimes change on every build. The default is the date of the newest commit,
-# which is stable for a given tree; an explicit value overrides it.
+# Reproducible builds (https://reproducible-builds.org/): the same tree must
+# yield the same .deb, on any host. Three things otherwise differ between a
+# local build and CI:
+#   * the changelog date (``date -R`` used the wall clock),
+#   * the tar member mtimes (dpkg copies the tree's mtimes),
+#   * the compressor (dpkg's default changed from xz to zstd in 1.22.x).
+# The compressor is pinned with ``-Zxz`` below; the date and the mtimes are
+# derived from the *release date in CHANGELOG.md*, which is fixed in the tree,
+# so a merge commit's timestamp cannot leak in. ``SOURCE_DATE_EPOCH`` still
+# overrides, for an explicit pin in CI or a manual build.
 if [ -n "${SOURCE_DATE_EPOCH:-}" ]; then
     BUILD_EPOCH="${SOURCE_DATE_EPOCH}"
 else
-    BUILD_EPOCH="$(git -C "${REPO_DIR}" log -1 --format=%ct 2>/dev/null || echo 0)"
-    [ "${BUILD_EPOCH}" != "0" ] || BUILD_EPOCH="$(date +%s)"
+    # ``## [0.2.10] - 2026-11-10`` -> 2026-11-10 -> midnight UTC that day.
+    release_date="$(grep -m1 -E "^## \[${VERSION}\]" "${REPO_DIR}/CHANGELOG.md" \
+        | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' || true)"
+    if [ -n "${release_date}" ]; then
+        BUILD_EPOCH="$(date -u -d "${release_date} 00:00:00" +%s)"
+    else
+        # No dated heading for this version: fall back to the newest commit, so
+        # an unreleased build is still stable within a tree.
+        BUILD_EPOCH="$(git -C "${REPO_DIR}" log -1 --format=%ct 2>/dev/null || echo 0)"
+        [ "${BUILD_EPOCH}" != "0" ] || BUILD_EPOCH="$(date +%s)"
+    fi
 fi
 export SOURCE_DATE_EPOCH="${BUILD_EPOCH}"
 BUILD_DATE="$(date -u -R -d "@${BUILD_EPOCH}" 2>/dev/null || date -u -R)"
@@ -300,6 +314,10 @@ chmod 0755 "${BUILD_DIR}/DEBIAN/postrm"
 # Clamp every mtime in the tree to the build epoch so the tar members are
 # deterministic (dpkg-deb copies the file mtimes into the archive).
 find "${BUILD_DIR}" -exec touch -h -d "@${BUILD_EPOCH}" {} +
-dpkg-deb --build --root-owner-group "${BUILD_DIR}" "${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"
+# Pin the compressor: the dpkg default changed from xz to zstd in 1.22.x, so
+# the same tree produced different bytes on a newer host (CI) than on an older
+# one. Pinning xz makes the artifact reproducible across environments, not only
+# across runs on one machine. xz is available in dpkg on Debian 12 and 13.
+dpkg-deb --build --root-owner-group -Zxz "${BUILD_DIR}" "${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"
 
 echo "[klyrshift] Package built: ${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"

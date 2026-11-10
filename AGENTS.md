@@ -75,6 +75,19 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   without a display server. Talking to a live compositor still needs a desktop.
 
 ## Invariants that have bitten before
+- **The `.deb` build must stay byte-reproducible, across hosts.** Three things
+  made the same tree produce different bytes: the changelog's `date -R`, dpkg
+  copying the tree's mtimes, and -- the one that survives a single-machine test
+  -- dpkg's default compressor, which changed from xz to zstd in 1.22.x (CI on a
+  newer dpkg produced `.tar.zst`, a local 1.22.22 `.tar.xz`). `build_deb.sh`
+  therefore pins `-Zxz`, clamps the mtimes and derives the date from the
+  **release date in `CHANGELOG.md`**, not the commit (a PR's synthetic merge
+  commit has a different timestamp than the merge, so a commit-derived date
+  still differs between CI and a local build). `SOURCE_DATE_EPOCH` overrides.
+  `tests/test_packaging_contract.py::test_build_script_supports_reproducible_builds`
+  guards all three. To check by hand: build twice, and compare a local build
+  against the CI artifact for the same commit -- they must match.
+
 - **The technical-token canary must stay wider than `stop_words.txt`.**
   `tests/test_false_positives.py` builds its corpus from the stdlib `mimetypes`
   table plus a static list (242 tokens), not from the stop-word file: a canary
