@@ -148,6 +148,17 @@ publishes.
   bytes and the CI artifact are the same; the code jobs stay on `ubuntu-latest`
   on purpose, to exercise the newest Ubuntu first. See the runner policy at the
   top of `ci.yml` and `tests/test_ci_workflows.py`.
+- [ ] **Cross-version reproducibility is a checked fact, not an assumption.**
+  Measured for v0.2.10: `dpkg-deb` 1.22.6 (Ubuntu 24.04, `xz` backend) and
+  1.23.7 (Ubuntu 26.04) both produce the same `.deb` from the same tree,
+  `6c0a55ea…`. So the image pin is a *belt-and-braces* guard, not a workaround
+  for a real difference. CI only proves reproducibility *within one image* (it
+  builds twice); this cross-image check is manual. Re-run it when the pinned
+  image moves (e.g. `ubuntu-24.04` → the next LTS): build on both images and
+  compare `sha256sum`. The date comes from `CHANGELOG.md` and the compressor is
+  pinned with `-Zxz`, so a difference would point at another toolchain change
+  (e.g. a new default for `dpkg-deb`), which is exactly what this check exists
+  to catch.
 - [ ] `python3 scripts/release_consistency.py --latest` passes — the newest
   published release now matches the tree.
 - [ ] The download links on the landing page resolve. Redeploy the Layero host

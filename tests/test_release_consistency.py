@@ -22,6 +22,7 @@ here with a recorded payload instead of a network call.
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -198,25 +199,34 @@ def _staged_assets_file(tmp_path: Path, names: list[str]) -> Path:
     return path
 
 
-def test_only_packaged_files_may_change_without_a_version_bump(rc: object) -> None:
-    """A release tree must not quietly produce a different .deb for one version.
+def test_changelog_newest_heading_matches_the_tree_version(rc: object) -> None:
+    """The *newest* changelog heading must equal the tree version, both ways.
 
-    The published ``.deb`` for a version is identified by its sha256. If a
-    post-release commit edits a file that is *packaged into* the .deb (today
-    only ``CHANGELOG.md``) while the version string stays the same, the same
-    version now has two different artifacts -- exactly the ambiguity that made
-    a reviewer question the 0.2.10 hash. Either the version is bumped or the
-    packaged file is not touched. This test names the packaged set so the rule
-    is explicit; ``scripts/build_deb.sh`` is the source of truth for what ships.
+    ``CHANGELOG.md`` is packaged into the ``.deb``, so it is the one repository
+    file a post-release commit can edit to make the same version produce two
+    different artifacts. The guard must catch a mismatch in either direction:
+
+    * the tree version ahead of the changelog (a bump with no entry), and
+    * the changelog ahead of the tree version (an entry for a version the tree
+      does not carry).
+
+    Comparing the *first* (newest) heading -- not mere membership -- is what
+    makes it two-directional: membership would accept a stale tree version that
+    still has an older heading somewhere below the new one.
     """
     build = (REPO_ROOT / "scripts" / "build_deb.sh").read_text(encoding="utf-8")
-    # The only repository file installed into the package besides the Python
-    # tree and data is the changelog; assert that assumption holds.
     assert "CHANGELOG.md" in build, "build_deb.sh no longer installs CHANGELOG.md"
-    # And the changelog must carry the version, so bumping it is visible here.
+
     changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     version = rc.collect_source_facts().version
-    assert f"## [{version}]" in changelog, f"CHANGELOG.md has no '## [{version}]' heading"
+    # ``## [0.2.11]`` or ``## [0.2.11] - date``; the first heading is the newest.
+    headings = re.findall(r"^## \[(\d+\.\d+\.\d+(?:\.\d+)?)\]", changelog, re.MULTILINE)
+    assert headings, "CHANGELOG.md has no '## [x.y.z]' heading"
+    newest = headings[0]
+    assert newest == version, (
+        f"the newest CHANGELOG.md heading is {newest!r} but the tree version is "
+        f"{version!r}; bump one or the other so one version has one artifact"
+    )
 
 
 def test_prepublish_gate_passes_before_the_release_exists(
