@@ -2,8 +2,9 @@
 
 How Klyrshift is tested, which numbers are tracked, and how a change is judged.
 This complements [TESTING.md](TESTING.md), which describes the three levels and
-the manual desktop plan; this document covers the *quality metrics* and the
-regression thresholds.
+the manual desktop plan, and [SELF_VERIFICATION.md](SELF_VERIFICATION.md),
+which describes the headless simulator and the autonomous QA engine; this
+document covers the *quality metrics* and the regression thresholds.
 
 ## Layers
 

@@ -47,6 +47,8 @@ SOURCES: tuple[str, ...] = (
     "docs/OFFLINE_AND_PRIVACY.md",
     "docs/TESTING.md",
     "docs/QA_ENGINE.md",
+    "docs/SELF_VERIFICATION.md",
+    "docs/AGENT_SESSIONS.md",
     "docs/TEST_STRATEGY.md",
     "docs/RELEASING.md",
     "docs/CONTRIBUTING.md",
