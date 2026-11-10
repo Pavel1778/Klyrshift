@@ -75,6 +75,43 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   without a display server. Talking to a live compositor still needs a desktop.
 
 ## Invariants that have bitten before
+- **A short vowel-less Latin token is not a word, and must not be converted.**
+  `http`, `www`, `xml`, `pdf`, `jpg`, `csv`, `tls`, `jwt`, `cfg`, `txt`, `vpn`,
+  `xlsx`, `yml`, `dns`, `svn`, `fps`, `llm` and their kin score as noise in the
+  English bigram model, so the Russian model used to win by a small margin and
+  the detector rewrote them into Cyrillic letters the user never typed
+  (`http` -> `реез`). They are not vocabulary words of any shipped
+  language, so they belong in the bundled stop-word list
+  (`src/klyrshift/data/stop_words.txt`, one token per line -- the loader reads
+  one word per line, not a whitespace-separated line). Do not "fix" this with a
+  heuristic: a vowel/consonant or length rule also rejects real wrong-layout
+  words (`rfr` -> `как`, `xnj` -> `что`, `lfkj` -> `дало`) and the flagship
+  `ghbdtn` -> `привет`. `tests/test_false_positives.py` pins the tokens and
+  the surviving flagship fixes; `guards/tech-token-untouched` pins it in the QA
+  corpus.
+
+- **The simulator's `config` step must rebuild every cache it invalidates.**
+  The daemon caches configuration at construction: the parsed hotkeys
+  (`_hotkeys`, `_double_tap_hotkeys`), `_excepted_apps`, `_skip_regex`,
+  `_typo_correctors`, the detector's tuning and the per-app layout manager.
+  Writing the field alone leaves those stale, so `config exceptions_apps=[kitty]`
+  was silently ignored and an excepted app was still corrected. `_apply_config`
+  routes the mutated config through `KlyrshiftDaemon.apply_config`, which is the
+  same path `reload_config` uses (both share it -- do not duplicate the body).
+  When you add a new cached field to the daemon, add it to `apply_config` too,
+  or a reload and a simulator override will both miss it.
+
+- **A word the working mode silenced was never evaluated, so it is not a keep.**
+  `manual` mode, quiet hours and an excepted application all skip the passes;
+  the flush must then *not* call `_note_kept`. Counting it promoted a
+  wrong-layout word into the detector's session vocabulary after
+  `learning_promote_threshold` passes, so a word the user typed three times in
+  `manual` mode stopped being corrected after they switched to `auto`. The keep
+  signal is only for a word the daemon actually judged. An evaluated, kept word
+  is still learned -- `tests/test_learning.py` and `tests/test_simulate.py` pin
+  both directions, and `learning/manual-mode-does-not-learn` pins it in the QA
+  corpus.
+
 - **The live hosts are `klyrshift.*`, not `linguafix.*`.** The site's canonical
   origin lives in two places that must agree: `site/astro.config.mjs` (sitemap,
   `robots.txt`) and `site/src/lib/site.ts` (canonical, `og:url`, hreflang). Both

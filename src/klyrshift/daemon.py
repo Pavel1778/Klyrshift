@@ -2079,8 +2079,14 @@ class KlyrshiftDaemon:
             # user who chose "only when I ask" is never corrected without a
             # command. An explicit hotkey (``force``) bypasses this.
             if not self._lexical_pass_allowed(force=force):
+                # The working mode silenced every pass, so the word was never
+                # evaluated: it must not feed the "kept" signal. Counting it
+                # would promote words the user never had a chance to judge --
+                # a wrong-layout word typed three times in manual mode (or
+                # during quiet hours, or in an excepted app) would join the
+                # session vocabulary and stop being fixed after the user
+                # switched to auto.
                 logger.debug("Lexical passes silenced by the working mode")
-                self._note_kept(buffer)
                 return
             # A separate, opt-in step then looks for a single-character typo in
             # the language the user is typing; that fix stays in the current
@@ -2236,6 +2242,18 @@ class KlyrshiftDaemon:
         except Exception:
             logger.error("Failed to reload configuration", exc_info=True)
             return
+        self.apply_config(new_config)
+
+    def apply_config(self, new_config: Config) -> None:
+        """Adopt ``new_config`` and rebuild every cache derived from it.
+
+        The daemon caches a lot of configuration at construction time: the
+        parsed hotkeys, the exception set, the detector's tuning and the
+        per-app layout manager. Swapping ``self.config`` alone would leave all
+        of those pointing at the old values, so a caller that mutates the
+        config in place (the simulator's ``config`` step, a test) must go
+        through here. ``reload_config`` reads the file and then calls this.
+        """
         self.config = new_config
         self.detector.set_stop_words(new_config.stop_words)
         self.detector.min_word_length = new_config.min_word_length

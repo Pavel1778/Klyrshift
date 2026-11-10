@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Short technical tokens are no longer rewritten into Cyrillic.** A short,
+  vowel-less Latin token (`http`, `www`, `xml`, `pdf`, `jpg`, `csv`, `tls`,
+  `jwt`, `cfg`, `txt`, `vpn`, `xlsx`, `yml`, `dns`, `svn`, `fps`, `llm`, ...)
+  scored as noise in the English bigram model, so the Russian model won by a
+  small margin and the detector rewrote the token into letters the user never
+  typed (`http` -> `реез`). These are not words of any shipped language, so
+  they now join the bundled stop-word list (`data/stop_words.txt`); the
+  automatic pass leaves them in the layout they were typed in. The flagship
+  fixes (`ghbdtn` -> `привет`, `rfr` -> `как`) are unaffected, and the
+  regression is pinned by `tests/test_false_positives.py` and a QA scenario.
+
+- **The simulator's `config` step refreshes every cache it invalidates.** The
+  daemon caches a lot of configuration at construction time (the parsed
+  hotkeys, the exception set, the detector's tuning, the per-app layout
+  manager), and `klyrshift simulate 'config ...'` used to write the field and
+  leave the caches stale. An override such as `config exceptions_apps=[kitty]`
+  was therefore silently ignored. The reload logic is now shared
+  (`KlyrshiftDaemon.apply_config`), and both `reload_config` and the simulator
+  call it, so an override takes effect immediately. Pinned by
+  `tests/test_simulate.py` and a QA scenario.
+
 - **An autonomous QA engine (`klyrshift qa`).** A testing layer on top of the
   pytest suite: it drives the real daemon through `klyrshift.simulate`, checks
   independent invariants and records confirmed bugs in a regression store. A
@@ -184,6 +205,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registry disagree again.
 
 ### Fixed
+
+- **Manual mode no longer poisons the learned vocabulary.** A word the working
+  mode silenced (manual mode, quiet hours, an excepted application) was never
+  evaluated, yet the flush counted as a "keep" and, after
+  `learning_promote_threshold` passes, promoted the word into the detector's
+  session vocabulary. A wrong-layout word typed three times in manual mode then
+  stopped being fixed after the user switched to auto. A silenced word no longer
+  feeds the keep signal; an evaluated, kept word is still learned. Pinned by
+  `tests/test_learning.py`, `tests/test_simulate.py` and a QA scenario.
 
 - **Enter, Tab and punctuation no longer eat the first character of a word.**
   Only a Space boundary consumed and retyped its key; Enter, Tab and the

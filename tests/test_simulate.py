@@ -354,3 +354,105 @@ def test_boundary_never_eats_a_character(mode: str, boundary: str, char: str, ex
     result = run_scenario(f"mode {mode}, {extra}type ghbdtn, {boundary}")
     assert result.replacements, (mode, boundary)
     assert result.screen == "привет" + char, (mode, boundary, result.screen)
+
+
+# --- the config step refreshes every derived cache --------------------------
+
+
+def test_config_override_refreshes_the_exception_set() -> None:
+    """``config exceptions_apps=...`` must take effect immediately.
+
+    The exception set is cached on the daemon at construction. The simulator's
+    ``config`` step used to write the field and leave the cache stale, so the
+    override was silently ignored and an excepted app was still corrected.
+    """
+    result = run_scenario("config exceptions_apps=[myapp], app myapp, type ghbdtn, space")
+    assert result.screen == "ghbdtn "
+    assert result.replacements == []
+
+
+def test_config_override_refreshes_the_parsed_hotkeys() -> None:
+    """A hotkey overridden through ``config`` must be re-parsed, not ignored."""
+    result = run_scenario(
+        "config hotkey_toggle_layout_last_word=CTRL+SHIFT+Y, type ghbdtn, ctrl+shift+y"
+    )
+    assert result.screen == "привет"
+    assert result.layout == "ru"
+
+
+def test_config_override_refreshes_the_detector_tuning() -> None:
+    """``min_word_length`` reaches the detector, not only the config object."""
+    assert run_scenario("config min_word_length=7, type ghbdtn, space").screen == "ghbdtn "
+    assert run_scenario("config min_word_length=3, type ghbdtn, space").screen == "привет "
+
+
+# --- the working mode must not poison the learned vocabulary ----------------
+
+
+def test_manual_mode_does_not_learn_a_word_it_never_judged() -> None:
+    """A word silenced by manual mode must not be promoted by learning.
+
+    Typing a wrong-layout word three times in manual mode used to promote it
+    (the flush counted as a "keep"), so after the user switched to auto the
+    word was never corrected again. Manual mode means "only when I ask": the
+    word was never evaluated, so it must not become learned vocabulary.
+    """
+    result = run_scenario(
+        "mode manual, type ghbdtn, space, type ghbdtn, space, type ghbdtn, space, "
+        "mode auto, type ghbdtn, space"
+    )
+    assert result.learned == []
+    assert result.screen == "ghbdtn ghbdtn ghbdtn привет "
+
+
+def test_quiet_hours_do_not_learn_a_word_they_silenced() -> None:
+    result = run_scenario(
+        "config quiet_hours_enabled=true, config quiet_hours_start=00:00, "
+        "config quiet_hours_end=23:59, type ghbdtn, space, type ghbdtn, space, "
+        "type ghbdtn, space"
+    )
+    assert result.learned == []
+
+
+def test_an_excepted_app_does_not_learn_a_word_it_silenced() -> None:
+    result = run_scenario(
+        "config exceptions_apps=[myapp], app myapp, type ghbdtn, space, "
+        "type ghbdtn, space, type ghbdtn, space"
+    )
+    assert result.learned == []
+
+
+def test_auto_mode_still_learns_a_word_the_user_keeps() -> None:
+    """The fix must not disable learning: an evaluated, kept word still promotes."""
+    result = run_scenario("type vercel, space, type vercel, space, type vercel, space")
+    assert result.learned == ["vercel"]
+
+
+# --- the application-undo model is faithful -------------------------------
+
+
+def test_ctrl_z_after_later_typing_does_not_resurrect_the_pre_fix_state() -> None:
+    """A real editor's Ctrl+Z reverts the *last* edit, not the daemon's fix.
+
+    The simulator used to keep only one snapshot (before each replacement), so
+    a Ctrl+Z after the user typed something new jumped the screen back to a
+    state the user had already moved past -- resurrecting the pre-fix text and
+    then, through the ``no-lost-characters`` invariant, reporting a lost
+    separator the daemon never lost. Here the last edit is the Space, so the
+    application's undo removes it; the daemon's earlier fix (``дом``) stays on
+    screen and the user's typing is not jumped past.
+    """
+    result = run_scenario("type ljv, dblshift, type hello, wait, space, ctrl z")
+    assert result.screen == "домhello"
+    assert result.undone_separators == 1
+
+
+def test_user_undo_of_a_separator_is_credited_to_the_screen() -> None:
+    """A separator the user's own Ctrl+Z removed is not a daemon defect.
+
+    The QA engine's ``no-lost-characters`` invariant must credit it back, or a
+    scenario that ends with Ctrl+Z is reported as a confirmed bug even though
+    the daemon lost nothing.
+    """
+    result = run_scenario("type ghbdtn, space, type ghbdtn, space, ctrl z")
+    assert result.undone_separators == 1

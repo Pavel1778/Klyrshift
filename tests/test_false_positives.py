@@ -249,3 +249,91 @@ def test_every_accented_latin_vowel_is_recognised() -> None:
         if decomposed != char and decomposed[0] in _BASE_VOWELS and char not in _VOWELS:
             missing.append(char)
     assert missing == []
+
+
+# --- short technical tokens (acronyms) -------------------------------------------
+#
+# A short, vowel-less Latin token (``http``, ``www``, ``xml``, ``pdf`` ...) scores
+# as noise in the English bigram model, so the Russian model used to win by a
+# small margin and the detector rewrote the token into Cyrillic letters the user
+# never typed. These tokens are not words of any shipped language, so they are
+# listed in the bundled stop-word list; the detector must leave them alone.
+
+# The tokens whose wrong-layout rendering the corpus would otherwise accept.
+_TECH_TOKENS = [
+    "http",
+    "https",
+    "www",
+    "xml",
+    "yml",
+    "toml",
+    "pdf",
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "svg",
+    "csv",
+    "tsv",
+    "xlsx",
+    "xls",
+    "docx",
+    "txt",
+    "cfg",
+    "ini",
+    "conf",
+    "pem",
+    "crt",
+    "tls",
+    "ssl",
+    "mtls",
+    "jwt",
+    "csrf",
+    "xss",
+    "cors",
+    "vpn",
+    "dhcp",
+    "ntp",
+    "dns",
+    "svn",
+    "cvs",
+    "hg",
+    "fps",
+    "tpu",
+    "npu",
+    "apu",
+    "llm",
+]
+
+
+@pytest.fixture
+def default_det() -> LanguageDetector:
+    """A detector configured exactly as the daemon configures it by default."""
+    from klyrshift.config import load_default_stop_words
+
+    return LanguageDetector(
+        converter=LayoutConverter(),
+        stop_words=load_default_stop_words(),
+        min_word_length=3,
+    )
+
+
+@pytest.mark.parametrize("token", _TECH_TOKENS)
+def test_short_tech_token_is_left_alone(default_det: LanguageDetector, token: str) -> None:
+    assert default_det.target_layout(token, "us") is None
+
+
+@pytest.mark.parametrize("token", _TECH_TOKENS)
+def test_short_tech_token_is_never_flagged(default_det: LanguageDetector, token: str) -> None:
+    assert default_det.should_fix(token, "us") is False
+
+
+def test_stop_words_do_not_block_the_flagship_fixes(default_det: LanguageDetector) -> None:
+    """The added tokens must not stop a genuine wrong-layout word being fixed."""
+    for typed, layout, expected in [
+        ("ghbdtn", "us", "ru"),
+        ("rfr", "us", "ru"),
+        ("ltkf", "us", "ru"),
+        ("ntrcn", "us", "ru"),
+    ]:
+        assert default_det.target_layout(typed, layout) == expected, typed

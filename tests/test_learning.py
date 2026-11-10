@@ -340,3 +340,50 @@ def test_forgetting_the_last_word_clears_the_detector_vocabulary() -> None:
     assert daemon.detector._learned_words == {"vercel"}
     daemon._handle_control_request({"cmd": "learn.forget", "word": "vercel"})
     assert daemon.detector._learned_words == set()
+
+
+def test_silenced_word_is_not_counted_as_kept() -> None:
+    """A word the working mode silenced must not feed the "kept" signal.
+
+    In manual mode the daemon evaluates nothing automatically, so a word it
+    flushes was never judged. Counting it as "kept" promoted a wrong-layout
+    word after three passes and then, on switching to auto, the word was never
+    corrected again -- the fix the user wanted was silently disabled.
+    """
+    daemon = make_daemon(mode="manual", learning_promote_threshold=1)
+    for _ in range(3):
+        type_word(daemon, "ghbdtn")
+        daemon._handle_event(make_event("KEY_SPACE", 1))
+    assert daemon.learning.learned_words() == []
+    assert daemon.learning.stats.kept == 0
+
+
+def test_evaluated_kept_word_is_still_counted() -> None:
+    """The guard is narrow: an evaluated, kept word is still learned."""
+    daemon = make_daemon(learning_promote_threshold=1)
+    type_word(daemon, "vercel")
+    daemon._handle_event(make_event("KEY_SPACE", 1))
+    assert daemon.learning.learned_words() == ["vercel"]
+    assert daemon.learning.stats.kept == 1
+
+
+def test_apply_config_rebuilds_the_exception_cache() -> None:
+    """``apply_config`` refreshes the caches derived from the config.
+
+    Swapping ``self.config`` alone left the cached exception set pointing at the
+    old value, so a reload that added an exception appeared to do nothing.
+    """
+    daemon = make_daemon()
+    assert "myapp" not in daemon._excepted_apps
+    new_config = Config(stop_words=[], exceptions_apps=["myapp"])
+    daemon.apply_config(new_config)
+    assert "myapp" in daemon._excepted_apps
+
+
+def test_apply_config_reparses_the_hotkeys() -> None:
+    daemon = make_daemon()
+    new_config = Config(stop_words=[], hotkey_toggle_layout_last_word="CTRL+SHIFT+Y")
+    daemon.apply_config(new_config)
+    parsed = daemon._hotkeys["toggle_layout"]
+    assert parsed is not None
+    assert parsed[1] == int(evdev.ecodes.KEY_Y)

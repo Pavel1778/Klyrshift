@@ -844,5 +844,98 @@
     ],
     "tags": [],
     "title": "Backspacing past the start is safe"
+  },
+  {
+    "category": "guards",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "http "
+    },
+    "id": "guards/tech-token-untouched",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "A short vowel-less Latin token is not a word of any shipped language; the detector must not rewrite it into Cyrillic.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type http",
+      "space"
+    ],
+    "tags": [
+      "acronym",
+      "guards"
+    ],
+    "title": "A tech acronym is left in the layout it was typed in"
+  },
+  {
+    "category": "per-app",
+    "config": {
+      "exceptions_apps": [
+        "myapp"
+      ]
+    },
+    "difficulty": "intermediate",
+    "expect": {
+      "screen": "ghbdtn "
+    },
+    "id": "per-app/exception-applies-immediately",
+    "invariants": [
+      "no-lost-characters",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "The exception set is a daemon cache; a config override must rebuild it or the exception is silently ignored.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "app myapp",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "config-refresh",
+      "per-app"
+    ],
+    "title": "An exception set through config takes effect at once"
+  },
+  {
+    "category": "learning",
+    "config": {},
+    "difficulty": "intermediate",
+    "expect": {
+      "screen": "ghbdtn ghbdtn ghbdtn привет "
+    },
+    "id": "learning/manual-mode-does-not-learn",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "Manual mode evaluates nothing, so its flushes must not promote a word; after switching to auto the word is fixed again.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "mode manual",
+      "type ghbdtn",
+      "space",
+      "type ghbdtn",
+      "space",
+      "type ghbdtn",
+      "space",
+      "mode auto",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "learning",
+      "modes"
+    ],
+    "title": "A word silenced by manual mode is not learned"
   }
 ]

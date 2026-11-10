@@ -210,6 +210,33 @@ def test_no_lost_characters_fires_on_a_missing_separator() -> None:
     assert violation.name == "no-lost-characters"
 
 
+def test_no_lost_characters_credits_a_user_undo() -> None:
+    """A separator the user's own Ctrl+Z removed is not a daemon defect.
+
+    Without the credit, a scenario ending in Ctrl+Z (the application undoes its
+    last edit, removing the Space) was reported as a confirmed bug even though
+    the daemon lost nothing.
+    """
+    scenario = Scenario(
+        id="x", steps=["type ghbdtn", "space", "ctrl z"], invariants=["no-lost-characters"]
+    )
+    context = inv.InvariantContext(
+        scenario=scenario,
+        screen="\u043f\u0440\u0438\u0432\u0435\u0442",
+        replacements=[(7, "\u043f\u0440\u0438\u0432\u0435\u0442 ", "ru")],
+        mode="auto",
+        layout="ru",
+        suppressed=["ghbdtn"],
+        typed_separators=1,
+        typed_punctuation=0,
+        typed_chars=6,
+        final_separators=0,
+        steps=scenario.steps,
+        undone_separators=1,
+    )
+    assert inv.check("no-lost-characters", context) is None
+
+
 def test_manual_mode_silent_fires_on_an_automatic_fix() -> None:
     scenario = Scenario(id="x", steps=["mode manual", "type ghbdtn", "space"])
     context = inv.InvariantContext(

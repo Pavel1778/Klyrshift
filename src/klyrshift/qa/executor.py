@@ -144,6 +144,7 @@ def execute(scenario: Scenario, *, start_layout: str | None = None) -> Execution
         final_separators=result.screen.count(" ")
         + result.screen.count("\n")
         + result.screen.count("\t"),
+        undone_separators=result.undone_separators,
         steps=list(scenario.steps),
     )
     violations = inv.run_invariants(context)

@@ -47,6 +47,9 @@ class InvariantContext:
         typed_punctuation: How many ``.``/``,`` characters the user pressed.
         typed_chars: How many printable characters the user pressed.
         final_separators: How many separators the screen shows.
+        undone_separators: How many separators the *user's own* ``Ctrl+Z``
+            removed by undoing their last edit. The daemon is not responsible
+            for those, so they are credited back to the screen.
         steps: The scenario steps, in order.
     """
 
@@ -61,6 +64,7 @@ class InvariantContext:
     typed_chars: int
     final_separators: int
     steps: list[str]
+    undone_separators: int = 0
 
 
 @dataclass
@@ -123,7 +127,11 @@ def _no_lost_characters(context: InvariantContext) -> InvariantViolation | None:
     pressed. A lost separator is the signature of a deletion/insertion count
     that is off by one.
     """
-    if context.final_separators < context.typed_separators:
+    # A separator the user's own Ctrl+Z removed is their edit, not the daemon's,
+    # so it counts toward the screen total. Without this the invariant blames the
+    # daemon for a lost separator whenever the scenario ends with a Ctrl+Z.
+    shown = context.final_separators + context.undone_separators
+    if shown < context.typed_separators:
         return InvariantViolation(
             "no-lost-characters",
             f"pressed {context.typed_separators} separator(s), screen shows "
