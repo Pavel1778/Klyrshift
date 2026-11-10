@@ -287,6 +287,38 @@ def test_unknown_config_field_raises() -> None:
         run_scenario("config not_a_field=1")
 
 
+def test_config_chunk_without_an_equals_raises() -> None:
+    with pytest.raises(ScenarioError):
+        run_scenario("config justaword, type ghbdtn, space")
+
+
+def test_empty_config_chunk_is_ignored() -> None:
+    """A trailing/duplicate ``;`` must not be treated as a bad chunk."""
+    result = run_scenario("config mode=auto;, type ghbdtn, space")
+    assert result.screen == "привет "
+
+
+def test_a_scenario_error_from_apply_config_is_not_double_wrapped() -> None:
+    """A ``ScenarioError`` raised while applying is re-raised unchanged.
+
+    The simulator wraps arbitrary config failures in ``ScenarioError``; a
+    ``ScenarioError`` that already came from the config layer must pass through,
+    not be nested inside another one.
+    """
+    from klyrshift.simulate import _apply_config, _Driver
+
+    driver = _Driver(Config(stop_words=[]), "us")
+
+    def boom(_cfg: Config) -> None:
+        raise ScenarioError("already a scenario error")
+
+    driver.daemon.config.validate = lambda: None  # type: ignore[method-assign]
+    driver.daemon.apply_config = boom  # type: ignore[method-assign, assignment]
+    with pytest.raises(ScenarioError) as excinfo:
+        _apply_config(driver.daemon, "mode=auto")
+    assert str(excinfo.value) == "already a scenario error"
+
+
 def test_untypable_character_raises() -> None:
     with pytest.raises(ScenarioError):
         run_scenario("type ghbdtn😀")
@@ -492,6 +524,19 @@ def test_invalid_config_value_leaves_the_daemon_usable() -> None:
         run_scenario("config mode=bogus, type ghbdtn, space")
 
 
+def test_a_non_valueerror_from_a_config_override_is_still_a_scenario_error() -> None:
+    """The guard is by *class*, not by value.
+
+    A bad override can fail with something other than ``ValueError``: a typo'd
+    ``~user`` in a path makes ``Path.expanduser()`` raise ``RuntimeError``. That
+    must surface as a ``ScenarioError`` too, or the next novel invalid input
+    prints a traceback again.
+    """
+    with pytest.raises(ScenarioError) as excinfo:
+        run_scenario("config dictionary_custom_path=~nosuchuser_xyz/dict.txt, type ghbdtn, space")
+    assert "RuntimeError" in str(excinfo.value)
+
+
 # --- the undo stack is bounded ----------------------------------------------
 
 
@@ -515,3 +560,72 @@ def test_ctrl_z_still_undoes_the_last_edit_after_the_cap() -> None:
     result = run_scenario("type ghbdtn, space, type ghbdtn, space, ctrl z")
     assert result.screen == "привет привет"
     assert result.undone_separators == 1
+
+
+# --- undo at the history cap (user-visible behaviour) -----------------------
+
+
+def _drive_long_run(edits: int) -> object:
+    """Return a driver after ``edits`` single-character edits."""
+    from klyrshift.simulate import _Driver, _run_step
+
+    driver = _Driver(Config(stop_words=[]), "us")
+    _run_step(driver, "type " + "abcdefghij" * (edits // 10) + "abc"[: edits % 10])
+    return driver
+
+
+def test_ctrl_z_past_the_cap_still_undoes_the_most_recent_edit() -> None:
+    """Past the cap, Ctrl+Z must undo the *newest* edit, not silently no-op.
+
+    The cap drops the *oldest* snapshots, so the most recent edit is always
+    restorable. The failure mode to guard against is a cap that drops from the
+    wrong end (or clears the stack), which would make Ctrl+Z do nothing or jump
+    to a stale point.
+    """
+    driver = _drive_long_run(150)
+    assert len(driver.injector.undo_stack) == 100
+    before = "".join(driver.screen)
+    from klyrshift.simulate import _run_step
+
+    _run_step(driver, "ctrl z")
+    after = "".join(driver.screen)
+    assert after == before[:-1], "Ctrl+Z past the cap did not remove the last character"
+
+
+def test_ctrl_z_never_deletes_below_empty() -> None:
+    """Repeated Ctrl+Z on a short screen drains it to empty and stops."""
+    from klyrshift.simulate import _Driver, _run_step
+
+    driver = _Driver(Config(stop_words=[]), "us")
+    _run_step(driver, "type abc")
+    for _ in range(120):
+        _run_step(driver, "ctrl z")
+    assert "".join(driver.screen) == ""
+    assert driver.injector.undo_stack == []
+
+
+def test_undo_does_not_roll_back_the_session_vocabulary() -> None:
+    """A screen undo must not revert learning: the two are independent.
+
+    The undo snapshot restores the *screen*; the learned vocabulary is a
+    separate, forward-only signal. Rolling the vocabulary back with the screen
+    would make a promoted word "un-learn" on a Ctrl+Z, which is not what the
+    user asked for.
+    """
+    result = run_scenario("type vercel, space, type vercel, space, type vercel, space, ctrl z")
+    assert result.learned == ["vercel"]
+
+
+def test_a_scenario_with_more_undos_than_the_cap_still_passes() -> None:
+    """A long scenario that out-undoes the cap must not become a QA failure.
+
+    The cap is an internal bound, not a limit on how many Ctrl+Z a scenario may
+    contain; the run must complete and render a sane screen.
+    """
+    from klyrshift.simulate import _Driver, _run_step
+
+    driver = _Driver(Config(stop_words=[]), "us")
+    _run_step(driver, "type ghbdtn")
+    for _ in range(150):
+        _run_step(driver, "ctrl z")
+    assert "".join(driver.screen) == ""

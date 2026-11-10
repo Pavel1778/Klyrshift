@@ -55,10 +55,12 @@ $ klyrshift simulate 'config mode=bogus, type ghbdtn, space'
 ValueError: mode must be one of ('auto', 'manual', 'hybrid')   # traceback
 ```
 
-### D3 — five more technical tokens leaked into the detector
+### D3 — more technical tokens leaked into the detector
 
-A broad sweep of real technical tokens (extensions, protocols, MIME types,
-config keys) found five that the detector still rewrote into Cyrillic:
+A sweep of real technical tokens (extensions, protocols, MIME types, config
+keys) found a class that the detector still rewrote into Cyrillic. The sweep is
+now **generated from the stdlib `mimetypes` table** (an external, maintained
+source) plus a static list, so it is wider than the stop-word file it guards:
 
 | token | rewritten to | |
 | --- | --- | --- |
@@ -67,9 +69,21 @@ config keys) found five that the detector still rewrote into Cyrillic:
 | `npz` | `тзя` | NumPy archive |
 | `pfx` | `зач` | PKCS#12 certificate |
 | `tgz` | `епя` | gzip tarball |
+| `hdf` | `рва` | Hierarchical Data Format |
+| `jks` | `олы` | Java KeyStore |
+| `vcf`, `vtt`, `pbm`, `pnm`, `xbm`, `xlb`, `cdf`, `csh`, `etx`, `jpe` | *(garbage)* | misc MIME extensions |
 
-None is a word of any shipped language. They are the same class as the tokens
-already fixed, and they are not covered by any test.
+None is a word of any shipped language.
+
+**The canary is not a tautology.** The reviewer's concern was that a canary
+which iterates over the same list that is now in `stop_words.txt` only proves
+"the list is applied". The implemented canary is therefore *wider*: it is built
+from the stdlib `mimetypes` extension table plus a static list (266 tokens),
+minus a documented allowlist of extensions that are real words (`so`, `key`,
+`log`, `mid`, `img`, `tmp`, `dat`, `bin`, `iso`). Two tests assert the widening
+(>= 100 tokens independent of the list, >= 150 total), and the canary is
+falsifiable: removing a token from `stop_words.txt` makes it fail by name. This
+was verified by hand during the review.
 
 ### D4 — the simulator's undo stack grew without bound
 
@@ -106,6 +120,19 @@ All four were fixed test-first (a failing test, then the minimal change).
 
 Two QA scenarios were added: `guards/tech-token-corpus-untouched` and
 `robustness/config-error-does-not-corrupt`.
+
+## Review follow-ups (round 2)
+
+The first review raised two blockers and four non-blocking items; all are closed.
+
+| Item | Resolution |
+| --- | --- |
+| **B1 — the canary may be a tautology** | Replaced with a corpus generated from the stdlib `mimetypes` table + a static list (266 tokens), wider than `stop_words.txt`. Two tests pin the widening; the canary fails by name when a token is removed from the list (verified). |
+| **B2 — undo behaviour at the cap** | Pinned with four tests: past the cap `Ctrl+Z` still undoes the most recent edit, never deletes below empty, never rolls the vocabulary back, and a scenario with more `Ctrl+Z` than the cap still completes. The cap drops the *oldest* snapshot, so the newest edit is always restorable. |
+| 3 — rollback-failure path | `apply_config` restores `self.config` *before* rebuilding the caches and, if the rollback itself fails, logs `"Rollback failed: some caches may still hold values from the rejected configuration"`. Covered by a test (the `pragma: no cover` was removed). |
+| 4 — exception translation by type | `_apply_config` now translates **any** exception (by class), not a list of values; the traceback is logged at debug and the original type is named in the `ScenarioError`. A `RuntimeError` test covers it. |
+| 5 — upgrade path, not just clean install | New `scripts/patch_upgrade_test.sh` (`make patch-upgrade-test`): installs a 0.2.9 stand-in, then upgrades to 0.2.10 and checks the user config survives unchanged, the unit stays enabled, `klyrshift verify` passes and the CLI works. Passes on Debian 13. |
+| 6 — coverage of the new branches | The new branches (rollback, rollback-failure, undo cap, config-error translation) are covered; three small `_apply_config` branches got focused tests. Full suite coverage is unchanged at 85 %. |
 
 ## Phase 3 — numbers after the change
 
@@ -145,7 +172,9 @@ Two QA scenarios were added: `guards/tech-token-corpus-untouched` and
   regenerated (`scripts/build_cli_docs.py`) and the handbook rebuilt.
 
 - **Artifact.** `dist/klyrshift_0.2.10_all.deb`
-  - `sha256: 23ef1d6a787c17515ad9aa03c5d8aee247621c559c0efc3d066589cabb87185a`
+  - `sha256: 8a62c30b95d2249cd202b16bf437c573393ebc4893b9d87c631cfd855ab8533a`
+    (rebuilt after the review follow-ups; the earlier `23ef1d6a...` was the
+    pre-review artifact and is superseded)
   - Built with `scripts/build_deb.sh` (dpkg-deb, `--root-owner-group`).
   - `Depends:` unchanged and minimal: `python3 (>= 3.10)`,
     `python3-tomli | python3 (>= 3.11)`, `python3-tomli-w`, `python3-evdev`,

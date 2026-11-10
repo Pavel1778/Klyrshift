@@ -7,6 +7,8 @@ guards: plausibility, structural boundaries and identifier detection.
 
 from __future__ import annotations
 
+import mimetypes
+
 import pytest
 
 from klyrshift.converter import LayoutConverter
@@ -339,99 +341,219 @@ def test_stop_words_do_not_block_the_flagship_fixes(default_det: LanguageDetecto
         assert default_det.target_layout(typed, layout) == expected, typed
 
 
-# --- canary: a broad corpus of real technical tokens -------------------------
+# --- canary: a wide, independent technical-token corpus ----------------------
 #
-# A single representative set the detector must leave in the layout it was typed
-# in. This is the canary for the "technical tokens" section of stop_words.txt:
-# if a new corpus or a scoring change makes one of these convert again, the test
-# names it. The tokens are extensions, protocols, MIME types and config keys --
-# never words of a shipped language, so the detector has no business rewriting
-# them into Cyrillic.
+# The canary for the "technical tokens" section of stop_words.txt. It must NOT
+# be a restatement of that list, or it would only prove "the list is applied",
+# never "the list is sufficient": a token that leaks would go unnamed because it
+# is not in the corpus either.
+#
+# The corpus is therefore built from two sources *wider* than the stop-word
+# list, and the tests below assert that widening explicitly:
+#
+#   * Python's stdlib ``mimetypes`` extension table -- an external, maintained
+#     source the project does not control, so a new file format appears here
+#     without anyone editing this file; and
+#   * a static list of source extensions, protocols, build/container tools and
+#     config keys, which never belong in the detector's word model.
+#
+# A token that IS a real word of a shipped language (``so``, ``key``, ``log``)
+# is not "a leak" when left alone and is excluded by ``_KNOWN_WORDS``; the
+# detector is *allowed* to keep a real word. Everything else must be left in the
+# layout it was typed in.
 
-_TECH_TOKEN_CORPUS = [
-    # file formats and encodings
-    "webp",
-    "jsonl",
-    "toml",
-    "yaml",
-    "proto",
-    "jpeg",
-    "svg",
-    "wasm",
-    "env",
-    "ini",
-    "avif",
-    "heic",
-    "json5",
-    "ndjson",
-    "htm",
-    "xhtml",
-    # source / module extensions
-    "mjs",
-    "cjs",
-    "tsx",
-    "jsx",
-    "vue",
-    "svelte",
-    "astro",
-    # data / serialisation
-    "pkl",
-    "npy",
-    "npz",
-    "parquet",
-    "arrow",
-    "feather",
-    "orc",
-    "avro",
-    # media
-    "webm",
-    "mkv",
-    "avi",
-    "mov",
-    "flac",
-    "ogg",
-    "opus",
-    "aac",
-    # archives
-    "zstd",
-    "lz4",
-    "bz2",
-    "tgz",
-    "zst",
-    # binaries / packages
-    "dll",
-    "dylib",
-    "appimage",
-    "flatpak",
-    # crypto / certificates
-    "pem",
-    "crt",
-    "csr",
-    "der",
-    "p12",
-    "pfx",
-    # protocols
-    "sse",
-    "graphql",
-    "grpc",
-    "proto3",
-    "smtp",
-    "imap",
-    "pop3",
-    "scp",
-    "sftp",
-    # config / build keys
-    "lock",
-    "manifest",
-    "tomlrc",
-    "editorconfig",
-    "gitignore",
-    "dockerignore",
-    "npmrc",
-]
+# Extensions that are also real words, so leaving them alone is not a bug.
+_KNOWN_WORDS = frozenset({"so", "key", "log", "mid", "img", "tmp", "dat", "bin", "iso"})
+
+
+def _mimetype_extensions() -> set[str]:
+    """Return the built-in MIME extensions (no system files, so it is stable).
+
+    ``mimetypes.types_map`` is populated from the stdlib table at import; the
+    system ``/etc/mime.types`` is only read by ``mimetypes.init()``, which is
+    deliberately not called so the corpus does not depend on the host.
+    """
+    return {
+        ext.lstrip(".").lower()
+        for ext in mimetypes.types_map
+        if len(ext) >= 4 and ext.lstrip(".").isalpha()
+    }
+
+
+# Source extensions, protocols, build/container tools and config keys. None is a
+# word of en/ru/de/fr/uk; they are what a developer types all day.
+_STATIC_TECH_TOKENS = frozenset(
+    [
+        "webp",
+        "jsonl",
+        "toml",
+        "sse",
+        "yaml",
+        "proto",
+        "proto3",
+        "pem",
+        "crt",
+        "csr",
+        "der",
+        "p12",
+        "pfx",
+        "jks",
+        "crl",
+        "ocsp",
+        "mjs",
+        "cjs",
+        "tsx",
+        "jsx",
+        "vue",
+        "svelte",
+        "astro",
+        "xhtml",
+        "rdf",
+        "pkl",
+        "npy",
+        "npz",
+        "parquet",
+        "arrow",
+        "feather",
+        "orc",
+        "avro",
+        "zarr",
+        "hdf",
+        "hdf5",
+        "webm",
+        "mkv",
+        "flac",
+        "ogg",
+        "opus",
+        "aiff",
+        "midi",
+        "zstd",
+        "lz4",
+        "bz2",
+        "tgz",
+        "zst",
+        "lzo",
+        "lzma",
+        "dll",
+        "dylib",
+        "appimage",
+        "flatpak",
+        "msix",
+        "pyc",
+        "pyo",
+        "pyi",
+        "whl",
+        "sass",
+        "scss",
+        "less",
+        "styl",
+        "ipynb",
+        "rmd",
+        "psd",
+        "indd",
+        "ttf",
+        "otf",
+        "woff",
+        "woff2",
+        "tcp",
+        "udp",
+        "smtp",
+        "imap",
+        "pop3",
+        "ssl",
+        "tls",
+        "ssh",
+        "scp",
+        "sftp",
+        "rsync",
+        "ntp",
+        "snmp",
+        "ldap",
+        "oauth",
+        "saml",
+        "sso",
+        "mfa",
+        "otp",
+        "totp",
+        "jwt",
+        "csrf",
+        "xss",
+        "cors",
+        "csp",
+        "hsts",
+        "dockerfile",
+        "vagrantfile",
+        "makefile",
+        "cmakelists",
+        "gemfile",
+        "procfile",
+        "npmrc",
+        "yarnrc",
+        "babelrc",
+        "eslintrc",
+        "prettierrc",
+        "editorconfig",
+        "gitignore",
+        "dockerignore",
+        "kubernetes",
+        "kubectl",
+        "helm",
+        "terraform",
+        "ansible",
+        "redis",
+        "mongo",
+        "mysql",
+        "pgsql",
+        "sqlite",
+        "nginx",
+        "apache",
+        "caddy",
+        "haproxy",
+        "varnish",
+        "webpack",
+        "vite",
+        "rollup",
+        "esbuild",
+        "parcel",
+        "protobuf",
+        "thrift",
+        "capnp",
+        "flatbuffers",
+        "msgpack",
+        "cbor",
+        "bson",
+    ]
+)
+
+_TECH_TOKEN_CORPUS = tuple(
+    sorted((set(_mimetype_extensions()) | _STATIC_TECH_TOKENS) - _KNOWN_WORDS)
+)
 
 
 @pytest.mark.parametrize("token", _TECH_TOKEN_CORPUS)
 def test_tech_token_corpus_is_never_rewritten(default_det: LanguageDetector, token: str) -> None:
     assert default_det.target_layout(token, "us") is None, token
     assert default_det.should_fix(token, "us") is False, token
+
+
+def test_the_canary_corpus_is_wider_than_the_stop_word_list() -> None:
+    """The canary must not be a restatement of stop_words.txt.
+
+    If every corpus token were also a stop word, the corpus would only prove
+    "the list is applied". The independent tokens -- those protected by the
+    plausibility/structural guards rather than by the list -- are what catch a
+    regression in *those* guards, and they must be the majority of the corpus.
+    """
+    from klyrshift.config import load_default_stop_words
+
+    stop_words = {word.lower() for word in load_default_stop_words()}
+    independent = [token for token in _TECH_TOKEN_CORPUS if token not in stop_words]
+    assert len(independent) >= 100, (
+        f"only {len(independent)} of {len(_TECH_TOKEN_CORPUS)} canary tokens are "
+        "independent of stop_words.txt; the canary is too close to the list it guards"
+    )
+
+
+def test_the_canary_corpus_is_reasonably_wide() -> None:
+    """A canary that is too small is not a net."""
+    assert len(_TECH_TOKEN_CORPUS) >= 150

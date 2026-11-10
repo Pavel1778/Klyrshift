@@ -3968,14 +3968,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Added
 
-- **Five more technical tokens are protected, and the corpus has a canary.**
-  A sweep of real extensions, protocols and config keys found `cjs`, `jsx`,
-  `npz`, `pfx` and `tgz` still rewritten into Cyrillic (they are not words of
-  any shipped language, so they join the technical-token block of
-  `data/stop_words.txt`). A parametrised canary
-  (`tests/test_false_positives.py::test_tech_token_corpus_is_never_rewritten`)
-  runs a representative corpus of ~70 real technical tokens through the
-  detector, so the next one that leaks is caught by name instead of by hand.
+- **More technical tokens are protected, and the canary is independent.** A
+  sweep of real extensions, protocols and config keys found several tokens still
+  rewritten into Cyrillic (`cjs`, `jsx`, `npz`, `pfx`, `tgz`, `hdf`, `jks`,
+  `vcf`, `vtt`, `pbm`, `pnm`, `xbm`, `xlb`, `cdf`, `csh`, `etx`, `jpe`); they
+  are not words of any shipped language and join the technical-token block of
+  `data/stop_words.txt`. The canary is deliberately **wider than that list**: it
+  is generated from the stdlib `mimetypes` extension table plus a static list of
+  source/protocol/build/config tokens (266 tokens), minus a small documented
+  allowlist of extensions that are real words (`so`, `key`, `log`). Two tests
+  assert the widening, so the canary cannot silently collapse back into a
+  restatement of the list it guards: a token that leaks is named by the test, and
+  removing a token from `stop_words.txt` makes the canary fail.
+
+- **A patch-upgrade test.** `scripts/patch_upgrade_test.sh` (and
+  `make patch-upgrade-test`) installs the previous patch release over the current
+  one in a clean container and checks that the user's config survives unchanged,
+  the daemon unit stays enabled, `klyrshift verify` passes and the CLI works.
+  The smoke test only proves a clean install; a patch release is normally an
+  upgrade, so this closes the gap.
 
 - **`AUDIT.md`.** A full audit of the daemon performed with the project's own
   tooling: the baseline numbers, the four defects found (with the measurement
@@ -4203,6 +4214,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   601 copies). The history is now capped at `UNDO_HISTORY_LIMIT` (100), matching
   a real editor's bounded history. Pinned by
   `tests/test_simulate.py::test_undo_stack_is_bounded_for_a_long_typing_run`.
+
+- **The undo cap's boundary is pinned.** Past the cap, `Ctrl+Z` still undoes the
+  *most recent* edit (the cap drops the oldest snapshots), never deletes below
+  empty, and never rolls the learned vocabulary back with the screen; a scenario
+  with more `Ctrl+Z` than the cap still completes. The rollback in
+  `apply_config` also restores the config object *before* rebuilding the caches,
+  so a rollback that itself fails still leaves a consistent config object and
+  logs the residual risk by name. All pinned by tests.
+
+- **The simulator translates *any* config-override failure, not just
+  `ValueError`.** A typo'd `~user` in a path raises `RuntimeError`; the guard is
+  now by class (with the traceback logged), so a novel invalid input cannot
+  print a traceback either.
 
 - **Manual mode no longer poisons the learned vocabulary.** A word the working
   mode silenced (manual mode, quiet hours, an excepted application) was never

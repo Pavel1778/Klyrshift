@@ -105,6 +105,20 @@ jsx
 tgz
 npz
 pfx
+# File formats and MIME extensions that are not words (stdlib mimetypes sweep).
+cdf
+csh
+etx
+hdf
+jks
+jpe
+pbm
+pnm
+rtx
+vcf
+vtt
+xbm
+xlb
 # Short identifiers absent from the en and ru vocabularies.
 www
 fps

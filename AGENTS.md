@@ -75,6 +75,34 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   without a display server. Talking to a live compositor still needs a desktop.
 
 ## Invariants that have bitten before
+- **The technical-token canary must stay wider than `stop_words.txt`.**
+  `tests/test_false_positives.py` builds its corpus from the stdlib `mimetypes`
+  table plus a static list (266 tokens), not from the stop-word file: a canary
+  that merely restates the list proves "the list is applied", never "the list is
+  sufficient". Two tests pin the widening (>=100 tokens must be independent of
+  the list; >=150 tokens total), and removing a token from `stop_words.txt` makes
+  the canary fail by name. Extensions that are real words (`so`, `key`, `log`,
+  `mid`, `img`, `tmp`, `dat`, `bin`, `iso`) are excluded by `_KNOWN_WORDS` --
+  leaving a real word alone is correct, so it is not a leak. When the canary
+  fails, add the named token to `stop_words.txt`; do not widen `_KNOWN_WORDS`
+  unless the token really is a word.
+
+- **The simulator's undo cap drops the *oldest* snapshot, and the boundary is
+  pinned.** `UNDO_HISTORY_LIMIT` (100) bounds the per-edit screen history; past
+  it, `Ctrl+Z` still reverts the most recent edit (the failure mode to avoid is
+  dropping from the wrong end, which would make `Ctrl+Z` no-op or jump to a stale
+  point). The undo restores the *screen* only -- the learned vocabulary is a
+  separate, forward-only signal and must not roll back with it. `tests/
+  test_simulate.py` pins all of this.
+
+- **A config-override failure is a `ScenarioError` by *class*, not by value.**
+  The simulator's `_apply_config` wraps `validate()` + `apply_config` in a broad
+  `except Exception` (logging the traceback at debug) and re-raises a
+  `ScenarioError` naming the original type, because the override is user input:
+  `ValueError`/`TypeError` from validation, `RuntimeError` from a typo'd `~user`,
+  `OSError` from a directory read are all "bad scenario", not daemon bugs. Do not
+  narrow it back to a list of types.
+
 - **`apply_config` must stay atomic.** It swaps `self.config` and then rebuilds
   a dozen derived caches (parsed hotkeys, `_excepted_apps`, `_skip_regex`, the
   detector's tuning, the per-app layout manager). Any step can raise -- a

@@ -418,6 +418,45 @@ def test_apply_config_is_atomic_on_a_midway_failure() -> None:
     assert daemon.detector.stop_words == {"original"}
 
 
+def test_apply_config_rollback_failure_is_logged_and_config_restored(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """If the rollback itself fails, the config object is still restored.
+
+    The rollback re-applies the previous config; if *that* also raises (external
+    state changed between the two attempts) the daemon must not be left with the
+    rejected config object. It restores ``self.config`` first and names the
+    remaining risk in the log, so a stuck state is visible rather than silent.
+    """
+    config = Config(analysis_timeout=0.1, stop_words=["original"])
+    daemon = KlyrshiftDaemon(
+        config,
+        detector=LanguageDetector(converter=None, stop_words=config.stop_words, min_word_length=3),
+        switcher=FakeSwitcher("us"),
+        injector=FakeInjector(),
+    )
+    calls = {"n": 0}
+    real_inner = daemon._apply_config_inner
+
+    def flaky(new_config: Config) -> None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("first attempt fails")
+        # The rollback attempt fails too.
+        raise RuntimeError("rollback also fails")
+
+    daemon._apply_config_inner = flaky  # type: ignore[method-assign]
+    bad = Config(stop_words=["changed"])
+    with caplog.at_level("ERROR"), pytest.raises(RuntimeError):
+        daemon.apply_config(bad)
+
+    assert calls["n"] == 2
+    # The config object is the original one, not the rejected one.
+    assert daemon.config is config
+    assert "Rollback failed" in caplog.text
+    daemon._apply_config_inner = real_inner  # type: ignore[method-assign]
+
+
 def test_apply_config_swaps_cleanly_when_it_succeeds() -> None:
     """The happy path still applies everything."""
     config = Config(analysis_timeout=0.1, stop_words=["original"], exceptions_apps=["oldapp"])

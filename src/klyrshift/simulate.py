@@ -43,6 +43,7 @@ tuple cannot check.
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Final, cast
@@ -52,6 +53,8 @@ from .daemon import _US_KEY_NAMES, KlyrshiftDaemon
 from .detector import LanguageDetector
 from .injector import TextInjector
 from .switcher import LayoutSwitcher
+
+logger = logging.getLogger(__name__)
 
 # The physical key that produces each canonical US character, and whether it
 # needs Shift. Derived from the daemon's own table so the two can never drift.
@@ -534,18 +537,24 @@ def _apply_config(daemon: KlyrshiftDaemon, assignments: str) -> None:
         if not hasattr(daemon.config, key):
             raise ScenarioError(f"unknown config field {key!r}")
         setattr(daemon.config, key, _coerce(raw))
-    # A bad value must surface as a ScenarioError, not a raw ValueError: the CLI
-    # catches ScenarioError and prints one line, but a ValueError escaping here
-    # prints a traceback. Validation and the derived-cache rebuild both run
-    # inside the guard, and the daemon rolls its config back on a failed
-    # ``apply_config``, so a rejected override leaves no partial state.
+    # A bad value must surface as a ScenarioError, not a raw exception: the CLI
+    # catches ScenarioError and prints one line, but anything else escaping here
+    # prints a traceback. The guard is deliberately broad rather than a list of
+    # exception types: the override is *user input*, and every failure mode of
+    # applying it (``ValueError``/``TypeError`` from ``Config.validate``,
+    # ``RuntimeError`` from a typo'd ``~user`` in a path, ``OSError`` from a
+    # directory read, ``KeyError`` from a malformed table) is a bad scenario, not
+    # a daemon bug. The type is named in the message and the traceback is logged,
+    # so a genuine bug is still diagnosable. The daemon rolls its config back on
+    # a failed ``apply_config``, so a rejected override leaves no partial state.
     try:
         daemon.config.validate()
         daemon.apply_config(daemon.config)
     except ScenarioError:
         raise
-    except (ValueError, TypeError) as exc:
-        raise ScenarioError(f"invalid config override: {exc}") from exc
+    except Exception as exc:
+        logger.debug("Config override failed", exc_info=True)
+        raise ScenarioError(f"invalid config override: {type(exc).__name__}: {exc}") from exc
 
 
 def _run_step(driver: _Driver, step: str) -> None:

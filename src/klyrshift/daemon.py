@@ -2267,19 +2267,29 @@ class KlyrshiftDaemon:
         try:
             self._apply_config_inner(new_config)
         except BaseException:
+            # Restore the config *object* first, so it is consistent even if the
+            # cache rebuild below fails too.
+            self.config = previous_config
             logger.error(
                 "Configuration reload failed; restoring the previous config", exc_info=True
             )
-            # Restore by re-applying the config that was running. Rebuilding
-            # from the known-good object is the only way to undo the detector's
-            # in-place tuning too (``set_stop_words``/``set_languages`` mutate it
-            # before a later step can fail), and it leaves no mixed state. The
-            # previous config is the one already in force, so this cannot itself
-            # hit the failure that just occurred.
+            # Then rebuild the caches from the known-good object. Rebuilding is
+            # the only way to undo the detector's in-place tuning
+            # (``set_stop_words``/``set_languages`` mutate it before a later step
+            # can fail), and the previous config is the one already in force, so
+            # this cannot itself hit the failure that just occurred. If it still
+            # fails (external state changed between the two attempts), say so
+            # explicitly: the config object is restored, but a cache may hold a
+            # value from the rejected config, and the next reload will rebuild
+            # it. Better a logged, named inconsistency than a silent one.
             try:
                 self._apply_config_inner(previous_config)
-            except Exception:  # pragma: no cover - restoring a running config
-                logger.error("Could not restore the previous configuration", exc_info=True)
+            except Exception:  # the rollback itself failed; logged below
+                logger.error(
+                    "Rollback failed: some caches may still hold values from the "
+                    "rejected configuration; reload again to rebuild them",
+                    exc_info=True,
+                )
             raise
 
     def _apply_config_inner(self, new_config: Config) -> None:
