@@ -138,6 +138,11 @@ publishes.
   published release) or if the tagged commit has no *successful* `ci.yml` run,
   and it builds the `.deb` twice to prove it is reproducible before uploading.
   Both guards run before the build, so a red commit or a reused tag fails fast.
+- [ ] If the release workflow fails at the "Require a green CI run" step, that is
+  the gate working, not a broken workflow: the tagged commit's CI had not
+  finished (the step waits up to 10 minutes) or did not pass. Wait for CI, then
+  re-run the failed release workflow from the Actions page. Do **not** bypass the
+  gate by publishing by hand: it exists so an untested artifact cannot ship.
 - [ ] The `.deb` must build on a pinned image. `ci.yml` and `release.yml` both
   pin `ubuntu-24.04` for the packaging jobs (and the GUI job) so the published
   bytes and the CI artifact are the same; the code jobs stay on `ubuntu-latest`

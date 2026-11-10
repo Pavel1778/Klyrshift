@@ -836,6 +836,14 @@ live compositor reacts to synthetic input. See `docs/TESTING.md`.
   `tests/test_repo_urls.py` and `tests/test_version_consistency.py` pin the live
   names. A hit is only stale if it is not explicitly about the old package,
   the migration, or a past release.
+  **`scripts/upgrade_test.sh` is the real test for this rename, not a typo.**
+  It builds a minimal stand-in for the old `linguafix` package, installs it in a
+  clean container, then installs the new `klyrshift` `.deb` over it with apt and
+  asserts the old package is displaced and the user's config survives. Its
+  "UPGRADE OK" line means "the `linguafix` -> `klyrshift` migration works", which
+  is a different check from a `0.2.9 -> 0.2.10` version upgrade. When quoting CI
+  results, say which one ran: `upgrade_test.sh` (rename) vs
+  `scripts/patch_upgrade_test.sh` (previous version -> current).
 
 ## Site (Astro) gotchas
 

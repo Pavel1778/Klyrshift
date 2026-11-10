@@ -3708,6 +3708,11 @@ publishes.
   published release) or if the tagged commit has no *successful* `ci.yml` run,
   and it builds the `.deb` twice to prove it is reproducible before uploading.
   Both guards run before the build, so a red commit or a reused tag fails fast.
+- [ ] If the release workflow fails at the "Require a green CI run" step, that is
+  the gate working, not a broken workflow: the tagged commit's CI had not
+  finished (the step waits up to 10 minutes) or did not pass. Wait for CI, then
+  re-run the failed release workflow from the Actions page. Do **not** bypass the
+  gate by publishing by hand: it exists so an untested artifact cannot ship.
 - [ ] The `.deb` must build on a pinned image. `ci.yml` and `release.yml` both
   pin `ubuntu-24.04` for the packaging jobs (and the GUI job) so the published
   bytes and the CI artifact are the same; the code jobs stay on `ubuntu-latest`
@@ -3982,32 +3987,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### [Unreleased]
-
-#### Changed
-
-- **CI runner policy: pin what builds the package, float what validates the
-  code.** `ubuntu-latest` had already migrated to Ubuntu 26.04 (the v0.2.10
-  release was built on it), while the GUI job alone was pinned to 24.04. The
-  jobs that build the `.deb` (`package` in `ci.yml` and `build-and-release` in
-  `release.yml`) now both pin `ubuntu-24.04`, so the CI artifact and the
-  published artifact are the same bytes for a given commit -- the reproducible
-  build's "same tree -> same sha256" depends on the packaging toolchain too.
-  Verified that dpkg-deb 1.22.6 (24.04) and 1.23.7 (26.04) both reproduce the
-  current `6c0a55ea...`, so the pin does not change the artifact; it removes the
-  risk of a silent change on the next image bump. Every other job stays on
-  `ubuntu-latest` on purpose, as an early warning that the code still works on
-  the newest Ubuntu. `tests/test_ci_workflows.py` pins the policy.
-
-#### Added
-
-- **A release refuses to re-publish, and requires green CI.** `release.yml`
-  aborts before building if the tag's release already exists (never overwrite a
-  published release), and waits for a *successful* `ci.yml` run on the tagged
-  commit, so a tag on a red commit cannot ship. It also builds the `.deb` twice
-  and requires identical bytes before uploading, and no longer risks cancelling
-  an in-flight publish. `ci.yml` gained a reproducibility check and a
-  concurrency group; both workflows have a job timeout, and every action is
-  pinned to a commit SHA rather than a floating major tag.
 
 ### [0.2.10] - 2026-11-10
 

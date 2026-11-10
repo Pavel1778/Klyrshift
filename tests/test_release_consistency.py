@@ -198,6 +198,27 @@ def _staged_assets_file(tmp_path: Path, names: list[str]) -> Path:
     return path
 
 
+def test_only_packaged_files_may_change_without_a_version_bump(rc: object) -> None:
+    """A release tree must not quietly produce a different .deb for one version.
+
+    The published ``.deb`` for a version is identified by its sha256. If a
+    post-release commit edits a file that is *packaged into* the .deb (today
+    only ``CHANGELOG.md``) while the version string stays the same, the same
+    version now has two different artifacts -- exactly the ambiguity that made
+    a reviewer question the 0.2.10 hash. Either the version is bumped or the
+    packaged file is not touched. This test names the packaged set so the rule
+    is explicit; ``scripts/build_deb.sh`` is the source of truth for what ships.
+    """
+    build = (REPO_ROOT / "scripts" / "build_deb.sh").read_text(encoding="utf-8")
+    # The only repository file installed into the package besides the Python
+    # tree and data is the changelog; assert that assumption holds.
+    assert "CHANGELOG.md" in build, "build_deb.sh no longer installs CHANGELOG.md"
+    # And the changelog must carry the version, so bumping it is visible here.
+    changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    version = rc.collect_source_facts().version
+    assert f"## [{version}]" in changelog, f"CHANGELOG.md has no '## [{version}]' heading"
+
+
 def test_prepublish_gate_passes_before_the_release_exists(
     rc: object, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
