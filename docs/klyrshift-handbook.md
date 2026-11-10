@@ -4325,6 +4325,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Added
 
+- **A self-verification section on the landing page.** The simulator and the
+  QA engine were documented but not surfaced where a visitor lands. A new
+  bilingual section (`SelfVerification.astro`) explains `klyrshift simulate`
+  and `klyrshift qa` (the independent oracle, the structural invariants,
+  deterministic offline runs), lists the commands and the honest limit, and
+  links `docs/SELF_VERIFICATION.md` and `docs/QA_ENGINE.md`. It is reachable
+  from the header nav and the footer.
+
 - **An autonomous QA engine (`klyrshift qa`).** A testing layer on top of the
   pytest suite: it drives the real daemon through `klyrshift.simulate`, checks
   independent invariants and records confirmed bugs in a regression store. A

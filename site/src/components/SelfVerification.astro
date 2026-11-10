@@ -1,0 +1,159 @@
+---
+// Self-verification: how Klyrshift checks itself without a keyboard. The daemon
+// reads /dev/input through evdev and injects through uinput, so exercising it end
+// to end normally needs a real desktop. The headless simulator drives the *real*
+// daemon with a faked keyboard, switcher and injector, and the autonomous QA
+// engine runs many scenarios through it. Every fact here comes from
+// docs/SELF_VERIFICATION.md and docs/QA_ENGINE.md; the commands are the real CLI
+// surface.
+import { pick } from "../lib/site";
+import { QA_ENGINE_DOC, SELF_VERIFICATION_DOC } from "../consts";
+
+type Card = { title: string; text: string; icon: string };
+
+// Lucide-style 24x24 outline paths, kept inline so the page ships no icon JS.
+const cards: Card[] = [
+  {
+    title: pick("Headless-симулятор", "Headless simulator"),
+    text: pick(
+      "Одна команда прогоняет настоящий демон с подменённой клавиатурой, переключателем и инжектором и печатает то, что увидел бы пользователь. Код, который решает, что исправить, — боевой, без изменений.",
+      "One command drives the real daemon with a faked keyboard, switcher and injector and prints what the user would see. The code that decides what to fix is the shipped code, unchanged.",
+    ),
+    icon: "M4 4h16v12H4zM9 20h6M12 16v4M8 8l2 2 3-3 3 3 2-2",
+  },
+  {
+    title: pick("Автономный QA-движок", "Autonomous QA engine"),
+    text: pick(
+      "klyrshift qa кормит симулятор корпусом сценариев, проверяет инварианты, классифицирует и минимизирует падения дельта-отладкой, а подтверждённые баги кладёт в хранилище регрессий.",
+      "klyrshift qa feeds the simulator a corpus of scenarios, checks invariants, classifies and minimises failures by delta-debugging, and records confirmed bugs in a regression store.",
+    ),
+    icon: "M12 3l8 4v5c0 4.5-3.2 7.9-8 9-4.8-1.1-8-4.5-8-9V7zM9 12l2 2 4-4",
+  },
+  {
+    title: pick("Детерминированно и офлайн", "Deterministic and offline"),
+    text: pick(
+      "Один и тот же seed и корпус дают один и тот же отчёт — без сети и без API-ключа. Сценарий — это данные JSON, а не код: исполняется только фиксированный DSL симулятора, поэтому ни один шаг не может выполниться как команда.",
+      "The same seed and corpus produce the same report — no network, no API key. A scenario is JSON data, never code: only the simulator's fixed step DSL runs, so no step can execute as a command.",
+    ),
+    icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3 3",
+  },
+];
+
+// The invariant names are the engine's own registry (klyrshift.qa.invariants);
+// the descriptions are a plain-language gloss of what each one proves.
+const invariants: { name: string; text: string }[] = [
+  {
+    name: "no-lost-characters",
+    text: pick("Ни один пробел, Enter или Tab не пропал", "No Space, Enter or Tab was lost"),
+  },
+  {
+    name: "space/enter/tab/punctuation-preserved",
+    text: pick("Клавиша-граница уцелела после правки", "The boundary key survived its own fix"),
+  },
+  {
+    name: "manual-mode-silent",
+    text: pick("Режим manual ничего не меняет без хоткея", "Manual mode rewrites nothing without a hotkey"),
+  },
+  {
+    name: "no-mixed-script-replacement",
+    text: pick("Правка не выдаёт латиницу вперемешку с кириллицей", "A fix never emits Latin mixed with Cyrillic"),
+  },
+  {
+    name: "no-over-deletion",
+    text: pick("Замена не удаляет больше, чем было нажато", "A replacement deletes no more than was pressed"),
+  },
+  {
+    name: "layout-switched",
+    text: pick("Раскладка осталась на целевом языке", "The layout ended at its target language"),
+  },
+];
+
+const runCode = `klyrshift simulate 'type ghbdtn, space'   # ${pick("что увидит пользователь", "what the user would see")}
+klyrshift qa run --generate 60 --seed 12345
+klyrshift qa run --changed src/klyrshift/daemon.py
+klyrshift qa run --report qa-out          # ${pick("JSON + Markdown", "JSON + Markdown")}
+klyrshift qa list                         # ${pick("хранилище регрессий", "the regression store")}`;
+---
+
+<section id="self-verification" class="border-y border-line bg-surface py-16 sm:py-20">
+  <div class="container-page">
+    <h2 class="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+      {pick("Самопроверка без клавиатуры", "Self-verification without a keyboard")}
+    </h2>
+    <p class="mx-auto mt-4 max-w-2xl text-center text-muted">
+      {
+        pick(
+          "Демон читает /dev/input и вводит текст через uinput, поэтому по-настоящему его можно прогнать только на живом рабочем столе — которого у автоматической сборки нет. Симулятор и автономный QA-движок делают логику проверяемой где угодно: на ноутбуке, в CI и агентом.",
+          "The daemon reads /dev/input and injects through uinput, so it can only be exercised for real on a live desktop — which an automated build does not have. The simulator and the autonomous QA engine make the logic verifiable anywhere: on a laptop, in CI, or by an agent.",
+        )
+      }
+    </p>
+
+    <ul class="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-3">
+      {cards.map((c) => (
+        <li class="card transition-colors hover:border-accent-line">
+          <span class="icon-chip">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d={c.icon} />
+            </svg>
+          </span>
+          <h3 class="mt-4 text-lg font-semibold">{c.title}</h3>
+          <p class="mt-2 text-muted">{c.text}</p>
+        </li>
+      ))}
+    </ul>
+
+    <div class="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
+      <div>
+        <h3 class="text-xl font-semibold">
+          {pick("Независимый оракул", "The independent oracle")}
+        </h3>
+        <p class="mt-2 text-sm text-muted">
+          {
+            pick(
+              "Инвариант — чистая функция от экрана, замен и нажатий. Нажатые счётчики берутся из шагов, а не из симулятора, поэтому проверка не спрашивает демон, прав ли демон. Структурный инвариант ломается — это подтверждённый баг, а не подогнанная проверка.",
+              "An invariant is a pure function of the screen, the replacements and what the user pressed. The typed counts come from the steps, not the simulator, so the check does not ask the daemon whether the daemon is right. A structural invariant that fails is a confirmed bug, not a tuned assertion.",
+            )
+          }
+        </p>
+        <ul class="mt-5 space-y-2">
+          {invariants.map((inv) => (
+            <li class="flex flex-col gap-0.5 rounded-lg border border-line bg-bg px-3 py-2 sm:flex-row sm:items-center sm:gap-3">
+              <code class="shrink-0 font-mono text-xs text-accent">{inv.name}</code>
+              <span class="text-sm text-muted">{inv.text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-xl font-semibold">{pick("Как это запускается", "How it runs")}</h3>
+        <p class="mt-2 text-sm text-muted">
+          {
+            pick(
+              "Никаких внешних сервисов и API-ключей: движок работает офлайн и запускается в CI на каждый push.",
+              "No external services and no API key: the engine is offline and runs in CI on every push.",
+            )
+          }
+        </p>
+        <pre class="code-panel mt-5 p-3 text-[12px] sm:text-[13px]"><code>{runCode}</code></pre>
+        <p class="mt-4 text-xs text-subtle">
+          {
+            pick(
+              "Предел честно очерчен: и симулятор, и движок проверяют логику демона с подменённым вводом. Реальный стек evdev → uinput, переключение через g3kb-switch и отрисовка GTK4 по-прежнему требуют рабочего стола.",
+              "The limit is stated plainly: both the simulator and the engine test the daemon's logic with a faked input path. The real evdev → uinput stack, switching through g3kb-switch and the GTK4 render still need a desktop.",
+            )
+          }
+        </p>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <a href={SELF_VERIFICATION_DOC} class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+            {pick("Самопроверка (документация)", "Self-verification docs")}
+          </a>
+          <a href={QA_ENGINE_DOC} class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+            {pick("QA-движок", "QA engine")}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
