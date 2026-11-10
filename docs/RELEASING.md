@@ -133,7 +133,16 @@ publishes.
   commit whose checks have not finished.
 - [ ] Tag and push: `git tag -a v<version> -m '...' && git push origin v<version>`.
 - [ ] Watch the release workflow: the consistency gate, the smoke test, the
-  zero-config test and the post-publish link check must all pass.
+  zero-config test and the post-publish link check must all pass. The workflow
+  now also refuses to publish if the release already exists (never overwrite a
+  published release) or if the tagged commit has no *successful* `ci.yml` run,
+  and it builds the `.deb` twice to prove it is reproducible before uploading.
+  Both guards run before the build, so a red commit or a reused tag fails fast.
+- [ ] The `.deb` must build on a pinned image. `ci.yml` and `release.yml` both
+  pin `ubuntu-24.04` for the packaging jobs (and the GUI job) so the published
+  bytes and the CI artifact are the same; the code jobs stay on `ubuntu-latest`
+  on purpose, to exercise the newest Ubuntu first. See the runner policy at the
+  top of `ci.yml` and `tests/test_ci_workflows.py`.
 - [ ] `python3 scripts/release_consistency.py --latest` passes — the newest
   published release now matches the tree.
 - [ ] The download links on the landing page resolve. Redeploy the Layero host

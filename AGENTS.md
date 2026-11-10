@@ -736,6 +736,30 @@ live compositor reacts to synthetic input. See `docs/TESTING.md`.
   skipped, the GUI modules dropped to 0% coverage and the job failed on
   `--cov-fail-under=85` (63% measured). The job pins `ubuntu-24.04`; bump it
   together with its `python-version`.
+- **`ubuntu-latest` is already Ubuntu 26.04, and only two jobs may move with
+  it.** Measured 2026-11-10: the `ubuntu-latest` runs of v0.2.10 (lint, qa,
+  package, site, latency) executed on `ubuntu-26.04`; only the GUI job, pinned
+  to `ubuntu-24.04`, did not. The runner policy in `.github/workflows/ci.yml` is
+  therefore deliberate, not mechanical: the jobs that **build the `.deb`**
+  (`package` in `ci.yml`, `build-and-release` in `release.yml`) pin
+  `ubuntu-24.04` and must pin the *same* image, because the reproducible-build
+  contract is "same tree -> same sha256" and the packaging toolchain is part of
+  that. Verified: dpkg-deb 1.22.6 (24.04) and 1.23.7 (26.04) both reproduce
+  `6c0a55ea...` for v0.2.10, so the pin does not change the current artifact --
+  it removes the risk that a future image bump changes it silently. The GUI job
+  pins `ubuntu-24.04` for the distro-PyGObject ABI (above). Every other job stays
+  on `ubuntu-latest` **on purpose**: it validates the code, so running it on the
+  newest Ubuntu is the early warning we want. `tests/test_ci_workflows.py` pins
+  all of this, so a silent un-pin fails the suite.
+- **A release must refuse to re-publish and must require green CI.** `release.yml`
+  aborts before building if `gh release view <tag>` finds the release already
+  exists (never overwrite a published release), and it waits for a *successful*
+  `ci.yml` run on the tagged commit (`gh run list --workflow ci.yml --commit`),
+  so a tag on a red commit cannot ship. Both steps precede the build. It also
+  builds the `.deb` twice and requires identical bytes before publishing, and
+  never cancels an in-flight release (`cancel-in-progress: false`). Guarded by
+  `tests/test_ci_workflows.py`.
+
 - **The headless simulator is the agent's keyboard.** `klyrshift simulate`
   (`src/klyrshift/simulate.py`) drives the real daemon with faked keyboard,
   switcher and injector, and renders the *screen* by applying each replacement,

@@ -13,16 +13,80 @@ on:
 permissions:
   contents: write
 
+# One release per tag, and never cancel one in flight: a half-cancelled publish
+# could leave a release with a partial asset set. A retry of the same tag waits
+# for the first to finish (and is then refused by the re-publish guard below).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-and-release:
     name: Build .deb and publish release
-    runs-on: ubuntu-latest
+    # Pinned to 24.04: this job builds the *published* artifact, so its
+    # toolchain must be fixed. It is the same image the ``package`` job in
+    # ``ci.yml`` uses, so the artifact uploaded there and the one published here
+    # are byte-identical for a given commit (the reproducible-build contract).
+    # A moving ``ubuntu-latest`` could change the packaging toolchain between a
+    # tag and the next one without a code change.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Full history so the tag's commit and its CI run can be resolved.
+          fetch-depth: 0
+
+      # Fail fast, before the (expensive) build, on the two conditions that make
+      # a publish wrong: the tag was already published, or the tagged commit did
+      # not pass CI. Both are cheaper to check here than to discover after the
+      # release is public, and neither rewrites an existing release.
+      - name: Refuse to re-publish an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "::error::release ${GITHUB_REF_NAME} already exists; refusing to overwrite it"
+            exit 1
+          fi
+          echo "no existing release for ${GITHUB_REF_NAME}; safe to publish"
+
+      # The tag must point at a commit whose CI passed. ``ubuntu-latest`` in
+      # ci.yml validates the code; publishing a tag whose commit is red would
+      # ship an untested artifact. This queries the real Actions runs for the
+      # tagged commit, so a green local run is not accepted as evidence.
+      - name: Require a green CI run on the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha="$(git rev-list -n1 "${GITHUB_REF_NAME}")"
+          echo "tagged commit: ${sha}"
+          # Give CI a moment if the tag was pushed right after the merge.
+          for attempt in $(seq 1 40); do
+            conclusion="$(gh run list --workflow ci.yml --commit "${sha}" \
+              --json conclusion,status --jq \
+              'map(select(.status=="completed")) | .[0].conclusion // ""' 2>/dev/null || true)"
+            case "${conclusion}" in
+              success)
+                echo "CI on ${sha}: success"
+                exit 0
+                ;;
+              failure|cancelled|timed_out|action_required|startup_failure)
+                echo "::error::CI on ${sha} concluded ${conclusion}; refusing to publish"
+                exit 1
+                ;;
+            esac
+            echo "attempt ${attempt}: CI not completed yet (conclusion='${conclusion}'); waiting"
+            sleep 15
+          done
+          echo "::error::CI on ${sha} did not reach a successful conclusion in time"
+          exit 1
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
 
@@ -34,6 +98,26 @@ jobs:
 
       - name: Build .deb
         run: bash scripts/build_deb.sh
+
+      # The published artifact must be reproducible from this tree: build it a
+      # second time and require the identical sha256, on the same pinned image
+      # the CI ``package`` job uses. This is what makes the checksum in
+      # ``SHA256SUMS.txt`` (and the release notes) verifiable by a user who
+      # rebuilds from the tagged commit.
+      - name: Verify the build is byte-reproducible
+        run: |
+          set -euo pipefail
+          first="$(sha256sum dist/klyrshift_*.deb | cut -d' ' -f1)"
+          echo "first build:  ${first}"
+          rm -rf dist build
+          bash scripts/build_deb.sh >/dev/null
+          second="$(sha256sum dist/klyrshift_*.deb | cut -d' ' -f1)"
+          echo "second build: ${second}"
+          if [ "${first}" != "${second}" ]; then
+            echo "::error::the .deb is not reproducible: ${first} != ${second}"
+            exit 1
+          fi
+          echo "reproducible: ${first}"
 
       - name: Smoke-test the .deb in a clean Debian container
         run: bash scripts/smoke_test.sh
@@ -98,7 +182,7 @@ jobs:
             --source --tag "${GITHUB_REF_NAME}" --assets-file /tmp/staged-assets.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
         with:
           files: |
             dist/*.deb
