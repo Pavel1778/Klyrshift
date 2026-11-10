@@ -3703,7 +3703,32 @@ publishes.
   commit whose checks have not finished.
 - [ ] Tag and push: `git tag -a v<version> -m '...' && git push origin v<version>`.
 - [ ] Watch the release workflow: the consistency gate, the smoke test, the
-  zero-config test and the post-publish link check must all pass.
+  zero-config test and the post-publish link check must all pass. The workflow
+  now also refuses to publish if the release already exists (never overwrite a
+  published release) or if the tagged commit has no *successful* `ci.yml` run,
+  and it builds the `.deb` twice to prove it is reproducible before uploading.
+  Both guards run before the build, so a red commit or a reused tag fails fast.
+- [ ] If the release workflow fails at the "Require a green CI run" step, that is
+  the gate working, not a broken workflow: the tagged commit's CI had not
+  finished (the step waits up to 10 minutes) or did not pass. Wait for CI, then
+  re-run the failed release workflow from the Actions page. Do **not** bypass the
+  gate by publishing by hand: it exists so an untested artifact cannot ship.
+- [ ] The `.deb` must build on a pinned image. `ci.yml` and `release.yml` both
+  pin `ubuntu-24.04` for the packaging jobs (and the GUI job) so the published
+  bytes and the CI artifact are the same; the code jobs stay on `ubuntu-latest`
+  on purpose, to exercise the newest Ubuntu first. See the runner policy at the
+  top of `ci.yml` and `tests/test_ci_workflows.py`.
+- [ ] **Cross-version reproducibility is a checked fact, not an assumption.**
+  Measured for v0.2.10: `dpkg-deb` 1.22.6 (Ubuntu 24.04, `xz` backend) and
+  1.23.7 (Ubuntu 26.04) both produce the same `.deb` from the same tree,
+  `6c0a55ea…`. So the image pin is a *belt-and-braces* guard, not a workaround
+  for a real difference. CI only proves reproducibility *within one image* (it
+  builds twice); this cross-image check is manual. Re-run it when the pinned
+  image moves (e.g. `ubuntu-24.04` → the next LTS): build on both images and
+  compare `sha256sum`. The date comes from `CHANGELOG.md` and the compressor is
+  pinned with `-Zxz`, so a difference would point at another toolchain change
+  (e.g. a new default for `dpkg-deb`), which is exactly what this check exists
+  to catch.
 - [ ] `python3 scripts/release_consistency.py --latest` passes — the newest
   published release now matches the tree.
 - [ ] The download links on the landing page resolve. Redeploy the Layero host

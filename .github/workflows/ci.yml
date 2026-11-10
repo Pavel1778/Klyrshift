@@ -6,12 +6,31 @@ on:
   pull_request:
     branches: [main]
 
+# A superseded run for the same ref is wasted work; cancel it. ``main`` is
+# included so a force-push-free re-push of a branch does not pile up runs. The
+# release workflow deliberately does NOT cancel (see release.yml).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
+# Runner policy (deliberate, not mechanical):
+#   * Jobs that *build the .deb* (`package` here, `release.yml`) are pinned to
+#     `ubuntu-24.04`: the packaging toolchain is part of what the reproducible
+#     build fixes, and both jobs must produce the same bytes.
+#   * The GUI job is pinned to `ubuntu-24.04` because it imports the
+#     *distribution* PyGObject, whose ABI must match the test interpreter.
+#   * Every other job stays on `ubuntu-latest` on purpose: it validates the
+#     code, not the packaging toolchain, so running it on the newest image is an
+#     early warning that the code still works on the next Ubuntu. Pinning it
+#     would hide exactly the regression we want to see first.
 jobs:
   lint-and-test:
     name: Lint & test (Python ${{ matrix.python-version }})
+    # ubuntu-latest on purpose (see the runner policy above): this validates the
+    # code on the newest Ubuntu, which is the signal we want first.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -20,10 +39,10 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -32,7 +51,7 @@ jobs:
       # Node >= 23.6 executes TypeScript directly. "20" here made the harness
       # fail with ERR_UNKNOWN_FILE_EXTENSION on every Python version.
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "24"
 
@@ -77,10 +96,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
 
@@ -111,13 +130,21 @@ jobs:
 
   package:
     name: Build .deb (downloadable artifact)
-    runs-on: ubuntu-latest
+    # Pinned to 24.04 so the artifact this job uploads is byte-identical to the
+    # one the release job publishes. The two jobs must build the same bytes:
+    # the reproducible-build contract is "same tree -> same sha256", and the
+    # toolchain is part of the tree's build environment. Verified: dpkg-deb
+    # 1.22.6 (24.04) and 1.23.7 (26.04) both produce
+    # 6c0a55ea... for v0.2.10, so pinning does not change the current artifact;
+    # it removes the *risk* that a future image bump changes it silently. The
+    # release job pins the same image, so the two stay in step.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
 
@@ -131,6 +158,28 @@ jobs:
       # cloning and building by hand. The version comes from ``pyproject.toml``.
       - name: Build .deb
         run: bash scripts/build_deb.sh
+
+      # Enforce the reproducible-build contract in CI, not only by hand. The
+      # contract is "same tree -> same sha256": the date comes from CHANGELOG.md
+      # and the compressor is pinned (see build_deb.sh). Building a second time
+      # from the same tree must reproduce the first artifact byte for byte; if it
+      # does not, a published checksum would go stale on the next rebuild and the
+      # contract is broken. This runs on the pinned 24.04 image, the same one the
+      # release job uses, so a green check here predicts the published bytes.
+      - name: Verify the build is byte-reproducible
+        run: |
+          set -euo pipefail
+          first="$(sha256sum dist/klyrshift_*.deb | cut -d' ' -f1)"
+          echo "first build:  ${first}"
+          rm -rf dist build
+          bash scripts/build_deb.sh >/dev/null
+          second="$(sha256sum dist/klyrshift_*.deb | cut -d' ' -f1)"
+          echo "second build: ${second}"
+          if [ "${first}" != "${second}" ]; then
+            echo "::error::the .deb is not reproducible: ${first} != ${second}"
+            exit 1
+          fi
+          echo "reproducible: ${first}"
 
       - name: Write SHA256
         run: |
@@ -236,7 +285,7 @@ jobs:
           echo "All thematic archives contain their ru/en members."
 
       - name: Upload .deb artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: klyrshift-deb
           path: |
@@ -246,13 +295,14 @@ jobs:
 
   latency-budget:
     name: Detector latency & memory budget
+    # ubuntu-latest on purpose (see the runner policy above).
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
 
@@ -271,13 +321,14 @@ jobs:
 
   qa:
     name: Autonomous QA (deterministic, offline)
+    # ubuntu-latest on purpose (see the runner policy above).
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
 
@@ -297,7 +348,7 @@ jobs:
 
       - name: Upload the QA report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: klyrshift-qa-report
           path: qa-out/
@@ -305,13 +356,15 @@ jobs:
 
   site:
     name: Landing page build
+    # ubuntu-latest on purpose (see the runner policy above): Node is pinned by
+    # ``setup-node``, so the image only has to provide a shell.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "24"
           cache: npm
