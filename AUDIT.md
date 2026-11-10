@@ -61,7 +61,15 @@ A sweep of real technical tokens (extensions, protocols, MIME types, config
 keys) found a class that the detector still rewrote into Cyrillic. The sweep is
 now **generated from the stdlib `mimetypes` table** (an external, maintained
 source) plus a static list, so it is wider than the stop-word file it guards.
-It found **thirteen** tokens, all added to the technical-token block:
+It found **thirteen** tokens, all added to the technical-token block.
+
+The corpus is **242 tokens**, and an earlier draft of this report said "266":
+that was a prose error, not a real number -- the allowlist never changed (it has
+had the same nine entries throughout: `so`, `key`, `log`, `mid`, `img`, `tmp`,
+`dat`, `bin`, `iso`), and `266` was never in the test. The authoritative size is
+`len(_TECH_TOKEN_CORPUS) == 242`, computed by the test itself. Both breadth
+assertions still hold with margin: **198** tokens are independent of
+`stop_words.txt` (threshold 100) and the corpus is 242 (threshold 150).
 
 | token | rewritten to | |
 | --- | --- | --- |
@@ -82,6 +90,14 @@ None is a word of any shipped language. `etx` and `csh` are borderline (they
 name a control byte and a shell, not only a file extension), but both are real
 entries of the stdlib `mimetypes` table and neither is a word of en/ru, so
 protecting them is correct; they are marked as borderline in `stop_words.txt`.
+
+**Source of each token** (the corpus is the stdlib `mimetypes` table plus a
+static list, minus the allowlist). Twelve of the thirteen come from the stdlib
+table: `cdf`, `csh`, `etx`, `hdf`, `jpe`, `pbm`, `pnm`, `rtx`, `vcf`, `vtt`,
+`xbm`, `xlb`. Only `jks` (Java KeyStore) comes from the static list -- it is a
+real extension but is not in this Python's `mimetypes`. `rtx` **is** in the
+stdlib table (`rtx in mimetypes.types_map` is `True`), so its absence from the
+reviewer's list of twelve was an omission, not a manual addition.
 
 **The canary is not a tautology.** The reviewer's concern was that a canary
 which iterates over the same list that is now in `stop_words.txt` only proves

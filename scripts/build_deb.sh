@@ -24,8 +24,13 @@ BUILD_DIR="${REPO_DIR}/build/${PKG}_${VERSION}_${ARCH}"
 DIST_DIR="${REPO_DIR}/dist"
 
 # Reproducible builds (https://reproducible-builds.org/): the same tree must
-# yield the same .deb, on any host. Three things otherwise differ between a
-# local build and CI:
+# yield the same .deb, on any host.
+# CONTRACT: the build date comes from the release heading in CHANGELOG.md
+# (`## [<version>] - YYYY-MM-DD`), NOT from git, and `-Zxz` is pinned against
+# dpkg's default flipping to zstd. A release PR must therefore add its dated
+# CHANGELOG heading before the .deb is built, or the build falls back to the
+# commit time and stops being reproducible across hosts.
+# Three things otherwise differ between a local build and CI:
 #   * the changelog date (``date -R`` used the wall clock),
 #   * the tar member mtimes (dpkg copies the tree's mtimes),
 #   * the compressor (dpkg's default changed from xz to zstd in 1.22.x).
