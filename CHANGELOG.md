@@ -258,6 +258,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a real editor's bounded history. Pinned by
   `tests/test_simulate.py::test_undo_stack_is_bounded_for_a_long_typing_run`.
 
+- **The `.deb` is now byte-reproducible.** The generated changelog embedded
+  `date -R` and dpkg copied the build tree's mtimes into the archive, so the same
+  tree produced a different sha256 on every build -- a published checksum would
+  go stale the moment anyone rebuilt. `scripts/build_deb.sh` now honours
+  `SOURCE_DATE_EPOCH` (defaulting to the newest commit's date), clamps the tree's
+  mtimes and writes a fixed changelog date, so a rebuild reproduces the artifact
+  byte for byte. Pinned by
+  `tests/test_packaging_contract.py::test_build_script_supports_reproducible_builds`.
+
 - **The undo cap's boundary is pinned.** Past the cap, `Ctrl+Z` still undoes the
   *most recent* edit (the cap drops the oldest snapshots), never deletes below
   empty, and never rolls the learned vocabulary back with the screen; a scenario

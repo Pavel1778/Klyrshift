@@ -172,9 +172,11 @@ The first review raised two blockers and four non-blocking items; all are closed
   regenerated (`scripts/build_cli_docs.py`) and the handbook rebuilt.
 
 - **Artifact.** `dist/klyrshift_0.2.10_all.deb`
-  - `sha256: 8a62c30b95d2249cd202b16bf437c573393ebc4893b9d87c631cfd855ab8533a`
-    (rebuilt after the review follow-ups; the earlier `23ef1d6a...` was the
-    pre-review artifact and is superseded)
+  - `sha256: 2bd58760cb45881ee21f59a545e1254f0abe235334d25f70b635d120b9ff2879`
+    (the build is byte-reproducible: `SOURCE_DATE_EPOCH` defaults to the
+    newest commit's date and the tree's mtimes are clamped, so a rebuild
+    reproduces this hash exactly. Earlier hashes from this PR are superseded
+    by each change; only this one matches the shipped artifact.)
   - Built with `scripts/build_deb.sh` (dpkg-deb, `--root-owner-group`).
   - `Depends:` unchanged and minimal: `python3 (>= 3.10)`,
     `python3-tomli | python3 (>= 3.11)`, `python3-tomli-w`, `python3-evdev`,

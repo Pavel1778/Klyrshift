@@ -23,6 +23,20 @@ ARCH="all"
 BUILD_DIR="${REPO_DIR}/build/${PKG}_${VERSION}_${ARCH}"
 DIST_DIR="${REPO_DIR}/dist"
 
+# Reproducible builds: honour SOURCE_DATE_EPOCH (https://reproducible-builds.org/)
+# so the same tree yields the same .deb and a published checksum never goes
+# stale. Without it, ``date -R`` in the generated changelog and the tar member
+# mtimes change on every build. The default is the date of the newest commit,
+# which is stable for a given tree; an explicit value overrides it.
+if [ -n "${SOURCE_DATE_EPOCH:-}" ]; then
+    BUILD_EPOCH="${SOURCE_DATE_EPOCH}"
+else
+    BUILD_EPOCH="$(git -C "${REPO_DIR}" log -1 --format=%ct 2>/dev/null || echo 0)"
+    [ "${BUILD_EPOCH}" != "0" ] || BUILD_EPOCH="$(date +%s)"
+fi
+export SOURCE_DATE_EPOCH="${BUILD_EPOCH}"
+BUILD_DATE="$(date -u -R -d "@${BUILD_EPOCH}" 2>/dev/null || date -u -R)"
+
 echo "[klyrshift] Building ${PKG} ${VERSION} (${ARCH})"
 
 rm -rf "${BUILD_DIR}"
@@ -117,7 +131,7 @@ ${PKG} (${VERSION}) unstable; urgency=medium
   * Upstream release ${VERSION}. The full, human-readable history lives in
     /usr/share/doc/${PKG}/CHANGELOG.md.
 
- -- Pavel1778 <noreply@github.com>  $(date -R)
+ -- Pavel1778 <noreply@github.com>  ${BUILD_DATE}
 EOF
 gzip -9n "${BUILD_DIR}/usr/share/doc/${PKG}/changelog"
 install -m 0644 "${REPO_DIR}/CHANGELOG.md" \
@@ -283,6 +297,9 @@ chmod 0755 "${BUILD_DIR}/DEBIAN/postrm"
 ( cd "${BUILD_DIR}" && find . -type f ! -path './DEBIAN/*' -printf '%P\0' \
     | sort -z | xargs -0 md5sum ) > "${BUILD_DIR}/DEBIAN/md5sums"
 
+# Clamp every mtime in the tree to the build epoch so the tar members are
+# deterministic (dpkg-deb copies the file mtimes into the archive).
+find "${BUILD_DIR}" -exec touch -h -d "@${BUILD_EPOCH}" {} +
 dpkg-deb --build --root-owner-group "${BUILD_DIR}" "${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"
 
 echo "[klyrshift] Package built: ${DIST_DIR}/${PKG}_${VERSION}_${ARCH}.deb"
