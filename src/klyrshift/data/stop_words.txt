@@ -106,6 +106,9 @@ tgz
 npz
 pfx
 # File formats and MIME extensions that are not words (stdlib mimetypes sweep).
+# etx and csh are borderline: etx also names a control byte (End of Text) and
+# csh also names a shell. Both are real entries of the stdlib mimetypes table
+# and neither is a word of en/ru, so leaving them alone is correct.
 cdf
 csh
 etx

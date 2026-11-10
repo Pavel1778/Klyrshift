@@ -77,7 +77,7 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
 ## Invariants that have bitten before
 - **The technical-token canary must stay wider than `stop_words.txt`.**
   `tests/test_false_positives.py` builds its corpus from the stdlib `mimetypes`
-  table plus a static list (266 tokens), not from the stop-word file: a canary
+  table plus a static list (242 tokens), not from the stop-word file: a canary
   that merely restates the list proves "the list is applied", never "the list is
   sufficient". Two tests pin the widening (>=100 tokens must be independent of
   the list; >=150 tokens total), and removing a token from `stop_words.txt` makes
@@ -461,6 +461,21 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   then refuses an automatic fix for that word, while `force=True` (double Shift,
   the manual hotkey) bypasses it. The guard sits next to the stop-word check, so
   it covers the layout, T9 and punctuation passes at once.
+- **The screen undo and the learned vocabulary are independent.** A `Ctrl+Z`
+  restores the *screen* (the application's own undo, which the simulator
+  mirrors); it does not roll the learned vocabulary back. Undo means "I mistyped,
+  let me retry", not "I reject this word" -- rejection is a separate signal
+  (`observe_rejected`) that *suppresses* the word. Rolling the vocabulary back
+  with the screen would un-learn a word on a routine correction. The two are
+  pinned apart by
+  `tests/test_simulate.py::test_undo_does_not_roll_back_the_session_vocabulary`.
+- **A rejected word never accumulates keeps.** The keep signal counts a word the
+  daemon *judged and left alone*; the suppression guard returns before the keep
+  is counted, so typing a rejected word again and rejecting it again cannot
+  promote it. This is the same principle as the manual-mode fix (an unevaluated
+  word is not a keep) and is pinned by
+  `tests/test_simulate.py::test_a_rejected_word_never_accumulates_keeps`.
+
 - **A key pressed while Ctrl/Alt/Super is held is dropped, not buffered.**
   `_handle_event_inner` returns early for `self._held_modifiers - {"shift"}`.
   Without it a command chord leaked its own key (`Ctrl+C` left `c`), which the

@@ -12,17 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **More technical tokens are protected, and the canary is independent.** A
-  sweep of real extensions, protocols and config keys found several tokens still
-  rewritten into Cyrillic (`cjs`, `jsx`, `npz`, `pfx`, `tgz`, `hdf`, `jks`,
-  `vcf`, `vtt`, `pbm`, `pnm`, `xbm`, `xlb`, `cdf`, `csh`, `etx`, `jpe`); they
-  are not words of any shipped language and join the technical-token block of
-  `data/stop_words.txt`. The canary is deliberately **wider than that list**: it
-  is generated from the stdlib `mimetypes` extension table plus a static list of
-  source/protocol/build/config tokens (266 tokens), minus a small documented
-  allowlist of extensions that are real words (`so`, `key`, `log`). Two tests
-  assert the widening, so the canary cannot silently collapse back into a
-  restatement of the list it guards: a token that leaks is named by the test, and
-  removing a token from `stop_words.txt` makes the canary fail.
+  sweep of real extensions, protocols and config keys found tokens the detector
+  still rewrote into Cyrillic (`cjs`, `jsx`, `npz`, `pfx`, `tgz` from the first
+  pass; `cdf`, `csh`, `etx`, `hdf`, `jks`, `jpe`, `pbm`, `pnm`, `rtx`, `vcf`,
+  `vtt`, `xbm`, `xlb` -- thirteen more -- once the canary was widened);
+  they are not words of any shipped language and join the technical-token block
+  of `data/stop_words.txt`. The canary is deliberately **wider than that list**:
+  it is generated from the stdlib `mimetypes` extension table plus a static list
+  of source/protocol/build/config tokens (**242 tokens**), minus a documented
+  allowlist of nine extensions that are real words (`so`, `key`, `log`, `mid`,
+  `img`, `tmp`, `dat`, `bin`, `iso`) -- leaving a real word alone is correct, so
+  it is not a leak. Two tests assert the widening, so the canary cannot silently
+  collapse back into a restatement of the list it guards: a token that leaks is
+  named by the test, and removing a token from `stop_words.txt` makes the canary
+  fail.
 
 - **A patch-upgrade test.** `scripts/patch_upgrade_test.sh` (and
   `make patch-upgrade-test`) installs the previous patch release over the current

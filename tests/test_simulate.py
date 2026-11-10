@@ -604,6 +604,31 @@ def test_ctrl_z_never_deletes_below_empty() -> None:
     assert driver.injector.undo_stack == []
 
 
+def test_a_rejected_word_never_accumulates_keeps() -> None:
+    """A word the user rejects with Ctrl+Z must not "mature" into the vocabulary.
+
+    The keep signal counts a word the daemon *judged and left alone*. A rejected
+    word is suppressed, and the suppression guard returns before the keep is
+    counted, so typing it again and rejecting it again cannot promote it -- the
+    same principle as the manual-mode fix (an unevaluated word is not a keep).
+    """
+    from klyrshift.simulate import _Driver, _run_step
+
+    driver = _Driver(Config(stop_words=[]), "us")
+    # Reject the same wrong-layout word three times, resetting the layout so the
+    # same physical keys render the same text each time.
+    for step in ["type rfr", "space", "ctrl z", "layout us"] * 3:
+        _run_step(driver, step)
+    _run_step(driver, "type rfr")
+    _run_step(driver, "space")
+
+    learning = driver.daemon.learning
+    assert "rfr" in learning.suppressed_words()
+    assert learning.learned_words() == []
+    assert learning.stats.kept == 0
+    assert learning.stats.promoted == 0
+
+
 def test_undo_does_not_roll_back_the_session_vocabulary() -> None:
     """A screen undo must not revert learning: the two are independent.
 

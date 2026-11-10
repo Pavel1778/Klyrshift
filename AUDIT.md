@@ -60,7 +60,8 @@ ValueError: mode must be one of ('auto', 'manual', 'hybrid')   # traceback
 A sweep of real technical tokens (extensions, protocols, MIME types, config
 keys) found a class that the detector still rewrote into Cyrillic. The sweep is
 now **generated from the stdlib `mimetypes` table** (an external, maintained
-source) plus a static list, so it is wider than the stop-word file it guards:
+source) plus a static list, so it is wider than the stop-word file it guards.
+It found **thirteen** tokens, all added to the technical-token block:
 
 | token | rewritten to | |
 | --- | --- | --- |
@@ -71,17 +72,24 @@ source) plus a static list, so it is wider than the stop-word file it guards:
 | `tgz` | `епя` | gzip tarball |
 | `hdf` | `рва` | Hierarchical Data Format |
 | `jks` | `олы` | Java KeyStore |
-| `vcf`, `vtt`, `pbm`, `pnm`, `xbm`, `xlb`, `cdf`, `csh`, `etx`, `jpe` | *(garbage)* | misc MIME extensions |
+| `cdf` | `сва` | Common Data Format |
+| `etx` | `уеч` | Text-encoding extension (borderline: also a control byte) |
+| `csh` | `сыр` | C-shell script extension (borderline: also a shell name) |
+| `jpe` | `озу` | JPEG variant extension |
+| `pbm`, `pnm`, `rtx`, `vcf`, `vtt`, `xbm`, `xlb` | *(garbage)* | misc MIME extensions |
 
-None is a word of any shipped language.
+None is a word of any shipped language. `etx` and `csh` are borderline (they
+name a control byte and a shell, not only a file extension), but both are real
+entries of the stdlib `mimetypes` table and neither is a word of en/ru, so
+protecting them is correct; they are marked as borderline in `stop_words.txt`.
 
 **The canary is not a tautology.** The reviewer's concern was that a canary
 which iterates over the same list that is now in `stop_words.txt` only proves
 "the list is applied". The implemented canary is therefore *wider*: it is built
-from the stdlib `mimetypes` extension table plus a static list (266 tokens),
-minus a documented allowlist of extensions that are real words (`so`, `key`,
-`log`, `mid`, `img`, `tmp`, `dat`, `bin`, `iso`). Two tests assert the widening
-(>= 100 tokens independent of the list, >= 150 total), and the canary is
+from the stdlib `mimetypes` extension table plus a static list (**242 tokens**),
+minus a documented allowlist of nine extensions that are real words (`so`,
+`key`, `log`, `mid`, `img`, `tmp`, `dat`, `bin`, `iso`). Two tests assert the
+widening (>= 100 tokens independent of the list, >= 150 total), and the canary is
 falsifiable: removing a token from `stop_words.txt` makes it fail by name. This
 was verified by hand during the review.
 
@@ -127,12 +135,25 @@ The first review raised two blockers and four non-blocking items; all are closed
 
 | Item | Resolution |
 | --- | --- |
-| **B1 — the canary may be a tautology** | Replaced with a corpus generated from the stdlib `mimetypes` table + a static list (266 tokens), wider than `stop_words.txt`. Two tests pin the widening; the canary fails by name when a token is removed from the list (verified). |
+| **B1 — the canary may be a tautology** | Replaced with a corpus generated from the stdlib `mimetypes` table + a static list (242 tokens), wider than `stop_words.txt`. Two tests pin the widening; the canary fails by name when a token is removed from the list (verified). |
 | **B2 — undo behaviour at the cap** | Pinned with four tests: past the cap `Ctrl+Z` still undoes the most recent edit, never deletes below empty, never rolls the vocabulary back, and a scenario with more `Ctrl+Z` than the cap still completes. The cap drops the *oldest* snapshot, so the newest edit is always restorable. |
 | 3 — rollback-failure path | `apply_config` restores `self.config` *before* rebuilding the caches and, if the rollback itself fails, logs `"Rollback failed: some caches may still hold values from the rejected configuration"`. Covered by a test (the `pragma: no cover` was removed). |
 | 4 — exception translation by type | `_apply_config` now translates **any** exception (by class), not a list of values; the traceback is logged at debug and the original type is named in the `ScenarioError`. A `RuntimeError` test covers it. |
 | 5 — upgrade path, not just clean install | New `scripts/patch_upgrade_test.sh` (`make patch-upgrade-test`): installs a 0.2.9 stand-in, then upgrades to 0.2.10 and checks the user config survives unchanged, the unit stays enabled, `klyrshift verify` passes and the CLI works. Passes on Debian 13. |
 | 6 — coverage of the new branches | The new branches (rollback, rollback-failure, undo cap, config-error translation) are covered; three small `_apply_config` branches got focused tests. Full suite coverage is unchanged at 85 %. |
+
+## Review follow-ups (round 3)
+
+The second review confirmed both blockers closed and asked for three pre-tag
+polish items plus two confirmations; all are done.
+
+| Item | Resolution |
+| --- | --- |
+| 1 — the report's leak count did not match the list | Corrected. The wider corpus found **13** leaks (`cdf`, `csh`, `etx`, `hdf`, `jks`, `jpe`, `pbm`, `pnm`, `rtx`, `vcf`, `vtt`, `xbm`, `xlb`); the earlier "10" was wrong and the earlier "12" (the reviewer's list) omitted `rtx`. The corpus is **242 tokens**, not 266. Fixed in `AUDIT.md`, `CHANGELOG.md` and `AGENTS.md`. |
+| 2 — are `etx` and `csh` intentional? | Yes. Both are real entries of the stdlib `mimetypes` table (verified: `etx in mimetypes.types_map` is `True`, likewise `csh`), so they come from the generated corpus, not a manual addition. Neither is a word of en/ru. They are borderline (a control byte and a shell name) and are now marked as such in `stop_words.txt`. |
+| 3 — document "screen and learning are independent", and test the adjacent scenario | The invariant is documented in `AGENTS.md` and `docs/UNDO_CONTRACT.md` (undo restores the *screen*; rejection is a separate signal). The adjacent scenario is pinned: a word rejected three times with `Ctrl+Z` **does not** accumulate keeps (`kept == 0`), the same principle as the manual-mode fix. New test: `tests/test_simulate.py::test_a_rejected_word_never_accumulates_keeps`. |
+| patch upgrade on Debian 12 | Run: `UPGRADE_IMAGE=debian:12 bash scripts/patch_upgrade_test.sh` passes (the clean install was already covered on 12 and 13). |
+| reproducibility: does the script set `SOURCE_DATE_EPOCH` itself? | Yes. When the variable is unset, `build_deb.sh` derives it from the newest commit (`git log -1 --format=%ct`), so a **local** build with no CI variable is reproducible too; an explicit `SOURCE_DATE_EPOCH` overrides it. Confirmed by two consecutive builds producing the identical hash. |
 
 ## Phase 3 — numbers after the change
 
@@ -172,11 +193,13 @@ The first review raised two blockers and four non-blocking items; all are closed
   regenerated (`scripts/build_cli_docs.py`) and the handbook rebuilt.
 
 - **Artifact.** `dist/klyrshift_0.2.10_all.deb`
-  - `sha256: 2bd58760cb45881ee21f59a545e1254f0abe235334d25f70b635d120b9ff2879`
-    (the build is byte-reproducible: `SOURCE_DATE_EPOCH` defaults to the
-    newest commit's date and the tree's mtimes are clamped, so a rebuild
-    reproduces this hash exactly. Earlier hashes from this PR are superseded
-    by each change; only this one matches the shipped artifact.)
+  - `sha256: 1b945dc1cfbfd78c9833db491fac70f61c0a3128409d2de08cf3dab1b4e8f5bb`
+    (the build is byte-reproducible: `build_deb.sh` sets `SOURCE_DATE_EPOCH`
+    itself from the newest commit when the variable is unset, so a local
+    build with no CI variable reproduces the same hash. Two consecutive
+    builds were verified identical. Earlier hashes in this PR changed as the
+    tree changed -- that is expected; only this one matches the shipped
+    artifact.)
   - Built with `scripts/build_deb.sh` (dpkg-deb, `--root-owner-group`).
   - `Depends:` unchanged and minimal: `python3 (>= 3.10)`,
     `python3-tomli | python3 (>= 3.11)`, `python3-tomli-w`, `python3-evdev`,
