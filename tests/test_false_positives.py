@@ -337,3 +337,101 @@ def test_stop_words_do_not_block_the_flagship_fixes(default_det: LanguageDetecto
         ("ntrcn", "us", "ru"),
     ]:
         assert default_det.target_layout(typed, layout) == expected, typed
+
+
+# --- canary: a broad corpus of real technical tokens -------------------------
+#
+# A single representative set the detector must leave in the layout it was typed
+# in. This is the canary for the "technical tokens" section of stop_words.txt:
+# if a new corpus or a scoring change makes one of these convert again, the test
+# names it. The tokens are extensions, protocols, MIME types and config keys --
+# never words of a shipped language, so the detector has no business rewriting
+# them into Cyrillic.
+
+_TECH_TOKEN_CORPUS = [
+    # file formats and encodings
+    "webp",
+    "jsonl",
+    "toml",
+    "yaml",
+    "proto",
+    "jpeg",
+    "svg",
+    "wasm",
+    "env",
+    "ini",
+    "avif",
+    "heic",
+    "json5",
+    "ndjson",
+    "htm",
+    "xhtml",
+    # source / module extensions
+    "mjs",
+    "cjs",
+    "tsx",
+    "jsx",
+    "vue",
+    "svelte",
+    "astro",
+    # data / serialisation
+    "pkl",
+    "npy",
+    "npz",
+    "parquet",
+    "arrow",
+    "feather",
+    "orc",
+    "avro",
+    # media
+    "webm",
+    "mkv",
+    "avi",
+    "mov",
+    "flac",
+    "ogg",
+    "opus",
+    "aac",
+    # archives
+    "zstd",
+    "lz4",
+    "bz2",
+    "tgz",
+    "zst",
+    # binaries / packages
+    "dll",
+    "dylib",
+    "appimage",
+    "flatpak",
+    # crypto / certificates
+    "pem",
+    "crt",
+    "csr",
+    "der",
+    "p12",
+    "pfx",
+    # protocols
+    "sse",
+    "graphql",
+    "grpc",
+    "proto3",
+    "smtp",
+    "imap",
+    "pop3",
+    "scp",
+    "sftp",
+    # config / build keys
+    "lock",
+    "manifest",
+    "tomlrc",
+    "editorconfig",
+    "gitignore",
+    "dockerignore",
+    "npmrc",
+]
+
+
+@pytest.mark.parametrize("token", _TECH_TOKEN_CORPUS)
+def test_tech_token_corpus_is_never_rewritten(default_det: LanguageDetector, token: str) -> None:
+    assert default_det.target_layout(token, "us") is None, token
+    assert default_det.should_fix(token, "us") is False, token

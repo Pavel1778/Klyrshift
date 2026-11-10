@@ -380,3 +380,56 @@ def test_event_error_is_survived(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(daemon, "_handle_event_inner", boom)
     daemon._handle_event(object())  # must not raise
+
+
+# --- config reload atomicity ------------------------------------------------
+
+
+def test_apply_config_is_atomic_on_a_midway_failure() -> None:
+    """A failure part-way through ``apply_config`` must not leave a mixed state.
+
+    ``apply_config`` swaps ``self.config`` and then rebuilds a dozen derived
+    caches. If a later step raises (a hand-edited ``dictionary_custom_path``
+    with a typo'd ``~user`` raises ``RuntimeError``), the daemon used to keep
+    the new config while every cache still held the old values -- an exception
+    list that does not match the config, hotkeys that do not match the file.
+    The config must be applied whole or not at all.
+    """
+    config = Config(analysis_timeout=0.1, stop_words=["original"], exceptions_apps=["oldapp"])
+    daemon = KlyrshiftDaemon(
+        config,
+        detector=LanguageDetector(converter=None, stop_words=config.stop_words, min_word_length=3),
+        switcher=FakeSwitcher("us"),
+        injector=FakeInjector(),
+    )
+    assert daemon._excepted_apps == {"oldapp"}
+
+    bad = Config(stop_words=["changed"], exceptions_apps=["newapp"])
+    bad.dictionary_custom_path = "~nosuchuser_xyz/dict.txt"
+    bad.validate()
+
+    with pytest.raises(RuntimeError):
+        daemon.apply_config(bad)
+
+    # Nothing changed: config and every cache still describe the old state.
+    assert daemon.config is config
+    assert daemon.config.exceptions_apps == ["oldapp"]
+    assert daemon._excepted_apps == {"oldapp"}
+    assert daemon.detector.stop_words == {"original"}
+
+
+def test_apply_config_swaps_cleanly_when_it_succeeds() -> None:
+    """The happy path still applies everything."""
+    config = Config(analysis_timeout=0.1, stop_words=["original"], exceptions_apps=["oldapp"])
+    daemon = KlyrshiftDaemon(
+        config,
+        detector=LanguageDetector(converter=None, stop_words=config.stop_words, min_word_length=3),
+        switcher=FakeSwitcher("us"),
+        injector=FakeInjector(),
+    )
+    good = Config(stop_words=["changed"], exceptions_apps=["newapp"])
+    good.validate()
+    daemon.apply_config(good)
+    assert daemon.config is good
+    assert daemon._excepted_apps == {"newapp"}
+    assert daemon.detector.stop_words == {"changed"}

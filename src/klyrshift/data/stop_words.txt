@@ -99,6 +99,12 @@ dns
 svn
 cvs
 hg
+# Source/module extensions and archive/binary formats.
+cjs
+jsx
+tgz
+npz
+pfx
 # Short identifiers absent from the en and ru vocabularies.
 www
 fps

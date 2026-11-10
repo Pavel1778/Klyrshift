@@ -132,6 +132,11 @@ _MODIFIER_KEYS: Final[dict[str, tuple[str, str]]] = {
     "super": ("KEY_LEFTMETA", "KEY_RIGHTMETA"),
 }
 
+# How many edits the simulated application can undo. Bounds the per-edit screen
+# snapshots so a long scenario stays O(n) memory; a real editor's history is
+# bounded too, and no Ctrl+Z reaches further back than this.
+UNDO_HISTORY_LIMIT: Final[int] = 100
+
 
 class ScenarioError(ValueError):
     """A scenario could not be parsed."""
@@ -232,12 +237,18 @@ class _SimInjector:
         # the most recent edit, not necessarily the daemon's last rewrite: if the
         # user typed anything after a fix, the undo reverts that instead. Keeping
         # one snapshot per edit models this, so the simulated screen never jumps
-        # back to a state the user had already moved past.
+        # back to a state the user had already moved past. The history is bounded
+        # because each snapshot copies the whole screen: an unbounded list would
+        # be O(n^2) memory over a long scenario, and no real editor restores an
+        # edit from hundreds of steps ago.
         self.undo_stack: list[list[str]] = []
+        self._undo_limit = UNDO_HISTORY_LIMIT
 
     def record_edit(self) -> None:
         """Snapshot the screen before an edit the user made themselves."""
         self.undo_stack.append(list(self._screen))
+        if len(self.undo_stack) > self._undo_limit:
+            del self.undo_stack[0]
 
     def can_type(self, char: str, layout: str) -> bool:
         # Mirrors the literal backends (``wtype``/``xdotool``), which can type
@@ -523,8 +534,18 @@ def _apply_config(daemon: KlyrshiftDaemon, assignments: str) -> None:
         if not hasattr(daemon.config, key):
             raise ScenarioError(f"unknown config field {key!r}")
         setattr(daemon.config, key, _coerce(raw))
-    daemon.config.validate()
-    daemon.apply_config(daemon.config)
+    # A bad value must surface as a ScenarioError, not a raw ValueError: the CLI
+    # catches ScenarioError and prints one line, but a ValueError escaping here
+    # prints a traceback. Validation and the derived-cache rebuild both run
+    # inside the guard, and the daemon rolls its config back on a failed
+    # ``apply_config``, so a rejected override leaves no partial state.
+    try:
+        daemon.config.validate()
+        daemon.apply_config(daemon.config)
+    except ScenarioError:
+        raise
+    except (ValueError, TypeError) as exc:
+        raise ScenarioError(f"invalid config override: {exc}") from exc
 
 
 def _run_step(driver: _Driver, step: str) -> None:

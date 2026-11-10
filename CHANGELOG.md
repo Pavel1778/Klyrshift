@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-11-10
+
 ### Added
+
+- **Five more technical tokens are protected, and the corpus has a canary.**
+  A sweep of real extensions, protocols and config keys found `cjs`, `jsx`,
+  `npz`, `pfx` and `tgz` still rewritten into Cyrillic (they are not words of
+  any shipped language, so they join the technical-token block of
+  `data/stop_words.txt`). A parametrised canary
+  (`tests/test_false_positives.py::test_tech_token_corpus_is_never_rewritten`)
+  runs a representative corpus of ~70 real technical tokens through the
+  detector, so the next one that leaks is caught by name instead of by hand.
+
+- **`AUDIT.md`.** A full audit of the daemon performed with the project's own
+  tooling: the baseline numbers, the four defects found (with the measurement
+  that proved each), the fixes and their tests, the before/after figures, and an
+  explicit out-of-scope list.
 
 - **Short technical tokens are no longer rewritten into Cyrillic.** A short,
   vowel-less Latin token (`http`, `www`, `xml`, `pdf`, `jpg`, `csv`, `tls`,
@@ -205,6 +221,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registry disagree again.
 
 ### Fixed
+
+- **A config reload is now atomic.** `KlyrshiftDaemon.apply_config` replaced
+  `self.config` and then rebuilt a dozen derived caches; a failure part-way
+  through (a hand-edited `dictionary_custom_path` with a typo'd `~user` raises
+  `RuntimeError`) left the daemon with the new config while the caches still
+  held the old values -- an exception list that did not match the config, hotkeys
+  that did not match the file. The rebuild is wrapped in a rollback that
+  re-applies the previous config on any exception, so the daemon always
+  describes exactly one state. Pinned by
+  `tests/test_daemon_robustness.py::test_apply_config_is_atomic_on_a_midway_failure`.
+
+- **An invalid `config` step prints a one-line error, not a traceback.**
+  `klyrshift simulate 'config mode=bogus, ...'` raised a raw `ValueError` from
+  `Config.validate()`, which escaped the CLI's `ScenarioError` handling and
+  printed a stack trace. The simulator now translates a validation failure into
+  a `ScenarioError`, so the CLI prints the expected one-liner and the QA executor
+  keeps classifying it as a harness error. Pinned by
+  `tests/test_simulate.py::test_invalid_config_value_raises_a_scenario_error`.
+
+- **The simulator's undo history is bounded.** The faithful per-edit undo model
+  (so `Ctrl+Z` reverts the most recent edit) kept one full screen snapshot per
+  keystroke, which is O(n^2) memory over a long scenario (600 characters kept
+  601 copies). The history is now capped at `UNDO_HISTORY_LIMIT` (100), matching
+  a real editor's bounded history. Pinned by
+  `tests/test_simulate.py::test_undo_stack_is_bounded_for_a_long_typing_run`.
 
 - **Manual mode no longer poisons the learned vocabulary.** A word the working
   mode silenced (manual mode, quiet hours, an excepted application) was never

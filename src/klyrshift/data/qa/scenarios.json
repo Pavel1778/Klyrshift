@@ -937,5 +937,63 @@
       "modes"
     ],
     "title": "A word silenced by manual mode is not learned"
+  },
+  {
+    "category": "guards",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "cjs jsx npz "
+    },
+    "id": "guards/tech-token-corpus-untouched",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "A broader set of real technical tokens (module extensions, archive formats) must stay in the layout they were typed in.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type cjs",
+      "space",
+      "type jsx",
+      "space",
+      "type npz",
+      "space"
+    ],
+    "tags": [
+      "acronym",
+      "guards"
+    ],
+    "title": "Module-extension tokens are left alone"
+  },
+  {
+    "category": "robustness",
+    "config": {},
+    "difficulty": "intermediate",
+    "expect": {
+      "screen": "привет "
+    },
+    "id": "robustness/config-error-does-not-corrupt",
+    "invariants": [
+      "no-lost-characters",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "An invalid config value must not leave the daemon in a mixed state; the scenario runs after a rejected override only when the override itself is valid, so this pins that a valid override still works.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config min_word_length=3",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "config-refresh",
+      "robustness"
+    ],
+    "title": "A valid config override still fixes a word"
   }
 ]

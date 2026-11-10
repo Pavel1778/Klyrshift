@@ -75,6 +75,33 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   without a display server. Talking to a live compositor still needs a desktop.
 
 ## Invariants that have bitten before
+- **`apply_config` must stay atomic.** It swaps `self.config` and then rebuilds
+  a dozen derived caches (parsed hotkeys, `_excepted_apps`, `_skip_regex`, the
+  detector's tuning, the per-app layout manager). Any step can raise -- a
+  hand-edited `dictionary_custom_path` with a typo'd `~user` makes
+  `Path.expanduser()` raise `RuntimeError` -- and a bare try/except around the
+  *whole* method is not enough: the detector is mutated in place
+  (`set_stop_words`, `set_languages`), so restoring only `self.config` leaves it
+  tuned to the rejected config. `apply_config` wraps the rebuild
+  (`_apply_config_inner`) and, on any exception, re-applies the previous config
+  object, which rebuilds every cache from the known-good state. Do not "simplify"
+  the rollback to a field snapshot; it will miss the detector's in-place state.
+
+- **A bad value in the simulator's `config` step is a `ScenarioError`, not a
+  `ValueError`.** `Config.validate()` raises `ValueError`; if it escapes the
+  simulator the CLI prints a traceback instead of its one-line error, and the QA
+  executor would classify the run as a harness error either way but the CLI is
+  visibly broken. `_apply_config` wraps `validate()` and `apply_config` and
+  re-raises `ValueError`/`TypeError` as `ScenarioError`. `tests/test_simulate.py`
+  pins five representative bad values.
+
+- **The simulator's undo history is bounded (`UNDO_HISTORY_LIMIT`).** The
+  per-edit undo model snapshots the whole screen before every edit, so an
+  unbounded list is O(n^2) memory over a long scenario (600 keystrokes kept 601
+  copies). It is capped at 100, like a real editor's history. A cap that dropped
+  the *most recent* edit instead of the oldest would break `Ctrl+Z`; drop from
+  the front.
+
 - **A short vowel-less Latin token is not a word, and must not be converted.**
   `http`, `www`, `xml`, `pdf`, `jpg`, `csv`, `tls`, `jwt`, `cfg`, `txt`, `vpn`,
   `xlsx`, `yml`, `dns`, `svn`, `fps`, `llm` and their kin score as noise in the

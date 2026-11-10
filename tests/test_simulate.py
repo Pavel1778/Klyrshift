@@ -456,3 +456,62 @@ def test_user_undo_of_a_separator_is_credited_to_the_screen() -> None:
     """
     result = run_scenario("type ghbdtn, space, type ghbdtn, space, ctrl z")
     assert result.undone_separators == 1
+
+
+# --- an invalid config override is a scenario error -------------------------
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        "mode=bogus",
+        "min_word_length=abc",
+        "typo_max_distance=5",
+        "confidence_threshold=5.0",
+        "backend=telepathy",
+    ],
+)
+def test_invalid_config_value_raises_a_scenario_error(override: str) -> None:
+    """A bad config value must surface as a ``ScenarioError``, not a traceback.
+
+    The value is written onto the config and validated. A raw ``ValueError``
+    escaping the simulator bypasses the CLI's error handling and prints a
+    traceback instead of the one-line scenario error the user expects.
+    """
+    with pytest.raises(ScenarioError):
+        run_scenario(f"config {override}, type ghbdtn, space")
+
+
+def test_invalid_config_value_leaves_the_daemon_usable() -> None:
+    """A rejected override must not corrupt the daemon for the rest of the run.
+
+    The scenario stops at the bad step, but the check documents that the error
+    is raised before any state is committed.
+    """
+    with pytest.raises(ScenarioError):
+        run_scenario("config mode=bogus, type ghbdtn, space")
+
+
+# --- the undo stack is bounded ----------------------------------------------
+
+
+def test_undo_stack_is_bounded_for_a_long_typing_run() -> None:
+    """A long scenario must not grow the undo stack without bound.
+
+    One snapshot is taken per edit (so Ctrl+Z can revert the most recent one),
+    and each snapshot copies the whole screen: a 500-keystroke run kept 501
+    copies, O(n^2) memory. A real application's undo history is bounded, so the
+    simulator caps it too; only the most recent edits need to be restorable.
+    """
+    from klyrshift.simulate import _Driver, _run_step
+
+    driver = _Driver(Config(stop_words=[]), "us")
+    _run_step(driver, "type " + "abcdefghij" * 60)  # 600 characters
+    assert len(driver.injector.undo_stack) <= 100
+
+
+def test_ctrl_z_still_undoes_the_last_edit_after_the_cap() -> None:
+    """Capping the history must not break the common Ctrl+Z case."""
+    result = run_scenario("type ghbdtn, space, type ghbdtn, space, ctrl z")
+    assert result.screen == "привет привет"
+    assert result.undone_separators == 1
