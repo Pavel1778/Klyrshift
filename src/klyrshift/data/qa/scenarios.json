@@ -844,5 +844,156 @@
     ],
     "tags": [],
     "title": "Backspacing past the start is safe"
+  },
+  {
+    "category": "guards",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "http "
+    },
+    "id": "guards/tech-token-untouched",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "A short vowel-less Latin token is not a word of any shipped language; the detector must not rewrite it into Cyrillic.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type http",
+      "space"
+    ],
+    "tags": [
+      "acronym",
+      "guards"
+    ],
+    "title": "A tech acronym is left in the layout it was typed in"
+  },
+  {
+    "category": "per-app",
+    "config": {
+      "exceptions_apps": [
+        "myapp"
+      ]
+    },
+    "difficulty": "intermediate",
+    "expect": {
+      "screen": "ghbdtn "
+    },
+    "id": "per-app/exception-applies-immediately",
+    "invariants": [
+      "no-lost-characters",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "The exception set is a daemon cache; a config override must rebuild it or the exception is silently ignored.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "app myapp",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "config-refresh",
+      "per-app"
+    ],
+    "title": "An exception set through config takes effect at once"
+  },
+  {
+    "category": "learning",
+    "config": {},
+    "difficulty": "intermediate",
+    "expect": {
+      "screen": "ghbdtn ghbdtn ghbdtn привет "
+    },
+    "id": "learning/manual-mode-does-not-learn",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "Manual mode evaluates nothing, so its flushes must not promote a word; after switching to auto the word is fixed again.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "mode manual",
+      "type ghbdtn",
+      "space",
+      "type ghbdtn",
+      "space",
+      "type ghbdtn",
+      "space",
+      "mode auto",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "learning",
+      "modes"
+    ],
+    "title": "A word silenced by manual mode is not learned"
+  },
+  {
+    "category": "guards",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "cjs jsx npz "
+    },
+    "id": "guards/tech-token-corpus-untouched",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "A broader set of real technical tokens (module extensions, archive formats) must stay in the layout they were typed in.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type cjs",
+      "space",
+      "type jsx",
+      "space",
+      "type npz",
+      "space"
+    ],
+    "tags": [
+      "acronym",
+      "guards"
+    ],
+    "title": "Module-extension tokens are left alone"
+  },
+  {
+    "category": "robustness",
+    "config": {},
+    "difficulty": "intermediate",
+    "expect": {
+      "screen": "привет "
+    },
+    "id": "robustness/config-error-does-not-corrupt",
+    "invariants": [
+      "no-lost-characters",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "An invalid config value must not leave the daemon in a mixed state; the scenario runs after a rejected override only when the override itself is valid, so this pins that a valid override still works.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "config min_word_length=3",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "config-refresh",
+      "robustness"
+    ],
+    "title": "A valid config override still fixes a word"
   }
 ]

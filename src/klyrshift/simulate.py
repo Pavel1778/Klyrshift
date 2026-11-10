@@ -43,6 +43,7 @@ tuple cannot check.
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Final, cast
@@ -52,6 +53,8 @@ from .daemon import _US_KEY_NAMES, KlyrshiftDaemon
 from .detector import LanguageDetector
 from .injector import TextInjector
 from .switcher import LayoutSwitcher
+
+logger = logging.getLogger(__name__)
 
 # The physical key that produces each canonical US character, and whether it
 # needs Shift. Derived from the daemon's own table so the two can never drift.
@@ -132,6 +135,11 @@ _MODIFIER_KEYS: Final[dict[str, tuple[str, str]]] = {
     "super": ("KEY_LEFTMETA", "KEY_RIGHTMETA"),
 }
 
+# How many edits the simulated application can undo. Bounds the per-edit screen
+# snapshots so a long scenario stays O(n) memory; a real editor's history is
+# bounded too, and no Ctrl+Z reaches further back than this.
+UNDO_HISTORY_LIMIT: Final[int] = 100
+
 
 class ScenarioError(ValueError):
     """A scenario could not be parsed."""
@@ -168,6 +176,10 @@ class SimulationResult:
     suppressed: list[str] = field(default_factory=list)
     learned: list[str] = field(default_factory=list)
     stats: dict[str, int] = field(default_factory=dict)
+    # Separators (Space/Enter/Tab) the *user's own* Ctrl+Z removed from the
+    # screen by undoing their last edit. The daemon is not responsible for those,
+    # so the ``no-lost-characters`` invariant credits them back.
+    undone_separators: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serialisable summary."""
@@ -183,6 +195,7 @@ class SimulationResult:
             "suppressed": self.suppressed,
             "learned": self.learned,
             "stats": self.stats,
+            "undone_separators": self.undone_separators,
         }
 
 
@@ -222,10 +235,23 @@ class _SimInjector:
     def __init__(self, result: SimulationResult, screen: list[str]) -> None:
         self._result = result
         self._screen = screen
-        # A snapshot of the screen before each replacement, so the simulator can
-        # emulate the *application's* own undo when the user presses Ctrl+Z (the
-        # daemon only observes that chord; the app restores the text).
+        # A snapshot of the screen before *every* edit (a typed character, a
+        # Backspace, or a daemon replacement). A real application's Ctrl+Z undoes
+        # the most recent edit, not necessarily the daemon's last rewrite: if the
+        # user typed anything after a fix, the undo reverts that instead. Keeping
+        # one snapshot per edit models this, so the simulated screen never jumps
+        # back to a state the user had already moved past. The history is bounded
+        # because each snapshot copies the whole screen: an unbounded list would
+        # be O(n^2) memory over a long scenario, and no real editor restores an
+        # edit from hundreds of steps ago.
         self.undo_stack: list[list[str]] = []
+        self._undo_limit = UNDO_HISTORY_LIMIT
+
+    def record_edit(self) -> None:
+        """Snapshot the screen before an edit the user made themselves."""
+        self.undo_stack.append(list(self._screen))
+        if len(self.undo_stack) > self._undo_limit:
+            del self.undo_stack[0]
 
     def can_type(self, char: str, layout: str) -> bool:
         # Mirrors the literal backends (``wtype``/``xdotool``), which can type
@@ -234,7 +260,7 @@ class _SimInjector:
         return bool(char)
 
     def replace_text(self, backspace_count: int, new: str, layout: str) -> bool:
-        self.undo_stack.append(list(self._screen))
+        self.record_edit()
         screen = "".join(self._screen)
         kept = screen[: len(screen) - backspace_count] if backspace_count else screen
         self._screen[:] = list(kept + new)
@@ -243,11 +269,23 @@ class _SimInjector:
         return True
 
     def app_undo(self) -> bool:
-        """Emulate the application undoing its last edit (the daemon's rewrite)."""
+        """Emulate the application undoing its most recent edit.
+
+        A real editor reverts the last edit -- a typed character, a Backspace, or
+        the daemon's rewrite -- so this restores the snapshot taken immediately
+        before that edit. Separators the user's own undo removed are recorded so
+        the ``no-lost-characters`` invariant does not blame the daemon for them.
+        """
         if not self.undo_stack:
             return False
+        before = self._screen[:]
         self._screen[:] = self.undo_stack.pop()
-        self._result.events.append(SimEvent("app-undo", "restored the pre-fix text"))
+        removed = sum(before.count(ch) for ch in " \n\t") - sum(
+            self._screen.count(ch) for ch in " \n\t"
+        )
+        if removed > 0:
+            self._result.undone_separators += removed
+        self._result.events.append(SimEvent("app-undo", "restored the pre-edit text"))
         return True
 
     def tap_combo(self, key_names: list[str]) -> bool:
@@ -342,6 +380,7 @@ class _Driver:
         """
         rendered = self._render(key_name, fallback)
         if rendered:
+            self.injector.record_edit()
             self.screen.append(rendered)
 
     def _render(self, key_name: str, fallback: str) -> str:
@@ -362,6 +401,7 @@ class _Driver:
         """
         rendered = self._render(key_name, "")
         if len(rendered) == 1:
+            self.injector.record_edit()
             self.screen.append(rendered)
         self.tap(key_name, "key", detail or key_name)
 
@@ -375,15 +415,18 @@ class _Driver:
         character simply appears after the word.
         """
         if consume:
+            self.injector.record_edit()
             self.screen.append(char)
             self.tap(key_name, "boundary", key_name)
         else:
             self.tap(key_name, "boundary", key_name)
+            self.injector.record_edit()
             self.screen.append(char)
 
     def backspace(self) -> None:
         """Delete the last on-screen character, then press Backspace."""
         if self.screen:
+            self.injector.record_edit()
             self.screen.pop()
         self.tap("KEY_BACKSPACE", "backspace", "backspace")
 
@@ -475,7 +518,15 @@ def _coerce(raw: str) -> Any:
 
 
 def _apply_config(daemon: KlyrshiftDaemon, assignments: str) -> None:
-    """Apply ``key=value; key=value`` overrides to the daemon's config."""
+    """Apply ``key=value; key=value`` overrides to the daemon's config.
+
+    The values are written onto the config and then pushed through
+    ``daemon.apply_config`` so every cache derived from the config (the parsed
+    hotkeys, the exception set, the detector's tuning, the per-app layout
+    manager) is rebuilt. Setting the field alone would leave the daemon reading
+    a stale cache, so an override such as ``config exceptions_apps=[kitty]``
+    would appear to be ignored.
+    """
     for chunk in assignments.split(";"):
         chunk = chunk.strip()
         if not chunk:
@@ -486,7 +537,24 @@ def _apply_config(daemon: KlyrshiftDaemon, assignments: str) -> None:
         if not hasattr(daemon.config, key):
             raise ScenarioError(f"unknown config field {key!r}")
         setattr(daemon.config, key, _coerce(raw))
-    daemon.config.validate()
+    # A bad value must surface as a ScenarioError, not a raw exception: the CLI
+    # catches ScenarioError and prints one line, but anything else escaping here
+    # prints a traceback. The guard is deliberately broad rather than a list of
+    # exception types: the override is *user input*, and every failure mode of
+    # applying it (``ValueError``/``TypeError`` from ``Config.validate``,
+    # ``RuntimeError`` from a typo'd ``~user`` in a path, ``OSError`` from a
+    # directory read, ``KeyError`` from a malformed table) is a bad scenario, not
+    # a daemon bug. The type is named in the message and the traceback is logged,
+    # so a genuine bug is still diagnosable. The daemon rolls its config back on
+    # a failed ``apply_config``, so a rejected override leaves no partial state.
+    try:
+        daemon.config.validate()
+        daemon.apply_config(daemon.config)
+    except ScenarioError:
+        raise
+    except Exception as exc:
+        logger.debug("Config override failed", exc_info=True)
+        raise ScenarioError(f"invalid config override: {type(exc).__name__}: {exc}") from exc
 
 
 def _run_step(driver: _Driver, step: str) -> None:

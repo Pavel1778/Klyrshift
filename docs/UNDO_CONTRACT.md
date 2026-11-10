@@ -59,6 +59,12 @@ over the same characters.
 - **It does not run when the daemon could not type the replacement** (an
   untypable character, a missing backend): nothing was changed, so nothing is
   recorded.
+- **It does not roll back what Klyrshift learned.** Undo restores the *screen*;
+  the learned vocabulary is a separate, forward-only signal. Undo means "I
+  mistyped, let me retry", not "I reject this word" -- rejection is the separate
+  `Ctrl+Z`-as-a-rejection path that *suppresses* the word. Un-learning a word on
+  a routine correction would be surprising, so the two are deliberately
+  independent.
 
 ## Platform limits
 

@@ -75,6 +75,111 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   without a display server. Talking to a live compositor still needs a desktop.
 
 ## Invariants that have bitten before
+- **The `.deb` build must stay byte-reproducible, across hosts.** Three things
+  made the same tree produce different bytes: the changelog's `date -R`, dpkg
+  copying the tree's mtimes, and -- the one that survives a single-machine test
+  -- dpkg's default compressor, which changed from xz to zstd in 1.22.x (CI on a
+  newer dpkg produced `.tar.zst`, a local 1.22.22 `.tar.xz`). `build_deb.sh`
+  therefore pins `-Zxz`, clamps the mtimes and derives the date from the
+  **release date in `CHANGELOG.md`**, not the commit (a PR's synthetic merge
+  commit has a different timestamp than the merge, so a commit-derived date
+  still differs between CI and a local build). `SOURCE_DATE_EPOCH` overrides.
+  `tests/test_packaging_contract.py::test_build_script_supports_reproducible_builds`
+  guards all three. To check by hand: build twice, and compare a local build
+  against the CI artifact for the same commit -- they must match.
+
+- **The technical-token canary must stay wider than `stop_words.txt`.**
+  `tests/test_false_positives.py` builds its corpus from the stdlib `mimetypes`
+  table plus a static list (242 tokens), not from the stop-word file: a canary
+  that merely restates the list proves "the list is applied", never "the list is
+  sufficient". Two tests pin the widening (>=100 tokens must be independent of
+  the list; >=150 tokens total), and removing a token from `stop_words.txt` makes
+  the canary fail by name. Extensions that are real words (`so`, `key`, `log`,
+  `mid`, `img`, `tmp`, `dat`, `bin`, `iso`) are excluded by `_KNOWN_WORDS` --
+  leaving a real word alone is correct, so it is not a leak. When the canary
+  fails, add the named token to `stop_words.txt`; do not widen `_KNOWN_WORDS`
+  unless the token really is a word.
+
+- **The simulator's undo cap drops the *oldest* snapshot, and the boundary is
+  pinned.** `UNDO_HISTORY_LIMIT` (100) bounds the per-edit screen history; past
+  it, `Ctrl+Z` still reverts the most recent edit (the failure mode to avoid is
+  dropping from the wrong end, which would make `Ctrl+Z` no-op or jump to a stale
+  point). The undo restores the *screen* only -- the learned vocabulary is a
+  separate, forward-only signal and must not roll back with it. `tests/
+  test_simulate.py` pins all of this.
+
+- **A config-override failure is a `ScenarioError` by *class*, not by value.**
+  The simulator's `_apply_config` wraps `validate()` + `apply_config` in a broad
+  `except Exception` (logging the traceback at debug) and re-raises a
+  `ScenarioError` naming the original type, because the override is user input:
+  `ValueError`/`TypeError` from validation, `RuntimeError` from a typo'd `~user`,
+  `OSError` from a directory read are all "bad scenario", not daemon bugs. Do not
+  narrow it back to a list of types.
+
+- **`apply_config` must stay atomic.** It swaps `self.config` and then rebuilds
+  a dozen derived caches (parsed hotkeys, `_excepted_apps`, `_skip_regex`, the
+  detector's tuning, the per-app layout manager). Any step can raise -- a
+  hand-edited `dictionary_custom_path` with a typo'd `~user` makes
+  `Path.expanduser()` raise `RuntimeError` -- and a bare try/except around the
+  *whole* method is not enough: the detector is mutated in place
+  (`set_stop_words`, `set_languages`), so restoring only `self.config` leaves it
+  tuned to the rejected config. `apply_config` wraps the rebuild
+  (`_apply_config_inner`) and, on any exception, re-applies the previous config
+  object, which rebuilds every cache from the known-good state. Do not "simplify"
+  the rollback to a field snapshot; it will miss the detector's in-place state.
+
+- **A bad value in the simulator's `config` step is a `ScenarioError`, not a
+  `ValueError`.** `Config.validate()` raises `ValueError`; if it escapes the
+  simulator the CLI prints a traceback instead of its one-line error, and the QA
+  executor would classify the run as a harness error either way but the CLI is
+  visibly broken. `_apply_config` wraps `validate()` and `apply_config` and
+  re-raises `ValueError`/`TypeError` as `ScenarioError`. `tests/test_simulate.py`
+  pins five representative bad values.
+
+- **The simulator's undo history is bounded (`UNDO_HISTORY_LIMIT`).** The
+  per-edit undo model snapshots the whole screen before every edit, so an
+  unbounded list is O(n^2) memory over a long scenario (600 keystrokes kept 601
+  copies). It is capped at 100, like a real editor's history. A cap that dropped
+  the *most recent* edit instead of the oldest would break `Ctrl+Z`; drop from
+  the front.
+
+- **A short vowel-less Latin token is not a word, and must not be converted.**
+  `http`, `www`, `xml`, `pdf`, `jpg`, `csv`, `tls`, `jwt`, `cfg`, `txt`, `vpn`,
+  `xlsx`, `yml`, `dns`, `svn`, `fps`, `llm` and their kin score as noise in the
+  English bigram model, so the Russian model used to win by a small margin and
+  the detector rewrote them into Cyrillic letters the user never typed
+  (`http` -> `реез`). They are not vocabulary words of any shipped
+  language, so they belong in the bundled stop-word list
+  (`src/klyrshift/data/stop_words.txt`, one token per line -- the loader reads
+  one word per line, not a whitespace-separated line). Do not "fix" this with a
+  heuristic: a vowel/consonant or length rule also rejects real wrong-layout
+  words (`rfr` -> `как`, `xnj` -> `что`, `lfkj` -> `дало`) and the flagship
+  `ghbdtn` -> `привет`. `tests/test_false_positives.py` pins the tokens and
+  the surviving flagship fixes; `guards/tech-token-untouched` pins it in the QA
+  corpus.
+
+- **The simulator's `config` step must rebuild every cache it invalidates.**
+  The daemon caches configuration at construction: the parsed hotkeys
+  (`_hotkeys`, `_double_tap_hotkeys`), `_excepted_apps`, `_skip_regex`,
+  `_typo_correctors`, the detector's tuning and the per-app layout manager.
+  Writing the field alone leaves those stale, so `config exceptions_apps=[kitty]`
+  was silently ignored and an excepted app was still corrected. `_apply_config`
+  routes the mutated config through `KlyrshiftDaemon.apply_config`, which is the
+  same path `reload_config` uses (both share it -- do not duplicate the body).
+  When you add a new cached field to the daemon, add it to `apply_config` too,
+  or a reload and a simulator override will both miss it.
+
+- **A word the working mode silenced was never evaluated, so it is not a keep.**
+  `manual` mode, quiet hours and an excepted application all skip the passes;
+  the flush must then *not* call `_note_kept`. Counting it promoted a
+  wrong-layout word into the detector's session vocabulary after
+  `learning_promote_threshold` passes, so a word the user typed three times in
+  `manual` mode stopped being corrected after they switched to `auto`. The keep
+  signal is only for a word the daemon actually judged. An evaluated, kept word
+  is still learned -- `tests/test_learning.py` and `tests/test_simulate.py` pin
+  both directions, and `learning/manual-mode-does-not-learn` pins it in the QA
+  corpus.
+
 - **The live hosts are `klyrshift.*`, not `linguafix.*`.** The site's canonical
   origin lives in two places that must agree: `site/astro.config.mjs` (sitemap,
   `robots.txt`) and `site/src/lib/site.ts` (canonical, `og:url`, hreflang). Both
@@ -369,6 +474,21 @@ SMOKE_IMAGE=ubuntu:22.04 make smoke-test    # Python 3.10 path (tomli)
   then refuses an automatic fix for that word, while `force=True` (double Shift,
   the manual hotkey) bypasses it. The guard sits next to the stop-word check, so
   it covers the layout, T9 and punctuation passes at once.
+- **The screen undo and the learned vocabulary are independent.** A `Ctrl+Z`
+  restores the *screen* (the application's own undo, which the simulator
+  mirrors); it does not roll the learned vocabulary back. Undo means "I mistyped,
+  let me retry", not "I reject this word" -- rejection is a separate signal
+  (`observe_rejected`) that *suppresses* the word. Rolling the vocabulary back
+  with the screen would un-learn a word on a routine correction. The two are
+  pinned apart by
+  `tests/test_simulate.py::test_undo_does_not_roll_back_the_session_vocabulary`.
+- **A rejected word never accumulates keeps.** The keep signal counts a word the
+  daemon *judged and left alone*; the suppression guard returns before the keep
+  is counted, so typing a rejected word again and rejecting it again cannot
+  promote it. This is the same principle as the manual-mode fix (an unevaluated
+  word is not a keep) and is pinned by
+  `tests/test_simulate.py::test_a_rejected_word_never_accumulates_keeps`.
+
 - **A key pressed while Ctrl/Alt/Super is held is dropped, not buffered.**
   `_handle_event_inner` returns early for `self._held_modifiers - {"shift"}`.
   Without it a command chord leaked its own key (`Ctrl+C` left `c`), which the

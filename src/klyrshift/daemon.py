@@ -2079,8 +2079,14 @@ class KlyrshiftDaemon:
             # user who chose "only when I ask" is never corrected without a
             # command. An explicit hotkey (``force``) bypasses this.
             if not self._lexical_pass_allowed(force=force):
+                # The working mode silenced every pass, so the word was never
+                # evaluated: it must not feed the "kept" signal. Counting it
+                # would promote words the user never had a chance to judge --
+                # a wrong-layout word typed three times in manual mode (or
+                # during quiet hours, or in an excepted app) would join the
+                # session vocabulary and stop being fixed after the user
+                # switched to auto.
                 logger.debug("Lexical passes silenced by the working mode")
-                self._note_kept(buffer)
                 return
             # A separate, opt-in step then looks for a single-character typo in
             # the language the user is typing; that fix stays in the current
@@ -2236,6 +2242,62 @@ class KlyrshiftDaemon:
         except Exception:
             logger.error("Failed to reload configuration", exc_info=True)
             return
+        self.apply_config(new_config)
+
+    def apply_config(self, new_config: Config) -> None:
+        """Adopt ``new_config`` and rebuild every cache derived from it.
+
+        The daemon caches a lot of configuration at construction time: the
+        parsed hotkeys, the exception set, the detector's tuning and the
+        per-app layout manager. Swapping ``self.config`` alone would leave all
+        of those pointing at the old values, so a caller that mutates the
+        config in place (the simulator's ``config`` step, a test) must go
+        through here. ``reload_config`` reads the file and then calls this.
+
+        The swap is atomic: a failure part-way through (a hand-edited
+        ``dictionary_custom_path`` with a typo'd ``~user`` raises) must not
+        leave ``self.config`` new while the caches still hold the old values.
+        The previous config and the mutable caches are snapshotted first and
+        restored on any exception, so the daemon keeps describing exactly one
+        state. The detector's own caches are rebuilt from ``self.config`` on the
+        next reload, so a partial detector update is harmless once the config
+        object is restored.
+        """
+        previous_config = self.config
+        try:
+            self._apply_config_inner(new_config)
+        except BaseException:
+            # Restore the config *object* first, so it is consistent even if the
+            # cache rebuild below fails too.
+            self.config = previous_config
+            logger.error(
+                "Configuration reload failed; restoring the previous config", exc_info=True
+            )
+            # Then rebuild the caches from the known-good object. Rebuilding is
+            # the only way to undo the detector's in-place tuning
+            # (``set_stop_words``/``set_languages`` mutate it before a later step
+            # can fail), and the previous config is the one already in force, so
+            # this cannot itself hit the failure that just occurred. If it still
+            # fails (external state changed between the two attempts), say so
+            # explicitly: the config object is restored, but a cache may hold a
+            # value from the rejected config, and the next reload will rebuild
+            # it. Better a logged, named inconsistency than a silent one.
+            try:
+                self._apply_config_inner(previous_config)
+            except Exception:  # the rollback itself failed; logged below
+                logger.error(
+                    "Rollback failed: some caches may still hold values from the "
+                    "rejected configuration; reload again to rebuild them",
+                    exc_info=True,
+                )
+            raise
+
+    def _apply_config_inner(self, new_config: Config) -> None:
+        """Rebuild every cache from ``new_config`` (the body of ``apply_config``).
+
+        Split out so :meth:`apply_config` can wrap it in a rollback. Do not call
+        this directly: it has no atomicity of its own.
+        """
         self.config = new_config
         self.detector.set_stop_words(new_config.stop_words)
         self.detector.min_word_length = new_config.min_word_length

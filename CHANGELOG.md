@@ -7,7 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-11-10
+
 ### Added
+
+- **More technical tokens are protected, and the canary is independent.** A
+  sweep of real extensions, protocols and config keys found tokens the detector
+  still rewrote into Cyrillic (`cjs`, `jsx`, `npz`, `pfx`, `tgz` from the first
+  pass; `cdf`, `csh`, `etx`, `hdf`, `jks`, `jpe`, `pbm`, `pnm`, `rtx`, `vcf`,
+  `vtt`, `xbm`, `xlb` -- thirteen more -- once the canary was widened);
+  they are not words of any shipped language and join the technical-token block
+  of `data/stop_words.txt`. The canary is deliberately **wider than that list**:
+  it is generated from the stdlib `mimetypes` extension table plus a static list
+  of source/protocol/build/config tokens (**242 tokens**), minus a documented
+  allowlist of nine extensions that are real words (`so`, `key`, `log`, `mid`,
+  `img`, `tmp`, `dat`, `bin`, `iso`) -- leaving a real word alone is correct, so
+  it is not a leak. Two tests assert the widening, so the canary cannot silently
+  collapse back into a restatement of the list it guards: a token that leaks is
+  named by the test, and removing a token from `stop_words.txt` makes the canary
+  fail.
+
+- **A patch-upgrade test.** `scripts/patch_upgrade_test.sh` (and
+  `make patch-upgrade-test`) installs the previous patch release over the current
+  one in a clean container and checks that the user's config survives unchanged,
+  the daemon unit stays enabled, `klyrshift verify` passes and the CLI works.
+  The smoke test only proves a clean install; a patch release is normally an
+  upgrade, so this closes the gap.
+
+- **`AUDIT.md`.** A full audit of the daemon performed with the project's own
+  tooling: the baseline numbers, the four defects found (with the measurement
+  that proved each), the fixes and their tests, the before/after figures, and an
+  explicit out-of-scope list.
+
+- **Short technical tokens are no longer rewritten into Cyrillic.** A short,
+  vowel-less Latin token (`http`, `www`, `xml`, `pdf`, `jpg`, `csv`, `tls`,
+  `jwt`, `cfg`, `txt`, `vpn`, `xlsx`, `yml`, `dns`, `svn`, `fps`, `llm`, ...)
+  scored as noise in the English bigram model, so the Russian model won by a
+  small margin and the detector rewrote the token into letters the user never
+  typed (`http` -> `реез`). These are not words of any shipped language, so
+  they now join the bundled stop-word list (`data/stop_words.txt`); the
+  automatic pass leaves them in the layout they were typed in. The flagship
+  fixes (`ghbdtn` -> `привет`, `rfr` -> `как`) are unaffected, and the
+  regression is pinned by `tests/test_false_positives.py` and a QA scenario.
+
+- **The simulator's `config` step refreshes every cache it invalidates.** The
+  daemon caches a lot of configuration at construction time (the parsed
+  hotkeys, the exception set, the detector's tuning, the per-app layout
+  manager), and `klyrshift simulate 'config ...'` used to write the field and
+  leave the caches stale. An override such as `config exceptions_apps=[kitty]`
+  was therefore silently ignored. The reload logic is now shared
+  (`KlyrshiftDaemon.apply_config`), and both `reload_config` and the simulator
+  call it, so an override takes effect immediately. Pinned by
+  `tests/test_simulate.py` and a QA scenario.
 
 - **An autonomous QA engine (`klyrshift qa`).** A testing layer on top of the
   pytest suite: it drives the real daemon through `klyrshift.simulate`, checks
@@ -184,6 +235,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registry disagree again.
 
 ### Fixed
+
+- **A config reload is now atomic.** `KlyrshiftDaemon.apply_config` replaced
+  `self.config` and then rebuilt a dozen derived caches; a failure part-way
+  through (a hand-edited `dictionary_custom_path` with a typo'd `~user` raises
+  `RuntimeError`) left the daemon with the new config while the caches still
+  held the old values -- an exception list that did not match the config, hotkeys
+  that did not match the file. The rebuild is wrapped in a rollback that
+  re-applies the previous config on any exception, so the daemon always
+  describes exactly one state. Pinned by
+  `tests/test_daemon_robustness.py::test_apply_config_is_atomic_on_a_midway_failure`.
+
+- **An invalid `config` step prints a one-line error, not a traceback.**
+  `klyrshift simulate 'config mode=bogus, ...'` raised a raw `ValueError` from
+  `Config.validate()`, which escaped the CLI's `ScenarioError` handling and
+  printed a stack trace. The simulator now translates a validation failure into
+  a `ScenarioError`, so the CLI prints the expected one-liner and the QA executor
+  keeps classifying it as a harness error. Pinned by
+  `tests/test_simulate.py::test_invalid_config_value_raises_a_scenario_error`.
+
+- **The simulator's undo history is bounded.** The faithful per-edit undo model
+  (so `Ctrl+Z` reverts the most recent edit) kept one full screen snapshot per
+  keystroke, which is O(n^2) memory over a long scenario (600 characters kept
+  601 copies). The history is now capped at `UNDO_HISTORY_LIMIT` (100), matching
+  a real editor's bounded history. Pinned by
+  `tests/test_simulate.py::test_undo_stack_is_bounded_for_a_long_typing_run`.
+
+- **The `.deb` is now byte-reproducible, across environments.** The generated
+  changelog embedded `date -R` and dpkg copied the build tree's mtimes into the
+  archive, so the same tree produced a different sha256 on every build -- and
+  two more differences split a local build from CI: the date came from the
+  newest commit (a PR's synthetic merge commit has a different time than the
+  merge), and dpkg's default compressor changed from xz to zstd in 1.22.x, so a
+  newer host produced `.tar.zst` where an older one produced `.tar.xz`.
+  `scripts/build_deb.sh` now pins `-Zxz`, clamps the tree's mtimes and derives
+  the date from the **release date in `CHANGELOG.md`** (fixed in the tree), so
+  CI and a local build of the same commit produce the identical artifact.
+  `SOURCE_DATE_EPOCH` still overrides for an explicit pin. Pinned by
+  `tests/test_packaging_contract.py::test_build_script_supports_reproducible_builds`.
+
+- **The undo cap's boundary is pinned.** Past the cap, `Ctrl+Z` still undoes the
+  *most recent* edit (the cap drops the oldest snapshots), never deletes below
+  empty, and never rolls the learned vocabulary back with the screen; a scenario
+  with more `Ctrl+Z` than the cap still completes. The rollback in
+  `apply_config` also restores the config object *before* rebuilding the caches,
+  so a rollback that itself fails still leaves a consistent config object and
+  logs the residual risk by name. All pinned by tests.
+
+- **The simulator translates *any* config-override failure, not just
+  `ValueError`.** A typo'd `~user` in a path raises `RuntimeError`; the guard is
+  now by class (with the traceback logged), so a novel invalid input cannot
+  print a traceback either.
+
+- **Manual mode no longer poisons the learned vocabulary.** A word the working
+  mode silenced (manual mode, quiet hours, an excepted application) was never
+  evaluated, yet the flush counted as a "keep" and, after
+  `learning_promote_threshold` passes, promoted the word into the detector's
+  session vocabulary. A wrong-layout word typed three times in manual mode then
+  stopped being fixed after the user switched to auto. A silenced word no longer
+  feeds the keep signal; an evaluated, kept word is still learned. Pinned by
+  `tests/test_learning.py`, `tests/test_simulate.py` and a QA scenario.
 
 - **Enter, Tab and punctuation no longer eat the first character of a word.**
   Only a Space boundary consumed and retyped its key; Enter, Tab and the

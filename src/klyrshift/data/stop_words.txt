@@ -57,6 +57,79 @@ yarn
 cargo
 gradle
 maven
+# Technical identifiers that are not real words of any shipped language.
+# A short vowel-less token scores as noise in its own layout, so the other
+# layout's bigram model wins by a small margin and the detector rewrites it
+# into Cyrillic the user never typed. One token per line (the loader reads
+# one stop word per line).
+# File formats and encodings.
+pdf
+jpg
+jpeg
+png
+gif
+svg
+csv
+tsv
+xlsx
+xls
+docx
+txt
+xml
+yml
+toml
+cfg
+ini
+conf
+pem
+crt
+# Protocols, security and networking.
+tls
+ssl
+mtls
+jwt
+csrf
+xss
+cors
+vpn
+dhcp
+ntp
+dns
+# Version control.
+svn
+cvs
+hg
+# Source/module extensions and archive/binary formats.
+cjs
+jsx
+tgz
+npz
+pfx
+# File formats and MIME extensions that are not words (stdlib mimetypes sweep).
+# etx and csh are borderline: etx also names a control byte (End of Text) and
+# csh also names a shell. Both are real entries of the stdlib mimetypes table
+# and neither is a word of en/ru, so leaving them alone is correct.
+cdf
+csh
+etx
+hdf
+jks
+jpe
+pbm
+pnm
+rtx
+vcf
+vtt
+xbm
+xlb
+# Short identifiers absent from the en and ru vocabularies.
+www
+fps
+tpu
+npu
+apu
+llm
+
 # Common Russian 3-letter function words (prepositions, conjunctions and
 # pronouns). They are already correct when typed in Cyrillic, so correcting a
 # wrong-layout rendering of them (for example ``lkz`` for ``для``) is noise;

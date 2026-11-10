@@ -308,6 +308,33 @@ def test_package_recommends_a_layout_backend_that_exists_in_debian() -> None:
     assert "x11-xkb-utils" in script
 
 
+def test_build_script_supports_reproducible_builds() -> None:
+    """The .deb must be byte-reproducible for a given tree.
+
+    Without SOURCE_DATE_EPOCH the generated changelog embeds ``date -R`` and the
+    tar member mtimes change on every build, so the same tree yields a different
+    sha256 each time -- a published checksum would go stale the moment anyone
+    rebuilt. The script must honour SOURCE_DATE_EPOCH, clamp the tree's mtimes
+    and use a fixed date in the changelog.
+    """
+    script = BUILD_DEB.read_text(encoding="utf-8")
+    assert "SOURCE_DATE_EPOCH" in script
+    # The changelog date must come from the epoch, not the wall clock.
+    assert "$(date -R)" not in script
+    assert "BUILD_DATE" in script
+    # The tree's mtimes must be clamped before the archive is built.
+    assert "touch -h -d" in script
+    # The epoch must come from the tree (the CHANGELOG release date), not the
+    # commit timestamp: a PR's synthetic merge commit has a different time than
+    # the merge, so a commit-derived date would make CI and a local build
+    # disagree. It falls back to the commit only for an undated version.
+    assert "CHANGELOG.md" in script
+    assert "release_date" in script
+    # The compressor must be pinned: dpkg's default changed from xz to zstd in
+    # 1.22.x, so a newer host (CI) and an older one produced different bytes.
+    assert "-Zxz" in script
+
+
 def test_release_workflow_only_fires_on_release_tags() -> None:
     text = (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     # A stage tag such as ``v0.2.0-stage2`` must never publish a release, or it

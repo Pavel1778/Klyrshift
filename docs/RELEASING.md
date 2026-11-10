@@ -19,6 +19,10 @@ whole list before pushing the tag: the tag is the point of no return.
 - [ ] The `CHANGELOG.md` section for this version exists and is not still under
   `## [Unreleased]`. A released version must have its own `## [x.y.z] - date`
   heading, or the tree claims a version the changelog does not describe.
+  **The dated heading is also what makes the `.deb` reproducible**: the build
+  takes its timestamp from that line (not from git), so a release PR must add it
+  *before* the `.deb` is built. Without it the build falls back to the commit
+  time and stops being byte-identical across hosts. See `scripts/build_deb.sh`.
 - [ ] The version is not already used. `git ls-remote --tags origin` must not
   list it. `0.2.8.2` has a **changelog heading from 2026-10-08** that was never
   tagged; `0.2.8.3` and `0.2.8.4` are tagged and published. `0.2.9` is the next

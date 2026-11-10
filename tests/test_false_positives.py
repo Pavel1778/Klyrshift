@@ -7,6 +7,8 @@ guards: plausibility, structural boundaries and identifier detection.
 
 from __future__ import annotations
 
+import mimetypes
+
 import pytest
 
 from klyrshift.converter import LayoutConverter
@@ -249,3 +251,309 @@ def test_every_accented_latin_vowel_is_recognised() -> None:
         if decomposed != char and decomposed[0] in _BASE_VOWELS and char not in _VOWELS:
             missing.append(char)
     assert missing == []
+
+
+# --- short technical tokens (acronyms) -------------------------------------------
+#
+# A short, vowel-less Latin token (``http``, ``www``, ``xml``, ``pdf`` ...) scores
+# as noise in the English bigram model, so the Russian model used to win by a
+# small margin and the detector rewrote the token into Cyrillic letters the user
+# never typed. These tokens are not words of any shipped language, so they are
+# listed in the bundled stop-word list; the detector must leave them alone.
+
+# The tokens whose wrong-layout rendering the corpus would otherwise accept.
+_TECH_TOKENS = [
+    "http",
+    "https",
+    "www",
+    "xml",
+    "yml",
+    "toml",
+    "pdf",
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "svg",
+    "csv",
+    "tsv",
+    "xlsx",
+    "xls",
+    "docx",
+    "txt",
+    "cfg",
+    "ini",
+    "conf",
+    "pem",
+    "crt",
+    "tls",
+    "ssl",
+    "mtls",
+    "jwt",
+    "csrf",
+    "xss",
+    "cors",
+    "vpn",
+    "dhcp",
+    "ntp",
+    "dns",
+    "svn",
+    "cvs",
+    "hg",
+    "fps",
+    "tpu",
+    "npu",
+    "apu",
+    "llm",
+]
+
+
+@pytest.fixture
+def default_det() -> LanguageDetector:
+    """A detector configured exactly as the daemon configures it by default."""
+    from klyrshift.config import load_default_stop_words
+
+    return LanguageDetector(
+        converter=LayoutConverter(),
+        stop_words=load_default_stop_words(),
+        min_word_length=3,
+    )
+
+
+@pytest.mark.parametrize("token", _TECH_TOKENS)
+def test_short_tech_token_is_left_alone(default_det: LanguageDetector, token: str) -> None:
+    assert default_det.target_layout(token, "us") is None
+
+
+@pytest.mark.parametrize("token", _TECH_TOKENS)
+def test_short_tech_token_is_never_flagged(default_det: LanguageDetector, token: str) -> None:
+    assert default_det.should_fix(token, "us") is False
+
+
+def test_stop_words_do_not_block_the_flagship_fixes(default_det: LanguageDetector) -> None:
+    """The added tokens must not stop a genuine wrong-layout word being fixed."""
+    for typed, layout, expected in [
+        ("ghbdtn", "us", "ru"),
+        ("rfr", "us", "ru"),
+        ("ltkf", "us", "ru"),
+        ("ntrcn", "us", "ru"),
+    ]:
+        assert default_det.target_layout(typed, layout) == expected, typed
+
+
+# --- canary: a wide, independent technical-token corpus ----------------------
+#
+# The canary for the "technical tokens" section of stop_words.txt. It must NOT
+# be a restatement of that list, or it would only prove "the list is applied",
+# never "the list is sufficient": a token that leaks would go unnamed because it
+# is not in the corpus either.
+#
+# The corpus is therefore built from two sources *wider* than the stop-word
+# list, and the tests below assert that widening explicitly:
+#
+#   * Python's stdlib ``mimetypes`` extension table -- an external, maintained
+#     source the project does not control, so a new file format appears here
+#     without anyone editing this file; and
+#   * a static list of source extensions, protocols, build/container tools and
+#     config keys, which never belong in the detector's word model.
+#
+# A token that IS a real word of a shipped language (``so``, ``key``, ``log``)
+# is not "a leak" when left alone and is excluded by ``_KNOWN_WORDS``; the
+# detector is *allowed* to keep a real word. Everything else must be left in the
+# layout it was typed in.
+
+# Extensions that are also real words, so leaving them alone is not a bug.
+_KNOWN_WORDS = frozenset({"so", "key", "log", "mid", "img", "tmp", "dat", "bin", "iso"})
+
+
+def _mimetype_extensions() -> set[str]:
+    """Return the built-in MIME extensions (no system files, so it is stable).
+
+    ``mimetypes.types_map`` is populated from the stdlib table at import; the
+    system ``/etc/mime.types`` is only read by ``mimetypes.init()``, which is
+    deliberately not called so the corpus does not depend on the host.
+    """
+    return {
+        ext.lstrip(".").lower()
+        for ext in mimetypes.types_map
+        if len(ext) >= 4 and ext.lstrip(".").isalpha()
+    }
+
+
+# Source extensions, protocols, build/container tools and config keys. None is a
+# word of en/ru/de/fr/uk; they are what a developer types all day.
+_STATIC_TECH_TOKENS = frozenset(
+    [
+        "webp",
+        "jsonl",
+        "toml",
+        "sse",
+        "yaml",
+        "proto",
+        "proto3",
+        "pem",
+        "crt",
+        "csr",
+        "der",
+        "p12",
+        "pfx",
+        "jks",
+        "crl",
+        "ocsp",
+        "mjs",
+        "cjs",
+        "tsx",
+        "jsx",
+        "vue",
+        "svelte",
+        "astro",
+        "xhtml",
+        "rdf",
+        "pkl",
+        "npy",
+        "npz",
+        "parquet",
+        "arrow",
+        "feather",
+        "orc",
+        "avro",
+        "zarr",
+        "hdf",
+        "hdf5",
+        "webm",
+        "mkv",
+        "flac",
+        "ogg",
+        "opus",
+        "aiff",
+        "midi",
+        "zstd",
+        "lz4",
+        "bz2",
+        "tgz",
+        "zst",
+        "lzo",
+        "lzma",
+        "dll",
+        "dylib",
+        "appimage",
+        "flatpak",
+        "msix",
+        "pyc",
+        "pyo",
+        "pyi",
+        "whl",
+        "sass",
+        "scss",
+        "less",
+        "styl",
+        "ipynb",
+        "rmd",
+        "psd",
+        "indd",
+        "ttf",
+        "otf",
+        "woff",
+        "woff2",
+        "tcp",
+        "udp",
+        "smtp",
+        "imap",
+        "pop3",
+        "ssl",
+        "tls",
+        "ssh",
+        "scp",
+        "sftp",
+        "rsync",
+        "ntp",
+        "snmp",
+        "ldap",
+        "oauth",
+        "saml",
+        "sso",
+        "mfa",
+        "otp",
+        "totp",
+        "jwt",
+        "csrf",
+        "xss",
+        "cors",
+        "csp",
+        "hsts",
+        "dockerfile",
+        "vagrantfile",
+        "makefile",
+        "cmakelists",
+        "gemfile",
+        "procfile",
+        "npmrc",
+        "yarnrc",
+        "babelrc",
+        "eslintrc",
+        "prettierrc",
+        "editorconfig",
+        "gitignore",
+        "dockerignore",
+        "kubernetes",
+        "kubectl",
+        "helm",
+        "terraform",
+        "ansible",
+        "redis",
+        "mongo",
+        "mysql",
+        "pgsql",
+        "sqlite",
+        "nginx",
+        "apache",
+        "caddy",
+        "haproxy",
+        "varnish",
+        "webpack",
+        "vite",
+        "rollup",
+        "esbuild",
+        "parcel",
+        "protobuf",
+        "thrift",
+        "capnp",
+        "flatbuffers",
+        "msgpack",
+        "cbor",
+        "bson",
+    ]
+)
+
+_TECH_TOKEN_CORPUS = tuple(
+    sorted((set(_mimetype_extensions()) | _STATIC_TECH_TOKENS) - _KNOWN_WORDS)
+)
+
+
+@pytest.mark.parametrize("token", _TECH_TOKEN_CORPUS)
+def test_tech_token_corpus_is_never_rewritten(default_det: LanguageDetector, token: str) -> None:
+    assert default_det.target_layout(token, "us") is None, token
+    assert default_det.should_fix(token, "us") is False, token
+
+
+def test_the_canary_corpus_is_wider_than_the_stop_word_list() -> None:
+    """The canary must not be a restatement of stop_words.txt.
+
+    If every corpus token were also a stop word, the corpus would only prove
+    "the list is applied". The independent tokens -- those protected by the
+    plausibility/structural guards rather than by the list -- are what catch a
+    regression in *those* guards, and they must be the majority of the corpus.
+    """
+    from klyrshift.config import load_default_stop_words
+
+    stop_words = {word.lower() for word in load_default_stop_words()}
+    independent = [token for token in _TECH_TOKEN_CORPUS if token not in stop_words]
+    assert len(independent) >= 100, (
+        f"only {len(independent)} of {len(_TECH_TOKEN_CORPUS)} canary tokens are "
+        "independent of stop_words.txt; the canary is too close to the list it guards"
+    )
+
+
+def test_the_canary_corpus_is_reasonably_wide() -> None:
+    """A canary that is too small is not a net."""
+    assert len(_TECH_TOKEN_CORPUS) >= 150

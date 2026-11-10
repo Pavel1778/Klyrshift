@@ -1,4 +1,4 @@
-.PHONY: help install uninstall test lint format typecheck check qa build-deb smoke-test zero-config upgrade-test clean dev docs-pdf cli-docs
+.PHONY: help install uninstall test lint format typecheck check qa build-deb smoke-test zero-config upgrade-test patch-upgrade-test clean dev docs-pdf cli-docs
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -59,6 +59,9 @@ zero-config: ## Prove the .deb installs with no manual step (no usermod, no enab
 
 upgrade-test: ## Install the .deb over the pre-rename linguafix package and check the upgrade
 	bash scripts/upgrade_test.sh
+
+patch-upgrade-test: ## Install the current .deb over the previous patch release and check the upgrade
+	bash scripts/patch_upgrade_test.sh
 
 clean: ## Remove build artifacts and caches
 	rm -rf build dist *.egg-info .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage
