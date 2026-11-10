@@ -576,6 +576,35 @@ no API key, deterministic. Keep it that way -- an LLM call in the default path
 would make CI depend on the network. The engine tests the same surface the
 simulator does; it does **not** prove the real `evdev`/`uinput` path.
 
+The project's self-verification story (the simulator plus this engine) is
+documented in `docs/SELF_VERIFICATION.md`, and the agent-session lifecycle and
+restart procedure in `docs/AGENT_SESSIONS.md`.
+
+## Agent sessions (lifecycle and restart)
+
+Work here is done by automated sessions as well as by hand; the process is in
+`docs/AGENT_SESSIONS.md`. The rules that matter:
+
+- **Orient before you edit.** The sandbox can be recreated with a previous
+  session's edits still uncommitted, and a task description can be stale. Run
+  `git status`, `git log --oneline -20` and `git fetch origin && git log
+  --oneline origin/main -5` first. A duplicate session once re-implemented the
+  GUI non-blocking fix and T9 while those were already merged (duplicate PR
+  closed); `git fetch` is the cure.
+- **Only committed, pushed work is durable.** Uncommitted edits and the
+  container (venv, GTK, xvfb, Docker) do not survive a restart. Commit early and
+  push before the sandbox is at risk.
+- **Verify with the self-verification tools, not by assertion.** `make check`,
+  the GUI job under `xvfb-run`, `klyrshift qa run`, and the `.deb` smoke test
+  answer different questions -- see `docs/SELF_VERIFICATION.md`. The headless
+  suite *skips* GUI tests rather than failing them, so a GUI change needs the
+  `xvfb-run` run.
+- **Never weaken a check to reach green** (delete an assertion, skip a test,
+  lower a threshold). Fix the cause or the test, and say why.
+- **Record the session** in `.openhands/memory/`: durable facts in `MEMORY.md`,
+  what this session did in a dated `YYYY-MM-DD.md`. That is how the next
+  sandbox learns what this one found.
+
 ## Known limitation
 
 The daemon works on a real GNOME desktop only; the CI and smoke tests do not
