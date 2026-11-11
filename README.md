@@ -637,6 +637,7 @@ make build-deb                # собрать .deb в dist/
 
 Команды и опции: [docs/CLI.md](docs/CLI.md) (та же справка в `man klyrshift`).
 Архитектура и принятые решения: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Структура проекта (что где лежит): [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
 Договор об отмене исправления: [docs/UNDO_CONTRACT.md](docs/UNDO_CONTRACT.md).
 Поддержка платформ (X11/Wayland, что проверено): [docs/PLATFORM_SUPPORT.md](docs/PLATFORM_SUPPORT.md).
 Офлайн-работа и приватность: [docs/OFFLINE_AND_PRIVACY.md](docs/OFFLINE_AND_PRIVACY.md).

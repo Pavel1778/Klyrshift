@@ -42,6 +42,7 @@ SOURCES: tuple[str, ...] = (
     "docs/LANGUAGE_PACKAGES.md",
     "docs/INTERFACE_LANGUAGES.md",
     "docs/ARCHITECTURE.md",
+    "docs/PROJECT_STRUCTURE.md",
     "docs/CONTROL_SOCKET.md",
     "docs/UNDO_CONTRACT.md",
     "docs/OFFLINE_AND_PRIVACY.md",
