@@ -201,6 +201,7 @@ guide must be added there or `tests/test_docs_handbook.py` fails.
 | [FEATURES.md](FEATURES.md) | The implemented-feature inventory, grouped by area. |
 | [WORK_REPORT.md](WORK_REPORT.md) | The work report: what is done and the results achieved. |
 | [VERIFICATION_REPORT.md](VERIFICATION_REPORT.md) | The verification report: what is already built, measured on the current tree. |
+| [SPECIFICATION_AUDIT.md](SPECIFICATION_AUDIT.md) | The specification audit: declared settings with no reader, and their fixes. |
 | [screenshots/](screenshots/README.md) | The README screenshots and how they are rendered. |
 
 ## Scripts — `scripts/`

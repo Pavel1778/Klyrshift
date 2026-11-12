@@ -106,7 +106,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         from .logging_setup import setup_logging
 
         config = load_config()
-        setup_logging(config.log_level, console=True)
+        setup_logging(config.log_level, console=True, rotation_mb=config.log_rotation_mb)
         daemon = KlyrshiftDaemon(config, dry_run=args.dry_run)
         return daemon.run()
 
@@ -1165,6 +1165,7 @@ def cmd_qa(args: argparse.Namespace) -> int:
         minimise=not args.no_minimise,
         record=not args.no_record,
         store_path=Path(args.store) if args.store else None,
+        repeats=max(2, args.repeats),
     )
     corpus = list(CURATED)
     if args.scenarios:
@@ -1437,6 +1438,12 @@ def build_parser() -> argparse.ArgumentParser:
     qa.add_argument("--store", help=_("путь к файлу регрессий"))
     qa.add_argument("--json", action="store_true", help=_("вывести отчёт в JSON"))
     qa.add_argument("--no-minimise", action="store_true", help=_("не минимизировать падения"))
+    qa.add_argument(
+        "--repeats",
+        type=int,
+        default=2,
+        help=_("сколько раз падение должно воспроизвестись, чтобы считаться багом"),
+    )
     qa.add_argument("--no-record", action="store_true", help=_("не записывать регрессии"))
     qa.set_defaults(func=cmd_qa)
 

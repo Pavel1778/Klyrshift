@@ -81,9 +81,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # The GUI is its own process: give it a logger (a dedicated gui.log) so a
     # failed start/stop or a missing daemon leaves a trace instead of vanishing.
+    from ..config import load_config
     from ..logging_setup import GUI_LOG_FILE_NAME, setup_logging
 
-    setup_logging(file_name=GUI_LOG_FILE_NAME)
+    setup_logging(
+        file_name=GUI_LOG_FILE_NAME,
+        rotation_mb=load_config().log_rotation_mb,
+    )
     logger.debug("Starting Klyrshift GUI")
 
     from .app import KlyrshiftApplication

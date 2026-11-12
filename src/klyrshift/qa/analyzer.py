@@ -124,10 +124,21 @@ def _signature(execution: Execution) -> str:
     return f"{execution.outcome}|{names}|{screen}"
 
 
-def analyse(scenario: Scenario, execution: Execution, *, minimise: bool = True) -> FailureReport:
-    """Classify ``execution`` and (optionally) minimise the scenario."""
+def analyse(
+    scenario: Scenario,
+    execution: Execution,
+    *,
+    minimise: bool = True,
+    repeats: int = 2,
+) -> FailureReport:
+    """Classify ``execution`` and (optionally) minimise the scenario.
+
+    ``repeats`` is how many times a failure must reproduce to count as a
+    confirmed bug; it is threaded from :class:`~klyrshift.qa.runner.RunConfig`
+    so the knob the CLI documents actually changes the verdict.
+    """
     classification = classify(execution)
-    if classification in (CONFIRMED_BUG, SUSPICION) and not reproduces(scenario):
+    if classification in (CONFIRMED_BUG, SUSPICION) and not reproduces(scenario, runs=repeats):
         classification = FLAKY
 
     report = FailureReport(

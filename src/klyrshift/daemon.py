@@ -89,6 +89,9 @@ MAX_TYPING_INTERVAL: Final[float] = 5.0
 # couple of keystrokes is not a typing speed.
 _MIN_INTERVALS_FOR_ADAPT: Final[int] = 5
 NOTIFY_TIMEOUT: Final[float] = 3.0
+# Desktop event-sound player (``gnome-session-canberra``). Optional: when it
+# is absent, ``sound_on_fix`` degrades to silence rather than an error.
+SOUND_PLAYER: Final[str] = "canberra-gtk-play"
 # Pause between keyboard re-discovery attempts after the last device vanished.
 DEVICE_RESCAN_DELAY: Final[float] = 2.0
 # The learning counters are flushed to disk at most this often, so a busy
@@ -626,6 +629,7 @@ class KlyrshiftDaemon:
             with self._lock:
                 sensitive = self.buffer.strip()
             self._log_sanitized("Failed to handle a key event", exc, sensitive)
+            self._notify_error()
 
     def _replay_deferred_events(self) -> None:
         """Replay the keys that arrived while a replacement was in flight."""
@@ -1287,8 +1291,7 @@ class KlyrshiftDaemon:
             return False
         if self.injector.replace_text(backspace_count, expansion, current):
             self._record_undo(buffer, current, backspace_count, source=current, target=current)
-            if self.config.notify_on_fix:
-                self._notify()
+            self._announce_fix()
         return True
 
     def _typo_correction(self, buffer: str, current: str, *, force: bool = False) -> str | None:
@@ -1573,13 +1576,13 @@ class KlyrshiftDaemon:
         # many characters and retyping the original restores the screen exactly.
         if not self.injector.replace_text(backspace_count, original, target):
             logger.warning("Undo failed to replace text")
+            self._notify_error()
             return False
         # The user restored their own text: never re-fix this word this session.
         self._last_undone_word = original
         self.learning.observe_rejected(original)
         logger.info("Undid the last fix")
-        if self.config.notify_on_fix:
-            self._notify()
+        self._announce_fix()
         return True
 
     def _toggle_last_word_layout(self) -> bool:
@@ -1923,6 +1926,7 @@ class KlyrshiftDaemon:
             self._process_buffer_inner(force=force, boundary=boundary, boundary_char=boundary_char)
         except Exception as exc:  # the daemon must survive any failure
             self._log_sanitized("Failed to process the buffer", exc, sensitive)
+            self._notify_error()
         finally:
             with self._lock:
                 self._processing_buffer = False
@@ -2210,8 +2214,60 @@ class KlyrshiftDaemon:
             self._last_flushed_word = converted
             self._last_flushed_corrected = True
             logger.debug("Flush complete, buffer cleared")
-            if self.config.notify_on_fix:
-                self._notify()
+            self._announce_fix()
+
+    def _announce_fix(self) -> None:
+        """Signal a completed fix: a desktop notification and/or a sound.
+
+        Both are opt-in and independent. The notification body is a fixed label
+        (never the corrected text), so this cannot leak what was typed.
+        """
+        if self.config.notify_on_fix:
+            self._notify()
+        if self.config.sound_on_fix:
+            self._play_sound()
+
+    def _play_sound(self) -> None:
+        """Play the desktop "bell" event sound, tolerating a missing player.
+
+        ``canberra-gtk-play`` ships in ``gnome-session-canberra`` and is the
+        standard way to ask the session for an event sound; it honours the
+        user's sound theme and volume. When it is not installed the call is a
+        no-op -- the fix itself is unaffected.
+        """
+        try:
+            subprocess.run(
+                [SOUND_PLAYER, "-i", "bell"],
+                check=False,
+                capture_output=True,
+                timeout=NOTIFY_TIMEOUT,
+            )
+        except (OSError, subprocess.SubprocessError):
+            logger.debug("sound player failed", exc_info=True)
+
+    def _notify_error(self) -> None:
+        """Show a desktop notification that a correction failed.
+
+        Opt-in through ``notify_on_error``. The body is a fixed label for the
+        same reason the fix notification is: the typed text must never reach a
+        subprocess argv, where ``ps`` and ``/proc`` would expose it.
+        """
+        if not self.config.notify_on_error:
+            return
+        try:
+            subprocess.run(
+                [
+                    "notify-send",
+                    "--app-name=Klyrshift",
+                    "Klyrshift",
+                    _("Не удалось исправить раскладку"),
+                ],
+                check=False,
+                capture_output=True,
+                timeout=NOTIFY_TIMEOUT,
+            )
+        except (OSError, subprocess.SubprocessError):
+            logger.debug("notify-send failed", exc_info=True)
 
     def _notify(self) -> None:
         """Show a desktop notification about a correction."""

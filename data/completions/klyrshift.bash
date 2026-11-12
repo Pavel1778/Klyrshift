@@ -108,7 +108,7 @@ _klyrshift() {
             if [[ "$cur" != -* ]] && (( COMP_CWORD == i + 1 )); then
                 COMPREPLY=( $(compgen -W "run regress list" -- "$cur") )
             else
-                COMPREPLY=( $(compgen -W "--seed --generate --focus --changed --scenarios --report --store --json --no-minimise --no-record -h --help" -- "$cur") )
+                COMPREPLY=( $(compgen -W "--seed --generate --focus --changed --scenarios --report --store --json --no-minimise --repeats --no-record -h --help" -- "$cur") )
             fi
             ;;
         restart)

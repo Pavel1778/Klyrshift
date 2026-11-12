@@ -28,6 +28,7 @@ def setup_logging(
     log_dir: Path | None = None,
     console: bool = False,
     file_name: str = LOG_FILE_NAME,
+    rotation_mb: int = MAX_BYTES // (1024 * 1024),
 ) -> Path:
     """Configure the root logger and return the log file path.
 
@@ -36,6 +37,9 @@ def setup_logging(
         log_dir: Override the directory used for the log file.
         console: When true, also log to stderr (used for ``--foreground``).
         file_name: Name of the log file inside ``log_dir``.
+        rotation_mb: Rotate the log once it reaches this many megabytes. The
+            caller passes ``Config.log_rotation_mb`` so the GUI "Ротация, МБ"
+            spin has an effect; the default keeps the historical 5 MB.
 
     Returns:
         The path of the log file that was configured.
@@ -55,7 +59,7 @@ def setup_logging(
 
     file_handler = RotatingFileHandler(
         log_file,
-        maxBytes=MAX_BYTES,
+        maxBytes=max(1, rotation_mb) * 1024 * 1024,
         backupCount=BACKUP_COUNT,
         encoding="utf-8",
     )

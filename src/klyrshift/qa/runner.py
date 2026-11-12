@@ -126,7 +126,7 @@ def run(
         for violation in execution.violations:
             summary.violations[violation.name] = summary.violations.get(violation.name, 0) + 1
 
-        failure = analyse(scenario, execution, minimise=cfg.minimise)
+        failure = analyse(scenario, execution, minimise=cfg.minimise, repeats=cfg.repeats)
         summary.failures.append(failure.to_dict())
         if failure.classification != CONFIRMED_BUG:
             continue

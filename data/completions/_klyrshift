@@ -135,6 +135,7 @@ _klyrshift() {
                 '--store[path to the regression file]' \
                 '--json[print the report as JSON]' \
                 '--no-minimise[do not minimise failures]' \
+                '--repeats[how many times a failure must reproduce to count as a bug]' \
                 '--no-record[do not record regressions]' \
                 '1: :(run regress list)'
                 ;;
