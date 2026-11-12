@@ -55,6 +55,7 @@ SOURCES: tuple[str, ...] = (
     "docs/ROADMAP.md",
     "docs/FEATURES.md",
     "docs/WORK_REPORT.md",
+    "docs/VERIFICATION_REPORT.md",
     "CHANGELOG.md",
 )
 

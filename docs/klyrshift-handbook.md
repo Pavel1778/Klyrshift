@@ -26,6 +26,7 @@ This handbook is generated from the project's Markdown sources by
 - [Roadmap](#roadmap)
 - [Implemented features](#implemented-features)
 - [Отчёт о выполненной работе](#отчёт-о-выполненной-работе)
+- [Проверка существующей реализации](#проверка-существующей-реализации)
 - [Changelog](#changelog)
 
 <a id="README.md"></a>
@@ -679,6 +680,7 @@ make build-deb                # собрать .deb в dist/
 Языки интерфейса (каталоги, fallback, плюрали, как добавить язык): [docs/INTERFACE_LANGUAGES.md](#contents).
 Реализованные возможности (что уже готово): [docs/FEATURES.md](#contents).
 Отчёт о выполненной работе (что сделано и с каким результатом): [docs/WORK_REPORT.md](#contents).
+Проверка существующей реализации (что готово, по факту прогона): [docs/VERIFICATION_REPORT.md](#contents).
 План развития: [docs/ROADMAP.md](#contents).
 Ручной план тестирования на реальной системе: [docs/TESTING.md](#contents).
 Автономный QA-движок (сценарии, инварианты, отчёт, регрессии): [docs/QA_ENGINE.md](#contents).
@@ -3005,6 +3007,7 @@ guide must be added there or `tests/test_docs_handbook.py` fails.
 | [ROADMAP.md](#contents) | Where the project is and what comes next. |
 | [FEATURES.md](#contents) | The implemented-feature inventory, grouped by area. |
 | [WORK_REPORT.md](#contents) | The work report: what is done and the results achieved. |
+| [VERIFICATION_REPORT.md](#contents) | The verification report: what is already built, measured on the current tree. |
 | [screenshots/](#contents) | The README screenshots and how they are rendered. |
 
 ### Scripts — `scripts/`
@@ -4811,6 +4814,174 @@ make build-deb && make smoke-test   # .deb в чистом контейнере
 
 Единый офлайн-справочник собирается командой `make docs-pdf` из источников в
 `docs/`; этот отчёт входит в сборку.
+
+<a id="docs/VERIFICATION_REPORT.md"></a>
+
+## Проверка существующей реализации
+
+Этот документ фиксирует результат проверки того, что уже готово в Klyrshift,
+выполненной на дереве `0.2.10` (коммит-основание `b486945`). Он отвечает на
+вопрос «что уже готово?» **измерением**, а не пересказом: каждая строка ниже —
+команда, которую можно повторить, и её фактический вывод. Отчёт о выполненной
+работе — в [WORK_REPORT.md](#contents), инвентаризация возможностей — в
+[FEATURES.md](#contents), известные ограничения — в
+[ROADMAP.md](#contents).
+
+Итог: **заявленные возможности подтверждены**, все проверяемые в этом окружении
+контуры (тесты, линтеры, типы, QA-движок, симулятор, сборка `.deb`, лендинг)
+зелёные. Найдены расхождения в документации (устаревшие числа) и один
+известный, но не исправленный дефект QA-движка; и то и другое перечислено ниже.
+
+### 1. Что проверено и с каким результатом
+
+Окружение: Debian 13 (trixie), Python 3.13.15, `git` HEAD `b486945`.
+
+| Проверка | Команда | Результат |
+|---|---|---|
+| Тесты (headless) | `pytest tests/ -q --cov=klyrshift` | **1776 passed, 111 skipped**, покрытие **85 %** |
+| Тесты (GUI, максимум) | `PYTHONPATH=/usr/lib/python3/dist-packages KLYRSHIFT_RENDER_TEST=1 xvfb-run -a pytest tests/ -q --cov=klyrshift --cov-config=coverage-gui.rc --cov-fail-under=85` | **1887 passed, 0 skipped**, покрытие **85.80 %** |
+| Сбор тестов | `pytest tests/ --collect-only -q` | 1887 тестов собрано |
+| Линтер | `ruff check .` | `All checks passed!` |
+| Формат | `black --check .` | 177 файлов без изменений |
+| Порядок импортов | `isort --check-only .` | чисто |
+| Типы | `mypy --strict .` | `Success: no issues found in 173 source files` |
+| Автономный QA | `klyrshift qa run --generate 60 --seed 12345 --no-record` | **96 проверено, 96 успешно, 0 ошибок стенда**, exit 0 |
+| Бенчмарк детектора | `python scripts/measure_detector.py` | ru→us recall 92.8 %, en→ru 95.1 %, **0 ложных срабатываний, 0 порчи** |
+| Бюджет задержки/памяти | `python scripts/measure_latency.py --limit 3000 --repeats 2` | 0.0068 / 0.0067 мс/слово, 4.3 MiB |
+| Консистентность версии | `python scripts/release_consistency.py --source` | `ok` |
+| Воспроизводимость `.deb` | `bash scripts/build_deb.sh` дважды + `cmp` | **байт-идентичен** (`6c0a55ea…`) |
+| Манифест целостности | `dpkg-deb -e` + `md5sum -c` | покрывает ровно 108 файлов, все суммы верны |
+| Лендинг | `cd site && npm run build` | собрано 2 страницы |
+| Интерфейс (i18n) | `klyrshift --lang ru/en/de/fr/uk status` | все пять локалей отвечают |
+
+#### Уровень 1b: безголовый симулятор
+
+Флагманский сценарий и режим «ручной» воспроизводятся как задокументировано:
+
+```
+$ klyrshift simulate 'type ghbdtn, space'
+Экран: привет
+Режим: auto · раскладка: ru
+  замена −7 +'привет ' @ru
+
+$ klyrshift explain --text ghbdtn
+Текущая раскладка: us
+Решение: исправить в ru -> привет
+Оценка: уверенность 100% (перевод даёт известные слова)
+```
+
+#### Командная строка
+
+Проверены `status`, `mode`, `hotkeys`, `config show`, `dict list/add/remove/categories`,
+`export`/`import`, `doctor`, `verify`, `logs`, `simulate`, `explain`, `fix`, `qa`.
+Все отвечают; `doctor` корректно возвращает ненулевой код, когда находит проблемы
+(в этом окружении — нет udev-правила и устройств ввода, что ожидаемо без рабочего
+стола).
+
+### 2. Расхождения
+
+#### 2.1 Дефект QA-движка: список/словарь из двух и более элементов (не исправлен)
+
+Задокументирован в [AUTOPROGRESS_BREAKAGE.md](#contents) и
+**воспроизводится на текущем дереве**. `qa/executor.build_script` склеивает шаги
+через `", "`, а `simulate.run_scenario` делит сценарий по `","`; запятые внутри
+`[a, b]`/`{k: v}` неотличимы от разделителя шагов.
+
+```
+$ klyrshift simulate 'config exceptions_apps=[kitty, code], type ghbdtn, space'
+Ошибка сценария: unknown key 'code]'
+
+$ klyrshift qa run --scenarios two-apps.json --no-record   # сценарий с двумя app
+QA: проверено 37, успешно 36, провалов 0, ошибок стенда 1
+$ echo $?
+1
+```
+
+Одноэлементный список/словарь проходит (в курируемом корпусе ровно один такой
+сценарий, поэтому прогон по умолчанию зелёный). То же остриё у `type`:
+`klyrshift simulate 'type hello, world'` → `unknown key 'world'`.
+
+**Статус:** известный дефект, не исправлен; исправление предложено в
+AUTOPROGRESS_BREAKAGE.md (разбор сценария с учётом вложенности скобок) и здесь не
+применялось, потому что шаг плана — *проверка*, а не исправление.
+
+#### 2.2 Мёртвая ручка `RunConfig.repeats`
+
+`qa/runner.py` объявляет `repeats: int = 2` и документирует его как «сколько раз
+падение должно воспроизвестись», но **ничто его не читает**: `runner.run` →
+`analyse` → `reproduces(scenario)` с зашитым `runs=2`. Ручка, которая молча ничего
+не делает, — ловушка для следующего читателя (тот же вывод в
+AUTOPROGRESS_BREAKAGE.md, п. 4).
+
+#### 2.3 Устаревшие числа в документации
+
+Документы-снимки описывают состояние на момент написания и с тех пор отстали.
+Числа ниже — факт на HEAD `b486945`:
+
+| Где | Написано | Факт | Комментарий |
+|---|---|---|---|
+| `docs/WORK_REPORT.md` | «19 руководств в `docs/`» | **20** | сразу после отчёта добавлен `AUTOPROGRESS_BREAKAGE.md` |
+| `docs/WORK_REPORT.md` | «333 коммита» | **335** | снимок на момент написания |
+| `docs/PROJECT_STRUCTURE.md` | «88 modules» (о тестах) | **89** | `test_*.py` в `tests/` |
+| `docs/ROADMAP.md` | «1300+ tests, ~86 % coverage» | **1887** тестов, **85.80 %** | «1300+» формально верно, но сильно устарело |
+
+Эти строки — прозаические снимки, их не пиннит ни один тест (в отличие от
+версий, структуры и ссылок), поэтому дрейф молчаливый. Отдельно: строка
+`docs/WORK_REPORT.md` «Прогон тестов — 1776 passed, 111 skipped» **верна** для
+headless-прогона, но не показывает более сильный GUI-прогон (1887 passed, 0
+skipped), который CI выполняет в задании `gui`.
+
+### 3. Чего в этом окружении проверить нельзя
+
+Это не дефекты, а границы стенда (совпадают с
+[PLATFORM_SUPPORT.md](#contents) и [TESTING.md](#contents)):
+
+- **Реальный путь `evdev` → `uinput` и живой композитор.** Нет графической сессии
+  и устройств ввода; проверяется только логика через симулятор.
+- **`g3kb-switch`** (переключение раскладки под Wayland) — нет в Debian и не
+  установлен; остаётся `Recommends`.
+- **Пакетные тесты в контейнере** (`scripts/smoke_test.sh`,
+  `deb_selfsufficiency_test.sh`, `upgrade_test.sh`) — нужен Docker, который в этом
+  окружении недоступен. Вместо них проверены сборка `.deb`, воспроизводимость и
+  полнота манифеста `md5sums` напрямую.
+- **`wtype`/`xdotool`** — не установлены; атомарная замена проверяема только на
+  `uinput` (документированное ограничение).
+
+### 4. Отсутствующие возможности (по ROADMAP)
+
+Ничего из перечисленного не заявлено как готовое; это план, а не регрессия:
+
+- **Flatpak / AppImage** — *planned* (нужен путь ввода через портал).
+- **Кросс-платформенные адаптеры** (Stage 6) — *planned*.
+- **Атомарная замена на `wtype`/`xdotool`** — *blocked* (у этих утилит нет
+  атомарного примитива).
+- **Проверка на реальном рабочем столе** (Stage 1, редакторы/браузер/терминал) —
+  *blocked* (нужна настоящая сессия GNOME).
+
+### 5. Как воспроизвести
+
+```bash
+bash scripts/dev_setup.sh                                   # venv + dev-зависимости
+make check                                                  # ruff + black + mypy + pytest --cov
+make qa                                                     # автономный QA (офлайн)
+make build-deb && cmp dist/klyrshift_*.deb <второй сборкой> # воспроизводимость
+
+## максимальный прогон (нужен дисплей и python3-gi):
+sudo apt install -y xvfb python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1
+PYTHONPATH=/usr/lib/python3/dist-packages KLYRSHIFT_RENDER_TEST=1 \
+  xvfb-run -a pytest tests/ -q --cov=klyrshift --cov-config=coverage-gui.rc --cov-fail-under=85
+```
+
+### 6. Вывод
+
+Существующая реализация **работает как заявлено** во всём, что проверяемо без
+рабочего стола: 1887 тестов проходят, покрытие 85.80 %, линтеры и типы чисты,
+QA-движок 96/96, детектор без ложных срабатываний и порчи, `.deb`
+воспроизводим и целостен, лендинг собирается, пять языков интерфейса живы.
+Расхождения — устаревшие числа в документах-снимках и один известный
+неисправленный дефект QA-движка на многоэлементных списках/словарях в
+`config`-шаге; отсутствующие возможности перечислены в
+[ROADMAP.md](#contents) и не заявлены как готовые.
 
 <a id="CHANGELOG.md"></a>
 
