@@ -78,10 +78,19 @@ fi
 head_ "3. device access (the uaccess rule, no 'input' group)"
 if compgen -G '/dev/input/event*' >/dev/null; then
     ok "keyboard event devices exist"
-    if [ -r "$(compgen -G '/dev/input/event*' | head -1)" ]; then
-        ok "the active session can read /dev/input/event* (uaccess ACL applied)"
+    # The rule opens keyboards only, so look for a readable keyboard node
+    # rather than the first event* node (often the power button or a mouse).
+    readable_kbd=""
+    for node in /dev/input/by-path/*-event-kbd /dev/input/by-id/*-event-kbd; do
+        if [ -e "$node" ] && [ -r "$node" ]; then
+            readable_kbd="$node"
+            break
+        fi
+    done
+    if [ -n "$readable_kbd" ]; then
+        ok "the active session can read a keyboard ($readable_kbd, uaccess ACL applied)"
     else
-        bad "/dev/input/event* is not readable -- is this the active seat? relogin after install"
+        bad "no keyboard under /dev/input is readable -- is this the active seat? relogin after install"
     fi
 else
     bad "no /dev/input/event* -- no keyboard, or the uinput module is missing"

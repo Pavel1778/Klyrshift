@@ -422,6 +422,24 @@ def test_udev_rule_uses_uaccess() -> None:
     assert all('ACTION!="remove"' in line for line in active)
 
 
+def test_udev_rule_opens_keyboards_only() -> None:
+    """Event devices are opened only when they are keyboards or our own.
+
+    The daemon reads keyboards only, so a blanket ``KERNEL=="event*"`` rule
+    would also hand the session the mouse, touchpad and joysticks. The second
+    rule covers the daemon's own virtual keyboards, which udev may not classify
+    as keyboards (python-evdev waits ~2 s for each one it cannot read).
+    """
+    rule = Path(__file__).resolve().parent.parent / "data" / "71-klyrshift.rules"
+    text = rule.read_text(encoding="utf-8")
+    active = [line for line in text.splitlines() if line.strip() and not line.startswith("#")]
+    event_rules = [line for line in active if 'KERNEL=="event*"' in line]
+    assert event_rules
+    for line in event_rules:
+        assert 'ENV{ID_INPUT_KEYBOARD}=="1"' in line or 'ATTRS{name}=="klyrshift*"' in line
+    assert any('ATTRS{name}=="klyrshift*"' in line for line in event_rules)
+
+
 def test_repo_and_packaged_data_files_match() -> None:
     """``data/`` and ``src/klyrshift/data/`` must not drift apart."""
     from importlib import resources
