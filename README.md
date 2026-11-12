@@ -646,6 +646,7 @@ make build-deb                # собрать .deb в dist/
 Формат языковых пакетов (версия, контрольная сумма, откат): [docs/LANGUAGE_PACKAGES.md](docs/LANGUAGE_PACKAGES.md).
 Языки интерфейса (каталоги, fallback, плюрали, как добавить язык): [docs/INTERFACE_LANGUAGES.md](docs/INTERFACE_LANGUAGES.md).
 Реализованные возможности (что уже готово): [docs/FEATURES.md](docs/FEATURES.md).
+Отчёт о выполненной работе (что сделано и с каким результатом): [docs/WORK_REPORT.md](docs/WORK_REPORT.md).
 План развития: [docs/ROADMAP.md](docs/ROADMAP.md).
 Ручной план тестирования на реальной системе: [docs/TESTING.md](docs/TESTING.md).
 Автономный QA-движок (сценарии, инварианты, отчёт, регрессии): [docs/QA_ENGINE.md](docs/QA_ENGINE.md).

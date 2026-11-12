@@ -198,6 +198,7 @@ guide must be added there or `tests/test_docs_handbook.py` fails.
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, code standards and commit conventions. |
 | [ROADMAP.md](ROADMAP.md) | Where the project is and what comes next. |
 | [FEATURES.md](FEATURES.md) | The implemented-feature inventory, grouped by area. |
+| [WORK_REPORT.md](WORK_REPORT.md) | The work report: what is done and the results achieved. |
 | [screenshots/](screenshots/README.md) | The README screenshots and how they are rendered. |
 
 ## Scripts — `scripts/`
