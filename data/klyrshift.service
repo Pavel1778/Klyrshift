@@ -15,6 +15,19 @@ RestartSec=5
 # real-time policy, treats the failure as fatal (exit 201) and the unit never
 # starts -- the daemon is stuck in a restart loop. A fix must still beat the
 # compositor, which is achieved by keeping the analysis path short instead.
+# Sandboxing that costs nothing: the daemon needs no new privileges, no
+# namespaces, no real-time scheduling and no foreign syscall ABI, and it only
+# talks over Unix sockets (D-Bus, the control socket), netlink (device
+# hotplug) and, for the opt-in update check, IPv4/IPv6. All of these are
+# seccomp/no-new-privs based, so they work in a *user* unit without
+# capabilities (all exist since systemd 235; tested on systemd 261). To drop
+# the network entirely, see docs/OFFLINE_AND_PRIVACY.md.
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
 Environment=PYTHONUNBUFFERED=1
 StandardOutput=journal
 StandardError=journal
