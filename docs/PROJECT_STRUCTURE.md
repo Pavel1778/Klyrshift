@@ -193,6 +193,7 @@ guide must be added there or `tests/test_docs_handbook.py` fails.
 | [OFFLINE_AND_PRIVACY.md](OFFLINE_AND_PRIVACY.md) | Offline operation and the privacy invariants. |
 | [TESTING.md](TESTING.md) | The three test levels and the manual desktop plan. |
 | [QA_ENGINE.md](QA_ENGINE.md) | The autonomous QA engine. |
+| [AUTOPROGRESS_BREAKAGE.md](AUTOPROGRESS_BREAKAGE.md) | Why the automated run breaks: the defect, its root cause and the fix. |
 | [TEST_STRATEGY.md](TEST_STRATEGY.md) | Quality metrics and regression thresholds. |
 | [RELEASING.md](RELEASING.md) | The release checklist. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, code standards and commit conventions. |
