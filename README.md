@@ -648,6 +648,7 @@ make build-deb                # собрать .deb в dist/
 Реализованные возможности (что уже готово): [docs/FEATURES.md](docs/FEATURES.md).
 Отчёт о выполненной работе (что сделано и с каким результатом): [docs/WORK_REPORT.md](docs/WORK_REPORT.md).
 Проверка существующей реализации (что готово, по факту прогона): [docs/VERIFICATION_REPORT.md](docs/VERIFICATION_REPORT.md).
+Готовность к развёртыванию (проверка перед выпуском): [docs/DEPLOYMENT_READINESS.md](docs/DEPLOYMENT_READINESS.md).
 Аудит спецификации (нет ли неучтённых настроек): [docs/SPECIFICATION_AUDIT.md](docs/SPECIFICATION_AUDIT.md).
 План развития: [docs/ROADMAP.md](docs/ROADMAP.md).
 Ручной план тестирования на реальной системе: [docs/TESTING.md](docs/TESTING.md).
