@@ -314,7 +314,9 @@ word is scored against the corpora whose *layout could have produced it*.
   - *Structural boundaries*: URLs, e-mail addresses, paths and version numbers
     are recognised and skipped before scoring.
   - *Identifier guard*: `snake_case`, `camelCase`, `x86_64` and similar code
-    tokens are treated as identifiers, not prose.
+    tokens are treated as identifiers, not prose. The letter/digit arms match any
+    Unicode letter, so a digit next to a Cyrillic letter (`1кг`, `кг1`) is an
+    identifier too, not a layout mistake.
   The guards run **after** the user-dictionary check, so a taught word
   (`муксуд` → `vercel`) is still fixed even when the source looks plausible.
 - **User dictionary** (`dictionary_size`, `dictionary_custom_path`). A
@@ -377,9 +379,11 @@ word is scored against the corpora whose *layout could have produced it*.
 `mode` is the master gate: `auto` acts on every word, `manual` acts only on an
 explicit hotkey, and `hybrid` acts automatically but withholds an uncertain
 layout fix for the manual hotkey. `manual` silences *every* automatic pass —
-layout, T9 and punctuation — so a user who chose "only when I ask" is never
-rewritten without a command (the reported "the app fixes me without my command"
-bug).
+layout, T9, punctuation and the per-app layout switch (`app_layout_switch`) — so
+a user who chose "only when I ask" is never rewritten or re-laid-out without a
+command (the reported "the app fixes me without my command" bug). The per-app
+switch is gated on the same `_should_fix_buffer` policy as a correction, so
+quiet hours and the exception list silence it too.
 
 Each optional feature then has its own mode on top of that (`typo_mode`,
 `punctuation_mode`): `off`, `manual` (explicit hotkey only), `auto` (on a word

@@ -716,6 +716,26 @@ live compositor reacts to synthetic input. See `docs/TESTING.md`.
   nothing runs automatically in `manual` (an explicit hotkey, `force=True`, and
   a per-app override naming a correcting mode both still work).
   `tests/test_typo_modes.py` and `tests/test_simulate.py` pin it.
+- **`manual` silences the per-app layout switch too, not only corrections.**
+  `app_layout_manager.maybe_apply()` ran at the top of `_process_buffer_inner`,
+  *before* the mode gate, so a mapped application switched the layout even in
+  `manual` mode -- the README promises manual does "ни переключения раскладки, ни
+  T9, ни пунктуации". The call is now guarded by
+  `if self.app_layout_manager.enabled and self._should_fix_buffer():`, so it
+  shares one policy with a correction: `manual` silences it, quiet hours silence
+  it, an excepted app is left alone, and `exceptions_force_in_manual` still
+  re-enables it. Guarded by
+  `tests/test_app_layouts.py::test_daemon_does_not_switch_layout_in_manual_mode`
+  and `::test_daemon_manual_mode_forces_layout_for_a_force_listed_app`.
+- **A digit next to a Cyrillic letter is an identifier, like `x86_64`.**
+  `detector._IDENTIFIER_RE` matched the letter/digit arms with an ASCII-only
+  `[A-Za-z]`, so a token that mixed a digit with Cyrillic (`1кг`, `кг1`) slipped
+  past the guard; the detector then converted the Russian half and switched the
+  layout -- the "typing a number breaks my layout" report. The arms now use the
+  Unicode letter class `[^\W\d_]`, matching the docs' promise that "a token with
+  a digit inside" is skipped in either alphabet. Guarded by
+  `tests/test_false_positives.py::test_digit_letter_mix_is_never_rewritten` and
+  the QA scenario `guards/digit-cyrillic-untouched`.
 - **The undo word must be cleared by every new fix, not only set once.**
   `_maybe_handle_undo_chord` reads `_last_undone_word or _last_fixed_from`. The
   undone word used to be sticky, so after the first Ctrl+Z every later chord

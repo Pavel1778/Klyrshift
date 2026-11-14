@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A digit next to a Cyrillic letter no longer breaks the layout.** The
+  identifier guard matched its letter/digit arms with an ASCII-only `[A-Za-z]`,
+  so a token that mixed a digit with Cyrillic (`1кг`, `кг1`) was not
+  recognised as an identifier; the detector converted the Russian half and
+  switched the layout (`1кг` -> `1ru`). The arms now use the Unicode letter
+  class, matching the documented promise that a token with a digit inside is
+  skipped in either alphabet. The ASCII forms (`x86_64`, `hello1`, `A1`) are
+  unchanged. Pinned by `tests/test_false_positives.py` and the QA scenario
+  `guards/digit-cyrillic-untouched`.
+
+- **`manual` mode silences the per-app layout switch too.** The per-app
+  preferred layout was applied before the mode gate, so a mapped application
+  switched the layout even when the user had chosen "only when I ask" -- the
+  README promises that manual mode does not switch the layout either. The
+  switch now shares one policy with a correction: `manual` and
+  quiet hours silence it, an excepted app is left alone, and
+  `exceptions_force_in_manual` still re-enables it. Pinned by
+  `tests/test_app_layouts.py` and the QA scenario
+  `modes/manual-app-layout-switch-silent`.
+
 ## [0.2.10] - 2026-11-10
 
 ### Added

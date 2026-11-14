@@ -1965,7 +1965,15 @@ class KlyrshiftDaemon:
             self.buffer = ""
             self._scancodes = []
         # Per-app preferred layout: cheap when disabled, throttled otherwise.
-        self.app_layout_manager.maybe_apply(time.monotonic())
+        # Switching the layout on focus is an *automatic* layout change, so it
+        # honours the same policy as every other automatic pass: ``manual``
+        # silences it (the user asked for "only when I ask"), quiet hours silence
+        # it, and an excepted app is left alone. Reusing ``_should_fix_buffer``
+        # keeps the mode contract in one place instead of a second, drifting
+        # copy. An explicit hotkey fix (``force``) does not re-enable it: the
+        # switch belongs to the focus change, not to a one-word fix.
+        if self.app_layout_manager.enabled and self._should_fix_buffer():
+            self.app_layout_manager.maybe_apply(time.monotonic())
         if boundary:
             logger.debug(
                 "Boundary flush: trigger=%s scancodes=%d buffer_len=%d",

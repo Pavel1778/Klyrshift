@@ -447,11 +447,14 @@ klyrshift dict remove-category it         # отключить
 `typo_correction = true`.
 
 **Режим `manual` — это «только по команде».** В нём Klyrshift не делает
-*ничего* автоматически: ни переключения раскладки, ни T9, ни пунктуации. Ручной
+*ничего* автоматически: ни переключения раскладки, ни T9, ни пунктуации, ни
+автопереключения раскладки по приложению (`app_layout_switch`). Ручной
 fix (двойной Shift) и ручные хоткеи T9/пунктуации (`CTRL+SHIFT+F` /
 `CTRL+SHIFT+P`) работают всегда — это ваша команда. Если в каком-то приложении
 вы хотите автоматику, задайте ему режим через `app_modes` (например
 `telegram = "auto"`): для этого приложения автоматические проходы включатся.
+Список `exceptions_force_in_manual` возвращает автоматику (и переключение
+раскладки по приложению) для выбранных программ.
 Отдельные переключатели `typo_mode`/`punctuation_mode` отвечают лишь за то,
 какой проход может работать (`off`/`manual`/`auto`/`hybrid`), но автоматически
 они срабатывают только в режиме `auto`/`hybrid`.
@@ -2611,7 +2614,9 @@ word is scored against the corpora whose *layout could have produced it*.
   - *Structural boundaries*: URLs, e-mail addresses, paths and version numbers
     are recognised and skipped before scoring.
   - *Identifier guard*: `snake_case`, `camelCase`, `x86_64` and similar code
-    tokens are treated as identifiers, not prose.
+    tokens are treated as identifiers, not prose. The letter/digit arms match any
+    Unicode letter, so a digit next to a Cyrillic letter (`1кг`, `кг1`) is an
+    identifier too, not a layout mistake.
   The guards run **after** the user-dictionary check, so a taught word
   (`муксуд` → `vercel`) is still fixed even when the source looks plausible.
 - **User dictionary** (`dictionary_size`, `dictionary_custom_path`). A
@@ -2674,9 +2679,11 @@ word is scored against the corpora whose *layout could have produced it*.
 `mode` is the master gate: `auto` acts on every word, `manual` acts only on an
 explicit hotkey, and `hybrid` acts automatically but withholds an uncertain
 layout fix for the manual hotkey. `manual` silences *every* automatic pass —
-layout, T9 and punctuation — so a user who chose "only when I ask" is never
-rewritten without a command (the reported "the app fixes me without my command"
-bug).
+layout, T9, punctuation and the per-app layout switch (`app_layout_switch`) — so
+a user who chose "only when I ask" is never rewritten or re-laid-out without a
+command (the reported "the app fixes me without my command" bug). The per-app
+switch is gated on the same `_should_fix_buffer` policy as a correction, so
+quiet hours and the exception list silence it too.
 
 Each optional feature then has its own mode on top of that (`typo_mode`,
 `punctuation_mode`): `off`, `manual` (explicit hotkey only), `auto` (on a word
@@ -5276,6 +5283,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### [Unreleased]
+
+#### Fixed
+
+- **A digit next to a Cyrillic letter no longer breaks the layout.** The
+  identifier guard matched its letter/digit arms with an ASCII-only `[A-Za-z]`,
+  so a token that mixed a digit with Cyrillic (`1кг`, `кг1`) was not
+  recognised as an identifier; the detector converted the Russian half and
+  switched the layout (`1кг` -> `1ru`). The arms now use the Unicode letter
+  class, matching the documented promise that a token with a digit inside is
+  skipped in either alphabet. The ASCII forms (`x86_64`, `hello1`, `A1`) are
+  unchanged. Pinned by `tests/test_false_positives.py` and the QA scenario
+  `guards/digit-cyrillic-untouched`.
+
+- **`manual` mode silences the per-app layout switch too.** The per-app
+  preferred layout was applied before the mode gate, so a mapped application
+  switched the layout even when the user had chosen "only when I ask" -- the
+  README promises that manual mode does not switch the layout either. The
+  switch now shares one policy with a correction: `manual` and
+  quiet hours silence it, an excepted app is left alone, and
+  `exceptions_force_in_manual` still re-enables it. Pinned by
+  `tests/test_app_layouts.py` and the QA scenario
+  `modes/manual-app-layout-switch-silent`.
 
 ### [0.2.10] - 2026-11-10
 
