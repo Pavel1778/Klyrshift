@@ -80,8 +80,16 @@ _STRUCTURAL_SEPARATOR_RE: Final[re.Pattern[str]] = re.compile(r"\w[.@/\\=#&~|<>\
 # A camelCase hump, a snake_case/kebab-case join or a letter/digit mix marks a
 # code identifier. Case-sensitive on purpose: ``A1`` is an identifier, ``ab`` is
 # a word.
+#
+# The letter/digit arms use a Unicode *letter* class (``[^\W\d_]``), not
+# ``[A-Za-z]``: a token that mixes a digit with Cyrillic letters (``1кг``,
+# ``кг1``) is just as intentional as ``x86_64`` -- a unit, a list marker, a
+# version -- and the docs promise that "a token with a digit inside" is skipped.
+# With the ASCII-only class the guard missed it, so the Russian half of ``1кг``
+# was converted to Latin and the layout switched (the "typing a number breaks my
+# layout" report).
 _IDENTIFIER_RE: Final[re.Pattern[str]] = re.compile(
-    r"[a-z][A-Z]|_|[^\W_]-[^\W_]|[A-Za-z]\d|\d[A-Za-z]"
+    r"[a-z][A-Z]|_|[^\W_]-[^\W_]|[^\W\d_]\d|\d[^\W\d_]"
 )
 
 # Which language each known layout types. Latin layouts share the same physical

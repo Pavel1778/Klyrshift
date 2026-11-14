@@ -995,5 +995,66 @@
       "robustness"
     ],
     "title": "A valid config override still fixes a word"
+  },
+  {
+    "category": "guards",
+    "config": {},
+    "difficulty": "basic",
+    "expect": {
+      "screen": "1кг "
+    },
+    "id": "guards/digit-cyrillic-untouched",
+    "invariants": [
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "ru",
+    "notes": "A digit next to a Cyrillic letter is an identifier (a unit, a list marker), not a layout mistake. The identifier guard used an ASCII-only letter class and missed it, so the Russian half was converted and the layout switched.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "type 1ru",
+      "space"
+    ],
+    "tags": [
+      "guards",
+      "identifier"
+    ],
+    "title": "A digit+Cyrillic token stays in the layout it was typed in"
+  },
+  {
+    "category": "modes",
+    "config": {
+      "app_layout_switch": true,
+      "app_layouts": {
+        "firefox": "ru"
+      }
+    },
+    "difficulty": "intermediate",
+    "expect": {
+      "screen": "ghbdtn "
+    },
+    "id": "modes/manual-app-layout-switch-silent",
+    "invariants": [
+      "manual-mode-silent",
+      "no-lost-characters",
+      "no-mixed-script-replacement",
+      "layout-is-known"
+    ],
+    "layout": "us",
+    "notes": "manual mode is the master gate for *every* automatic pass, the per-app layout switch included: a mapped application must not change the layout without a command.",
+    "origin": "manual",
+    "seed": 0,
+    "steps": [
+      "app firefox",
+      "type ghbdtn",
+      "space"
+    ],
+    "tags": [
+      "modes",
+      "per-app"
+    ],
+    "title": "manual mode silences the per-app layout switch"
   }
 ]

@@ -113,6 +113,51 @@ def test_identifier_guard_detects_code_tokens() -> None:
     assert det._should_guard("ghbdtn", "us") is False
 
 
+# --- a digit next to a Cyrillic letter is an identifier too ----------------------
+#
+# The guard used an ASCII-only ``[A-Za-z]`` for the letter/digit arms, so a token
+# that mixed a digit with Cyrillic (``1кг``) slipped through and the detector
+# converted the Russian half and switched the layout -- the "typing a number
+# breaks my layout" report. The docs promise that a token with a digit inside is
+# skipped, in either alphabet.
+
+
+@pytest.mark.parametrize(
+    ("token", "layout"),
+    [
+        # Russian units, list markers and ordinal forms typed in the wrong layout.
+        ("1кг", "ru"),
+        ("2кг", "ru"),
+        ("кг1", "ru"),
+        ("1км", "ru"),
+        ("1шт", "ru"),
+        ("1й", "ru"),
+        ("1я", "ru"),
+        ("1ый", "ru"),
+        ("1ая", "ru"),
+        ("1м2", "ru"),
+        # The ASCII forms must keep working too.
+        ("x86_64", "us"),
+        ("hello1", "us"),
+        ("1hello", "us"),
+        ("A1", "us"),
+    ],
+)
+def test_digit_letter_mix_is_never_rewritten(
+    det: LanguageDetector, token: str, layout: str
+) -> None:
+    assert det._should_guard(token, layout) is True
+    assert det.target_layout(token, layout) is None
+    assert det.should_fix(token, layout) is False
+
+
+def test_digit_letter_mix_with_cyrillic_is_a_structural_identifier() -> None:
+    """The Unicode-letter arms are what catch the Cyrillic case."""
+    det = LanguageDetector(converter=LayoutConverter(), stop_words=[], min_word_length=3)
+    assert det._should_guard_structure_only("1кг") is True
+    assert det._should_guard_structure_only("кг1") is True
+
+
 def test_taught_word_wins_over_plausibility_guard() -> None:
     """A user-taught word must be fixed even if the source looks plausible."""
     det = LanguageDetector(

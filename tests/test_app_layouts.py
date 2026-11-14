@@ -175,6 +175,70 @@ def test_daemon_app_layout_manager_wired() -> None:
     assert switcher.switches == ["ru"]
 
 
+def _flush(daemon: KlyrshiftDaemon, buffer: str) -> None:
+    """Put ``buffer`` in the live buffer and run the real flush path."""
+    with daemon._lock:
+        daemon.buffer = buffer
+        daemon._scancodes = [1] * len(buffer)
+    daemon._process_buffer()
+
+
+@pytest.mark.parametrize("mode", ["auto", "hybrid"])
+def test_daemon_switches_layout_for_a_mapped_app(mode: str) -> None:
+    """The focus switch still happens in the correcting modes."""
+    switcher = FakeSwitcher()
+    daemon = _make_daemon(
+        switcher, mode=mode, app_layouts={"firefox": "ru"}, app_layout_switch=True
+    )
+    daemon.app_layout_manager._probe = FakeProbe("firefox")
+    daemon.app_layout_manager._last_check = float("-inf")
+    _flush(daemon, "ghbdtn")
+    assert switcher.switches == ["ru"]
+
+
+def test_daemon_does_not_switch_layout_in_manual_mode() -> None:
+    """``manual`` silences the per-app layout switch too.
+
+    The README and ARCHITECTURE promise that ``manual`` does *nothing*
+    automatically -- "ни переключения раскладки, ни T9, ни пунктуации". The
+    per-app switch ran before the mode gate, so a mapped application changed the
+    layout even in manual mode; it must honour the same policy as every other
+    automatic pass.
+    """
+    switcher = FakeSwitcher()
+    daemon = _make_daemon(
+        switcher, mode="manual", app_layouts={"firefox": "ru"}, app_layout_switch=True
+    )
+    daemon.app_layout_manager._probe = FakeProbe("firefox")
+    daemon.app_layout_manager._last_check = float("-inf")
+    _flush(daemon, "ghbdtn")
+    assert switcher.switches == []
+    assert switcher.current == "us"
+
+
+def test_daemon_manual_mode_forces_layout_for_a_force_listed_app() -> None:
+    """The explicit "fix even in manual" list re-enables the switch.
+
+    The switch is gated on the same policy as a correction, so an application on
+    ``exceptions_force_in_manual`` still gets its layout in manual mode. The
+    policy reads the daemon's own focus probe, so that is what is pinned here.
+    """
+    switcher = FakeSwitcher()
+    daemon = _make_daemon(
+        switcher,
+        mode="manual",
+        app_layouts={"firefox": "ru"},
+        app_layout_switch=True,
+        exceptions_force_in_manual=["firefox"],
+    )
+    daemon.app_layout_manager._probe = FakeProbe("firefox")
+    daemon.app_layout_manager._last_check = float("-inf")
+    daemon._focused_app_cache = "firefox"
+    daemon._focused_app_at = float("inf")
+    _flush(daemon, "ghbdtn")
+    assert switcher.switches == ["ru"]
+
+
 def test_daemon_app_layout_reload(monkeypatch: pytest.MonkeyPatch) -> None:
     switcher = FakeSwitcher()
     daemon = _make_daemon(switcher)
